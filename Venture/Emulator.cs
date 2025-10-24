@@ -1,5 +1,7 @@
 using ELFSharp.ELF;
 using ELFSharp.ELF.Segments;
+using System.Runtime.CompilerServices;
+using Venture.InstructionFormats;
 
 namespace Venture;
 
@@ -47,70 +49,251 @@ public class Emulator
 
     public uint PC { get; set; } = FLASH_BASE_ADDRESS;
 
-    uint[] registers = new uint[32];
+    private uint[] registers = new uint[32];
+
+    private Dictionary<ushort, uint> csr = new Dictionary<ushort, uint>();
+
+    public event EventHandler<ECallEventArgs> ECall;
+
+    protected virtual void OnECall(ECallEventArgs e) 
+    { 
+        ECall?.Invoke(this, e);
+    }
 
     public void ExecuteInstruction()
     {
-        Console.WriteLine($"PC: {PC.ToHex()}");
         var instruction = MemoryRead(PC);
+        Console.WriteLine($"PC: {PC.ToHex()} Instruction: {instruction.ToHex()} {instruction.ToBin()}");
+        Console.WriteLine($"registers[10] {registers[10]}");
+        
+        var opcode = instruction.ExtractBits(0, 7);
 
-        var opcode = ExtractBits(instruction, 0, 7);
         if (opcode == 0b1101111)
         {
-            Console.WriteLine("jal");
-            uint rd = (instruction >> 7) & 0x1F; // 0x1F is a mask for 5 bits (11111)
-            uint imm_20 = (instruction >> 31) & 0x01; // Bit 31 -> imm[20]
-            uint imm_10_1 = (instruction >> 21) & 0x3FF; // Bits 30-21 -> imm[10:1]
-            uint imm_11 = (instruction >> 20) & 0x01; // Bit 20 -> imm[11]
-            uint imm_19_12 = (instruction >> 12) & 0xFF;  // Bits 19-12 -> imm[19:12]
-            uint imm_j = (imm_20 << 20)    // imm[20]
-                       | (imm_19_12 << 12) // imm[19:12]
-                       | (imm_11 << 11)    // imm[11]
-                       | (imm_10_1 << 1);  // imm[10:1] (shifted left by 1 for imm[0]=0)
-
-            int signed_imm_j = (int)imm_j;
-            if (imm_20 == 1)
-            {
-                // Extend the sign bit from bit 20 upwards
-                signed_imm_j |= unchecked((int)0xFFE00000); // Mask for bits 31 down to 21
-            }
+            Console.WriteLine("J-Type: jal");
+            var format = new JTypeInstructionFormat(instruction);
 
             uint returnAddress = PC + 4;
 
-            if (rd != 0)
+            if (format.rd != 0)
             {
-                registers[rd] = returnAddress;
+                registers[format.rd] = returnAddress;
             }
 
-            uint targetAddress = (uint)(PC + signed_imm_j);
+            uint targetAddress = (uint)(PC + format.imm_j);
 
             PC = targetAddress;
+            return;
         }
-        // else if (opcode == 0b0010011)
-        // {
 
-        // }
-        else
+        if (opcode == 0b0010011)
         {
-            Console.WriteLine(instruction.ToBin());
+            var format = new ITypeInstructionFormat(instruction);
+            if (format.funct3 == 0b000)
+            {
+                Console.WriteLine("I-Type: addi");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = (uint)((int)registers[format.rs1] + format.imm_i_signed);
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b001)
+            {
+                Console.WriteLine("I-Type: slli");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] << (int)format.shamt_i;
+                }
+                PC = PC + 4;
+                return;
+            }
+
+            throw new NotImplementedException($"I-Type with funct3 {format.funct3.ToBin(3)} not implemented. Instruction: {instruction.ToHex()}");
         }
+
+        if (opcode == 0b1110011)
+        {
+            var format = new ITypeInstructionFormat(instruction);
+            if (format.funct3 == 0b001)
+            {
+                Console.WriteLine("I-Type: csrrw");
+
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = csr[format.csr];
+                }
+
+                csr[format.csr] = registers[format.rs1];
+
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b010)
+            {
+                Console.WriteLine("I-Type: csrrs");
+
+                // TODO: Verify correctness
+                uint original_csr_value = csr.GetValueOrDefault(format.csr, (uint)0);
+
+                if (format.rs1 != 0)
+                {
+                    uint rs1_mask = registers[format.rs1];
+                    uint new_csr_value = original_csr_value | rs1_mask;
+                    csr[format.csr] = new_csr_value;
+                }
+
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = original_csr_value;
+                }
+
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b101)
+            {
+                Console.WriteLine("I-Type: csrrwi");
+
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = csr[format.csr];
+                }
+
+                csr[format.csr] = (uint)format.imm_i_unsigned;
+
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b000)
+            {
+                if (instruction == 0x30200073)
+                {
+                    Console.WriteLine("mret");
+                    PC = csr[0x341];
+                    return;
+                };
+
+                if (instruction == 0x00000073)
+                {
+                    Console.WriteLine($"ecall - service number: {registers[17]} argument: {registers[10]}");
+                    OnECall(new ECallEventArgs(registers[17], registers[10]));
+                    return;
+                }
+
+                throw new NotImplementedException($"I-Type with funct3 {format.funct3.ToBin(3)} not implemented. Instruction: {instruction.ToHex()}");
+            }
+
+            throw new NotImplementedException($"I-Type with funct3 {format.funct3.ToBin(3)} not implemented. Instruction: {instruction.ToHex()}");
+        }
+
+        if (opcode == 0b1100011)
+        {
+            var format = new BTypeInstructionFormat(instruction);
+            if (format.funct3 == 0b000)
+            {
+                Console.WriteLine("B-Type: beq");
+                if (registers[format.rs1] == registers[format.rs2])
+                {
+                    PC = (uint)((int)PC + format.imm_b);
+                }
+                else
+                {
+                    PC = PC + 4;
+                }
+                return;
+            }
+            if (format.funct3 == 0b001)
+            {
+                Console.WriteLine("B-Type: bne");
+                if (registers[format.rs1] != registers[format.rs2])
+                {
+                    PC = (uint)((int)PC + format.imm_b);
+                }
+                else
+                {
+                    PC = PC + 4;
+                }
+                return;
+            }
+            if (format.funct3 == 0b100)
+            {
+                Console.WriteLine("B-Type: blt");
+                if ((int)registers[format.rs1] < (int)registers[format.rs2])
+                {
+                    PC = (uint)((int)PC + format.imm_b);
+                }
+                else
+                {
+                    PC = PC + 4;
+                }
+                return;
+            }
+
+            throw new NotImplementedException($"B-Type with funct3 {format.funct3.ToBin(3)} not implemented. Instruction: {instruction.ToHex()}");
+        }
+        if (opcode == 0b0110011)
+        {
+            var format = new RTypeInstructionFormat(instruction);
+            if (format.funct3 == 0b000 && format.funct7 == 0b0000000)
+            {
+                Console.WriteLine("R-Type: add");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] + registers[format.rs2];
+                }
+                PC = PC + 4;
+                return;
+            }
+        }
+        
+        if (opcode == 0b0010111)
+        {
+            Console.WriteLine("U-Type: auipc");
+            var format = new UTypeInstructionFormat(instruction);
+            if (format.rd != 0)
+            {
+                registers[format.rd] = PC + format.imm_u;
+            }
+            PC = PC + 4;
+            return;
+        }
+
+        if (opcode == 0b0110111)
+        {
+            Console.WriteLine("U-Type: lui");
+            var format = new UTypeInstructionFormat(instruction);
+            if (format.rd != 0)
+            {
+                registers[format.rd] = format.imm_u;
+            }
+            PC = PC + 4;
+            return;
+        }
+        
+        if (instruction == 0x0ff0000f)
+        {
+            Console.WriteLine("fence");
+            PC = PC + 4;
+            return;
+        }
+
+        throw new NotImplementedException($"Opcode {opcode.ToBin(7)} not implemented. Instruction: {instruction.ToHex()}");
     }
 
-    public static uint ExtractBits(uint opcode, int startBit, int length)
+   
+
+}
+
+public class ECallEventArgs : EventArgs
+{
+    public uint ServiceNumber { get; }
+    public uint Argument { get; }
+
+    public ECallEventArgs(uint serviceNumber, uint argument)
     {
-        // 1. Calculate the mask: (1 << length) - 1
-        //    Example (length = 3): (1 << 3) - 1 = 8 - 1 = 7 (Binary 00...0111)
-        uint mask = (1U << length) - 1;
-
-        // 2. Right-shift to move the desired bits to the least significant position.
-        //    Example (startBit = 12): Moves bits 14-12 to positions 2-0.
-        uint shifted = opcode >> startBit;
-
-        // 3. Bitwise AND with the mask to clear any higher bits that were shifted in.
-        //    This isolates the required value.
-        uint extractedValue = shifted & mask;
-
-        return extractedValue;
+        ServiceNumber = serviceNumber;
+        Argument = argument;
     }
-
 }

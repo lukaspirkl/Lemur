@@ -1,6 +1,5 @@
 using ELFSharp.ELF;
 using ELFSharp.ELF.Segments;
-using System.Runtime.CompilerServices;
 using Venture.InstructionFormats;
 
 namespace Venture;
@@ -16,10 +15,15 @@ public class Emulator
     {
         BitConverter.GetBytes(value).CopyTo(flashMemory, (int)(address - FLASH_BASE_ADDRESS));
     }
-    
+
     public uint MemoryRead(uint address)
     {
         return BitConverter.ToUInt32(new ArraySegment<byte>(flashMemory, (int)(address - FLASH_BASE_ADDRESS), 4));
+    }
+    
+    public byte MemoryReadByte(uint address)
+    {
+        return flashMemory[(int)(address - FLASH_BASE_ADDRESS)];
     }
 
     public Emulator(string binPath)
@@ -53,7 +57,7 @@ public class Emulator
 
     private Dictionary<ushort, uint> csr = new Dictionary<ushort, uint>();
 
-    public event EventHandler<ECallEventArgs> ECall;
+    public event EventHandler<ECallEventArgs>? ECall;
 
     protected virtual void OnECall(ECallEventArgs e) 
     { 
@@ -86,6 +90,44 @@ public class Emulator
             return;
         }
 
+        if (opcode == 0b1100111)
+        {
+            Console.WriteLine("I-Type: jalr");
+            var format = new ITypeInstructionFormat(instruction);
+            if (format.funct3 == 0b000)
+            {
+                // TODO: This is maybe wrong. But I don't know how.
+                // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/insts/jalr.html
+                uint returnAddress = PC + 4;
+
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = returnAddress;
+                }
+
+                uint targetAddress = (uint)((int)registers[format.rs1] + format.imm_i_signed);
+
+                PC = targetAddress & 0b11111111_11111111_11111111_11111110;
+                return;
+            }
+        }
+
+        if (opcode == 0b0000011)
+        {
+            var format = new ITypeInstructionFormat(instruction);
+            if (format.funct3 == 0b000)
+            {
+                // TODO: This could be wrong
+                Console.WriteLine("I-Type: lb");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = MemoryReadByte((uint)(registers[format.rs1] + format.imm_i_signed));
+                }
+                PC = PC + 4;
+                return;
+            }
+        }
+
         if (opcode == 0b0010011)
         {
             var format = new ITypeInstructionFormat(instruction);
@@ -99,12 +141,62 @@ public class Emulator
                 PC = PC + 4;
                 return;
             }
-            if (format.funct3 == 0b001)
+            if (format.funct3 == 0b001 && format.funct7 == 0b0000000)
             {
                 Console.WriteLine("I-Type: slli");
                 if (format.rd != 0)
                 {
                     registers[format.rd] = registers[format.rs1] << (int)format.shamt_i;
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b101 && format.funct7 == 0b0000000)
+            {
+                Console.WriteLine("I-Type: srli");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] >> (int)format.shamt_i;
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b101 && format.funct7 == 0b0100000)
+            {
+                Console.WriteLine("I-Type: srai");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = (uint)((int)registers[format.rs1] >> (int)format.shamt_i);
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b100)
+            {
+                Console.WriteLine("I-Type: xori");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] ^ (uint)format.imm_i_signed;
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b110)
+            {
+                Console.WriteLine("I-Type: ori");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] | (uint)format.imm_i_signed;
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b111)
+            {
+                Console.WriteLine("I-Type: andi");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] & (uint)format.imm_i_signed;
                 }
                 PC = PC + 4;
                 return;
@@ -230,6 +322,45 @@ public class Emulator
                 }
                 return;
             }
+            if (format.funct3 == 0b101)
+            {
+                Console.WriteLine("B-Type: bge");
+                if ((int)registers[format.rs1] >= (int)registers[format.rs2])
+                {
+                    PC = (uint)((int)PC + format.imm_b);
+                }
+                else
+                {
+                    PC = PC + 4;
+                }
+                return;
+            }
+            if (format.funct3 == 0b110)
+            {
+                Console.WriteLine("B-Type: bltu");
+                if (registers[format.rs1] < registers[format.rs2])
+                {
+                    PC = (uint)((int)PC + format.imm_b);
+                }
+                else
+                {
+                    PC = PC + 4;
+                }
+                return;
+            }
+            if (format.funct3 == 0b111)
+            {
+                Console.WriteLine("B-Type: bgeu");
+                if (registers[format.rs1] >= registers[format.rs2])
+                {
+                    PC = (uint)((int)PC + format.imm_b);
+                }
+                else
+                {
+                    PC = PC + 4;
+                }
+                return;
+            }
 
             throw new NotImplementedException($"B-Type with funct3 {format.funct3.ToBin(3)} not implemented. Instruction: {instruction.ToHex()}");
         }
@@ -246,6 +377,98 @@ public class Emulator
                 PC = PC + 4;
                 return;
             }
+            if (format.funct3 == 0b000 && format.funct7 == 0b0100000)
+            {
+                Console.WriteLine("R-Type: sub");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] - registers[format.rs2];
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b001 && format.funct7 == 0b0000000)
+            {
+                Console.WriteLine("R-Type: sll");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] << (int)registers[format.rs2].ExtractBits(0, 5);
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b010 && format.funct7 == 0b0000000)
+            {
+                Console.WriteLine("R-Type: slt");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = ((int)registers[format.rs1] < (int)registers[format.rs2]) ? (uint)1 : 0;
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b011 && format.funct7 == 0b0000000)
+            {
+                Console.WriteLine("R-Type: sltu");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = (registers[format.rs1] < registers[format.rs2]) ? (uint)1 : 0;
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b100 && format.funct7 == 0b0000000)
+            {
+                Console.WriteLine("R-Type: xor");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] ^ registers[format.rs2];
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b101 && format.funct7 == 0b0000000)
+            {
+                Console.WriteLine("R-Type: srl");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] >> (int)registers[format.rs2].ExtractBits(0, 5);
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b101 && format.funct7 == 0b0100000)
+            {
+                Console.WriteLine("R-Type: sra");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = (uint)((int)registers[format.rs1] >> (int)registers[format.rs2].ExtractBits(0, 5));
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b110 && format.funct7 == 0b0000000)
+            {
+                Console.WriteLine("R-Type: or");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] | registers[format.rs2];
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b111 && format.funct7 == 0b0000000)
+            {
+                Console.WriteLine("R-Type: and");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] & registers[format.rs2];
+                }
+                PC = PC + 4;
+                return;
+            }
+
+            throw new NotImplementedException($"R-Type with funct3 {format.funct3.ToBin(3)} finct7 {format.funct7.ToBin(7)} not implemented. Instruction: {instruction.ToHex()}");
         }
         
         if (opcode == 0b0010111)

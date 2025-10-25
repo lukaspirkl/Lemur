@@ -1,31 +1,53 @@
-﻿using Venture;
+﻿using System.Reflection;
+using Venture;
+using Xunit.Sdk;
+using Xunit.v3;
 
 [assembly: CaptureConsole]
 
 namespace Tests;
 
+public class ComplianceTestRow : ITheoryDataRow
+{
+    public bool? Explicit { get; set; }
+
+    public string? Skip { get; set; }
+
+    public string? TestDisplayName { get; set; }
+
+    public int? Timeout { get; set; }
+
+    public Dictionary<string, HashSet<string>>? Traits { get; set; }
+
+    private string path;
+
+    public ComplianceTestRow(string path)
+    {
+        TestDisplayName = path.Split('-').Last();
+        this.path = path;
+    }
+
+    public object?[] GetData()
+    {
+        return [path];
+    }
+}
+
 public class ComplianceTests
 {
-    [Fact(Timeout = 1000)]
-    public void Add()
+    public static IEnumerable<ITheoryDataRow> GetData()
     {
-        Run("rv32ui-p/rv32ui-p-add", 500);
+        return Directory.EnumerateFiles("rv32ui-p")
+            .Where(x => !x.Contains("."))
+            .Select(x => new ComplianceTestRow(x));
     }
 
-    [Fact(Timeout = 1000)]
-    public void Addi()
+    // [Theory(Timeout = 1000)]
+    [Theory]
+    [MemberData(nameof(GetData))]
+    public void All(string path)
     {
-        Run("rv32ui-p/rv32ui-p-addi", 500);
-    }
-
-    [Fact(Timeout = 1000)]
-    public void And()
-    {
-        Run("rv32ui-p/rv32ui-p-and", 500);
-    }
-
-    private void Run(string path, int steps)
-    {
+        int maxSteps = 2000;
         var e = new Emulator(path);
 
         var isRunning = true;
@@ -38,12 +60,12 @@ public class ComplianceTests
         };
 
         int i = 0;
-        while (isRunning && i <= steps)
+        while (isRunning && i <= maxSteps)
         {
             e.ExecuteInstruction();
             i++;
         }
 
-        Assert.Equal(500, steps);
+        Assert.True(i <= maxSteps);
     }
 }

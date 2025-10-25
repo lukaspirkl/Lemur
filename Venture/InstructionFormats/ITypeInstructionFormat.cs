@@ -9,6 +9,8 @@ public class ITypeInstructionFormat : InstructionFormatBase
 
     public ushort csr => (ushort)imm_i_signed;
 
+    public uint funct7 { get; }
+
     public ITypeInstructionFormat(uint instruction) 
         : base(instruction)
     {
@@ -16,6 +18,7 @@ public class ITypeInstructionFormat : InstructionFormatBase
         imm_i_unsigned = instruction >> 20; // Left part is zeroed when shifting unsigned int
 
         shamt_i = instruction.ExtractBits(20, 5);
+        funct7 = instruction.ExtractBits(25, 7);
     }
 }
 

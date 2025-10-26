@@ -1,5 +1,6 @@
 using ELFSharp.ELF;
 using ELFSharp.ELF.Segments;
+using System.Net;
 using Venture.InstructionFormats;
 
 namespace Venture;
@@ -12,6 +13,21 @@ public class Emulator
     private byte[] flashMemory = new byte[FLASH_SIZE];
 
     public void MemoryWrite(uint address, uint value)
+    {
+        BitConverter.GetBytes(value).CopyTo(flashMemory, (int)(address - FLASH_BASE_ADDRESS));
+    }
+
+    public void MemoryWriteByte(uint address, byte value)
+    {
+        flashMemory[(int)(address - FLASH_BASE_ADDRESS)] = value;
+    }
+
+    public void MemoryWriteBytes(uint address, byte[] value)
+    {
+        value.CopyTo(flashMemory, (int)(address - FLASH_BASE_ADDRESS));
+    }
+
+    public void MemoryWriteHalfWord(uint address, ushort value)
     {
         BitConverter.GetBytes(value).CopyTo(flashMemory, (int)(address - FLASH_BASE_ADDRESS));
     }
@@ -132,7 +148,7 @@ public class Emulator
                 Console.WriteLine("I-Type: lh");
                 if (format.rd != 0)
                 {
-                    // Convert to sbyte and then to uint to have sign extension
+                    // Convert to short(signed) and then to uint to have sign extension
                     registers[format.rd] = (uint)(short)MemoryReadHalfWord((uint)(registers[format.rs1] + format.imm_i_signed));
                 }
                 PC = PC + 4;
@@ -143,7 +159,7 @@ public class Emulator
                 Console.WriteLine("I-Type: lw");
                 if (format.rd != 0)
                 {
-                    // Convert to sbyte and then to uint to have sign extension
+                    // Convert to int and then to uint to have sign extension
                     registers[format.rd] = (uint)(int)MemoryRead((uint)(registers[format.rs1] + format.imm_i_signed));
                 }
                 PC = PC + 4;
@@ -166,6 +182,34 @@ public class Emulator
                 {
                     registers[format.rd] = MemoryReadHalfWord((uint)(registers[format.rs1] + format.imm_i_signed));
                 }
+                PC = PC + 4;
+                return;
+            }
+        }
+
+        if (opcode == 0b0100011)
+        {
+            var format = new STypeInstructionFormat(instruction);
+            if (format.funct3 == 0b000)
+            {
+                Console.WriteLine("S-Type: sb");
+                var bytes = BitConverter.GetBytes(registers[format.rs2]);
+                MemoryWriteByte((uint)(registers[format.rs1] + format.imm_s), bytes[0]);
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b001)
+            {
+                Console.WriteLine("S-Type: sh");
+                var bytes = BitConverter.GetBytes(registers[format.rs2]).Take(2).ToArray();
+                MemoryWriteBytes((uint)(registers[format.rs1] + format.imm_s), bytes);
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b010)
+            {
+                Console.WriteLine("S-Type: sw");
+                MemoryWrite((uint)(registers[format.rs1] + format.imm_s), registers[format.rs2]);
                 PC = PC + 4;
                 return;
             }
@@ -561,6 +605,15 @@ public class Emulator
         if (instruction == 0x0ff0000f)
         {
             Console.WriteLine("fence");
+            // For my single hart processor this is no-operation.
+            PC = PC + 4;
+            return;
+        }
+
+        if (instruction == 0x0000100f)
+        {
+            Console.WriteLine("fence.i");
+            // For my single hart processor this is no-operation.
             PC = PC + 4;
             return;
         }

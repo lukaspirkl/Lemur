@@ -113,11 +113,11 @@ public class Emulator
             var format = new ITypeInstructionFormat(instruction);
             if (format.funct3 == 0b000)
             {
-                // TODO: This could be wrong
                 Console.WriteLine("I-Type: lb");
                 if (format.rd != 0)
                 {
-                    registers[format.rd] = MemoryReadByte((uint)(registers[format.rs1] + format.imm_i_signed));
+                    // Convert to sbyte and then to uint to have sign extension
+                    registers[format.rd] = (uint)(sbyte)MemoryReadByte((uint)(registers[format.rs1] + format.imm_i_signed));
                 }
                 PC = PC + 4;
                 return;

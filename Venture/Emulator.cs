@@ -68,7 +68,7 @@ public class Emulator
     {
         var instruction = MemoryRead(PC);
         Console.WriteLine($"PC: {PC.ToHex()} Instruction: {instruction.ToHex()} {instruction.ToBin()}");
-        Console.WriteLine($"registers[10] {registers[10]}");
+        //Console.WriteLine($"registers[5] {registers[5].ToHex()}");
         
         var opcode = instruction.ExtractBits(0, 7);
 
@@ -96,16 +96,12 @@ public class Emulator
             var format = new ITypeInstructionFormat(instruction);
             if (format.funct3 == 0b000)
             {
-                // TODO: This is maybe wrong. But I don't know how.
-                // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/insts/jalr.html
-                uint returnAddress = PC + 4;
+                uint targetAddress = (uint)((int)registers[format.rs1] + format.imm_i_signed);
 
                 if (format.rd != 0)
                 {
-                    registers[format.rd] = returnAddress;
+                    registers[format.rd] = PC + 4;
                 }
-
-                uint targetAddress = (uint)((int)registers[format.rs1] + format.imm_i_signed);
 
                 PC = targetAddress & 0b11111111_11111111_11111111_11111110;
                 return;

@@ -20,10 +20,15 @@ public class Emulator
     {
         return BitConverter.ToUInt32(new ArraySegment<byte>(flashMemory, (int)(address - FLASH_BASE_ADDRESS), 4));
     }
-    
+
     public byte MemoryReadByte(uint address)
     {
         return flashMemory[(int)(address - FLASH_BASE_ADDRESS)];
+    }
+    
+    public ushort MemoryReadHalfWord(uint address)
+    {
+        return BitConverter.ToUInt16(new ArraySegment<byte>(flashMemory, (int)(address - FLASH_BASE_ADDRESS), 2));
     }
 
     public Emulator(string binPath)
@@ -122,6 +127,48 @@ public class Emulator
                 PC = PC + 4;
                 return;
             }
+            if (format.funct3 == 0b001)
+            {
+                Console.WriteLine("I-Type: lh");
+                if (format.rd != 0)
+                {
+                    // Convert to sbyte and then to uint to have sign extension
+                    registers[format.rd] = (uint)(short)MemoryReadHalfWord((uint)(registers[format.rs1] + format.imm_i_signed));
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b010)
+            {
+                Console.WriteLine("I-Type: lw");
+                if (format.rd != 0)
+                {
+                    // Convert to sbyte and then to uint to have sign extension
+                    registers[format.rd] = (uint)(int)MemoryRead((uint)(registers[format.rs1] + format.imm_i_signed));
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b100)
+            {
+                Console.WriteLine("I-Type: lbu");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = MemoryReadByte((uint)(registers[format.rs1] + format.imm_i_signed));
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b101)
+            {
+                Console.WriteLine("I-Type: lhu");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = MemoryReadHalfWord((uint)(registers[format.rs1] + format.imm_i_signed));
+                }
+                PC = PC + 4;
+                return;
+            }
         }
 
         if (opcode == 0b0010011)
@@ -133,6 +180,26 @@ public class Emulator
                 if (format.rd != 0)
                 {
                     registers[format.rd] = (uint)((int)registers[format.rs1] + format.imm_i_signed);
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b010)
+            {
+                Console.WriteLine("I-Type: slti");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = (int)registers[format.rs1] < format.imm_i_signed ? (uint)1 : 0;
+                }
+                PC = PC + 4;
+                return;
+            }
+            if (format.funct3 == 0b011)
+            {
+                Console.WriteLine("I-Type: sltiu");
+                if (format.rd != 0)
+                {
+                    registers[format.rd] = registers[format.rs1] < (uint)format.imm_i_signed ? (uint)1 : 0;
                 }
                 PC = PC + 4;
                 return;

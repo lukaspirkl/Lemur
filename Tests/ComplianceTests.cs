@@ -1,7 +1,4 @@
-﻿using System.Reflection;
-using Venture;
-using Xunit.Sdk;
-using Xunit.v3;
+﻿using Venture;
 
 [assembly: CaptureConsole]
 
@@ -42,13 +39,13 @@ public class ComplianceTests
             .Select(x => new ComplianceTestRow(x));
     }
 
-    // [Theory(Timeout = 1000)]
     [Theory]
     [MemberData(nameof(GetData))]
     public void All(string path)
     {
         int maxSteps = 2000;
-        var e = new Emulator(path);
+        var m = new Memory(path, 0x80000000, 1024 * 128);
+        var e = new Emulator(m);
 
         var isRunning = true;
 

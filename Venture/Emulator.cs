@@ -1,78 +1,18 @@
-using ELFSharp.ELF;
-using ELFSharp.ELF.Segments;
-using System.Net;
 using Venture.InstructionFormats;
 
 namespace Venture;
 
 public class Emulator
 {
-    private const uint FLASH_BASE_ADDRESS = 0x80000000;
-    private const int FLASH_SIZE = 1024 * 128; // 128 KiB
+    private readonly IMemory memory;
 
-    private byte[] flashMemory = new byte[FLASH_SIZE];
-
-    public void MemoryWrite(uint address, uint value)
+    public Emulator(IMemory memory)
     {
-        BitConverter.GetBytes(value).CopyTo(flashMemory, (int)(address - FLASH_BASE_ADDRESS));
+        this.memory = memory;
+        PC = memory.InitialPC;
     }
 
-    public void MemoryWriteByte(uint address, byte value)
-    {
-        flashMemory[(int)(address - FLASH_BASE_ADDRESS)] = value;
-    }
-
-    public void MemoryWriteBytes(uint address, byte[] value)
-    {
-        value.CopyTo(flashMemory, (int)(address - FLASH_BASE_ADDRESS));
-    }
-
-    public void MemoryWriteHalfWord(uint address, ushort value)
-    {
-        BitConverter.GetBytes(value).CopyTo(flashMemory, (int)(address - FLASH_BASE_ADDRESS));
-    }
-
-    public uint MemoryRead(uint address)
-    {
-        return BitConverter.ToUInt32(new ArraySegment<byte>(flashMemory, (int)(address - FLASH_BASE_ADDRESS), 4));
-    }
-
-    public byte MemoryReadByte(uint address)
-    {
-        return flashMemory[(int)(address - FLASH_BASE_ADDRESS)];
-    }
-    
-    public ushort MemoryReadHalfWord(uint address)
-    {
-        return BitConverter.ToUInt16(new ArraySegment<byte>(flashMemory, (int)(address - FLASH_BASE_ADDRESS), 2));
-    }
-
-    public Emulator(string binPath)
-    {
-        if (!BitConverter.IsLittleEndian)
-        {
-            throw new InvalidOperationException("This platform is not little endian.");
-        }
-
-        var elf = ELFReader.Load(binPath);
-        var loadableSegments = elf.Segments.OfType<Segment<UInt32>>().Where(x => x.Type == SegmentType.Load);
-        foreach (var segment in loadableSegments)
-        {
-            Console.WriteLine($"Processing segment at 0x{segment.Address:X}...");
-            long arrayOffset = (long)(segment.Address - FLASH_BASE_ADDRESS);
-            if (arrayOffset < 0 || (arrayOffset + (long)segment.Size) > flashMemory.Length)
-            {
-                Console.WriteLine($"Warning: Segment at 0x{segment.Address:X} (size 0x{segment.Size:X}) " +
-                                  $"is outside the defined flash memory range. Skipping.");
-                continue;
-            }
-
-            byte[] segmentData = segment.GetMemoryContents();
-            Array.Copy(segmentData, 0, flashMemory, arrayOffset, segmentData.Length);
-        }
-    }
-
-    public uint PC { get; set; } = FLASH_BASE_ADDRESS;
+    public uint PC { get; set; }
 
     private uint[] registers = new uint[32];
 
@@ -87,7 +27,7 @@ public class Emulator
 
     public void ExecuteInstruction()
     {
-        var instruction = MemoryRead(PC);
+        var instruction = memory.ReadWord(PC);
         Console.WriteLine($"PC: {PC.ToHex()} Instruction: {instruction.ToHex()} {instruction.ToBin()}");
         //Console.WriteLine($"registers[5] {registers[5].ToHex()}");
         
@@ -138,7 +78,7 @@ public class Emulator
                 if (format.rd != 0)
                 {
                     // Convert to sbyte and then to uint to have sign extension
-                    registers[format.rd] = (uint)(sbyte)MemoryReadByte((uint)(registers[format.rs1] + format.imm_i_signed));
+                    registers[format.rd] = (uint)(sbyte)memory.ReadByte((uint)(registers[format.rs1] + format.imm_i_signed));
                 }
                 PC = PC + 4;
                 return;
@@ -149,7 +89,7 @@ public class Emulator
                 if (format.rd != 0)
                 {
                     // Convert to short(signed) and then to uint to have sign extension
-                    registers[format.rd] = (uint)(short)MemoryReadHalfWord((uint)(registers[format.rs1] + format.imm_i_signed));
+                    registers[format.rd] = (uint)(short)memory.ReadHalfWord((uint)(registers[format.rs1] + format.imm_i_signed));
                 }
                 PC = PC + 4;
                 return;
@@ -160,7 +100,7 @@ public class Emulator
                 if (format.rd != 0)
                 {
                     // Convert to int and then to uint to have sign extension
-                    registers[format.rd] = (uint)(int)MemoryRead((uint)(registers[format.rs1] + format.imm_i_signed));
+                    registers[format.rd] = (uint)(int)memory.ReadWord((uint)(registers[format.rs1] + format.imm_i_signed));
                 }
                 PC = PC + 4;
                 return;
@@ -170,7 +110,7 @@ public class Emulator
                 Console.WriteLine("I-Type: lbu");
                 if (format.rd != 0)
                 {
-                    registers[format.rd] = MemoryReadByte((uint)(registers[format.rs1] + format.imm_i_signed));
+                    registers[format.rd] = memory.ReadByte((uint)(registers[format.rs1] + format.imm_i_signed));
                 }
                 PC = PC + 4;
                 return;
@@ -180,7 +120,7 @@ public class Emulator
                 Console.WriteLine("I-Type: lhu");
                 if (format.rd != 0)
                 {
-                    registers[format.rd] = MemoryReadHalfWord((uint)(registers[format.rs1] + format.imm_i_signed));
+                    registers[format.rd] = memory.ReadHalfWord((uint)(registers[format.rs1] + format.imm_i_signed));
                 }
                 PC = PC + 4;
                 return;
@@ -194,7 +134,7 @@ public class Emulator
             {
                 Console.WriteLine("S-Type: sb");
                 var bytes = BitConverter.GetBytes(registers[format.rs2]);
-                MemoryWriteByte((uint)(registers[format.rs1] + format.imm_s), bytes[0]);
+                memory.WriteByte((uint)(registers[format.rs1] + format.imm_s), bytes[0]);
                 PC = PC + 4;
                 return;
             }
@@ -202,14 +142,14 @@ public class Emulator
             {
                 Console.WriteLine("S-Type: sh");
                 var bytes = BitConverter.GetBytes(registers[format.rs2]).Take(2).ToArray();
-                MemoryWriteBytes((uint)(registers[format.rs1] + format.imm_s), bytes);
+                memory.Write((uint)(registers[format.rs1] + format.imm_s), bytes);
                 PC = PC + 4;
                 return;
             }
             if (format.funct3 == 0b010)
             {
                 Console.WriteLine("S-Type: sw");
-                MemoryWrite((uint)(registers[format.rs1] + format.imm_s), registers[format.rs2]);
+                memory.WriteWord((uint)(registers[format.rs1] + format.imm_s), registers[format.rs2]);
                 PC = PC + 4;
                 return;
             }

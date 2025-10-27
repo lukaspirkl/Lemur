@@ -11,4 +11,13 @@
     <PackageReference Include="ELFSharp" Version="2.17.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="Blink\KeySquareBlink.dis">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="Blink\KeySquareBlink.elf">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

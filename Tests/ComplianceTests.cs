@@ -44,22 +44,21 @@ public class ComplianceTests
     public void All(string path)
     {
         int maxSteps = 2000;
-        var m = new Memory(path, 0x80000000, 1024 * 128);
-        var e = new Emulator(m);
-
         var isRunning = true;
 
-        e.ECall += (s, a) =>
+        var m = new Memory(path, 0x80000000, 1024 * 128);
+        var e = new Emulator(m);
+        e.AddRW32I(p =>
         {
             isRunning = false;
-            Assert.Equal((uint)93, a.ServiceNumber);
-            Assert.Equal((uint)0, a.Argument);
-        };
+            Assert.Equal((uint)93, p.ServiceNumber);
+            Assert.Equal((uint)0, p.Argument);
+        });
 
         int i = 0;
         while (isRunning && i <= maxSteps)
         {
-            e.ExecuteInstruction();
+            e.Step();
             i++;
         }
 

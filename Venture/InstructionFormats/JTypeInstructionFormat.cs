@@ -2,6 +2,11 @@
 
 public class JTypeInstructionFormat : InstructionFormatBase
 {
+    public static JTypeInstructionFormat Parse(uint instruction)
+    {
+        return new JTypeInstructionFormat(instruction);
+    }
+
     public int imm_j { get; }
 
     public JTypeInstructionFormat(uint instruction)

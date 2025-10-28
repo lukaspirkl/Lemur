@@ -2,6 +2,11 @@
 
 public class STypeInstructionFormat : InstructionFormatBase
 {
+    public static STypeInstructionFormat Parse(uint instruction)
+    {
+        return new STypeInstructionFormat(instruction);
+    }
+
     public int imm_s { get; }
 
     public STypeInstructionFormat(uint instruction) 

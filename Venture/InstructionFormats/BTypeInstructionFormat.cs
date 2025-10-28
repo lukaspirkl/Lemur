@@ -2,6 +2,11 @@
 
 public class BTypeInstructionFormat : InstructionFormatBase
 {
+    public static BTypeInstructionFormat Parse(uint instruction)
+    {
+        return new BTypeInstructionFormat(instruction);
+    }
+
     public int imm_b { get; }
 
     public BTypeInstructionFormat(uint instruction)

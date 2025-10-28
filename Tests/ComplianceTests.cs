@@ -48,7 +48,7 @@ public class ComplianceTests
 
         var m = new Memory(path, 0x80000000, 1024 * 128);
         var e = new Emulator(m);
-        e.AddRW32I(p =>
+        e.AddRV32I(p =>
         {
             isRunning = false;
             Assert.Equal((uint)93, p.ServiceNumber);

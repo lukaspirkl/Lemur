@@ -6,16 +6,29 @@ public interface IEmulator
     Registers Registers { get; }
     Dictionary<ushort, uint> CSR { get; }
     uint PC { get; set; }
-    Dictionary<uint, Func<uint, bool>> Instructions { get; }
+    public void AddInstructionSet(Action<IInstructionSetBuider> factory);
 }
 
 public class Emulator : IEmulator
 {
+    private readonly InstructionSetCollection instructionSetCollection = new InstructionSetCollection();
+
     public IMemory Memory { get; }
     public Registers Registers { get; }
     public Dictionary<ushort, uint> CSR { get; } = new Dictionary<ushort, uint>();
-    public uint PC { get; set; }
-    public Dictionary<uint, Func<uint, bool>> Instructions { get; } = new();
+
+    private bool m_IsPCModified = false;
+    private uint m_PC;
+
+    public uint PC
+    {
+        get { return m_PC; }
+        set
+        {
+            m_IsPCModified = true;
+            m_PC = value;
+        }
+    }
 
     public Emulator(IMemory memory)
     {
@@ -30,21 +43,18 @@ public class Emulator : IEmulator
         Console.WriteLine($"PC: {PC.ToHex()} Instruction: {instruction.ToHex()} {instruction.ToBin()}");
         //Console.WriteLine($"registers[5] {registers[5].ToHex()}");
 
-        if (ExecuteInstruction(instruction))
+        m_IsPCModified = false;
+
+        instructionSetCollection.Execute(instruction);
+
+        if (!m_IsPCModified)
         {
             PC = PC + 4;
         }
     }
 
-    public bool ExecuteInstruction(uint instruction)
+    public void AddInstructionSet(Action<IInstructionSetBuider> factory)
     {
-        var opcode = instruction.ExtractBits(0, 7);
-
-        if (Instructions.TryGetValue(opcode, out var func))
-        {
-            return func(instruction);
-        }
-
-        throw new NotImplementedException($"Instruction {instruction.ToHex()} not implemented.");
+        factory(instructionSetCollection);
     }
 }

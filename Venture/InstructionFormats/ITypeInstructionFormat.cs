@@ -2,6 +2,11 @@
 
 public class ITypeInstructionFormat : InstructionFormatBase
 {
+    public static ITypeInstructionFormat Parse(uint instruction)
+    {
+        return new ITypeInstructionFormat(instruction);
+    }
+
     public int imm_i_signed { get; }
     public uint imm_i_unsigned { get; }
 

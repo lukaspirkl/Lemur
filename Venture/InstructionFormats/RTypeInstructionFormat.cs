@@ -2,6 +2,11 @@
 
 public class RTypeInstructionFormat : InstructionFormatBase
 {
+    public static RTypeInstructionFormat Parse(uint instruction)
+    {
+        return new RTypeInstructionFormat(instruction);
+    }
+
     public uint funct7 { get; }
 
     public RTypeInstructionFormat(uint instruction)

@@ -2,6 +2,7 @@
 
 public class InstructionFormatBase
 {
+    public uint instruction { get; }
     public uint opcode { get; }
     public uint rd { get; }
     public uint funct3 { get; }
@@ -11,6 +12,7 @@ public class InstructionFormatBase
 
     public InstructionFormatBase(uint instruction)
     {
+        this.instruction = instruction;
         opcode = instruction.ExtractBits(0, 7);
         rd = instruction.ExtractBits(7, 5);
         funct3 = instruction.ExtractBits(12, 3);

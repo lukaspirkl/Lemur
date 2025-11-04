@@ -5,7 +5,11 @@ public interface IMemory
     uint InitialPC { get; }
     void Write(uint address, byte[] data);
     ArraySegment<byte> Read(uint address, int count);
+
+    event EventHandler<MemoryWriteArgs>? OnWrite;
 }
+
+public record MemoryWriteArgs(uint Address, byte[] Data);
 
 public static class MemoryExtensions
 {

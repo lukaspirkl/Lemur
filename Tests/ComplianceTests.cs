@@ -4,34 +4,36 @@
 
 namespace Tests;
 
-public class ComplianceTestRow : ITheoryDataRow
-{
-    public bool? Explicit { get; set; }
 
-    public string? Skip { get; set; }
-
-    public string? TestDisplayName { get; set; }
-
-    public int? Timeout { get; set; }
-
-    public Dictionary<string, HashSet<string>>? Traits { get; set; }
-
-    private string path;
-
-    public ComplianceTestRow(string path)
-    {
-        TestDisplayName = path.Split('-').Last();
-        this.path = path;
-    }
-
-    public object?[] GetData()
-    {
-        return [path];
-    }
-}
 
 public class ComplianceTests
 {
+    public class ComplianceTestRow : ITheoryDataRow
+    {
+        public bool? Explicit { get; set; }
+
+        public string? Skip { get; set; }
+
+        public string? TestDisplayName { get; set; }
+
+        public int? Timeout { get; set; }
+
+        public Dictionary<string, HashSet<string>>? Traits { get; set; }
+
+        private string path;
+
+        public ComplianceTestRow(string path)
+        {
+            TestDisplayName = path.Split('-').Last();
+            this.path = path;
+        }
+
+        public object?[] GetData()
+        {
+            return [path];
+        }
+    }
+
     public static IEnumerable<ITheoryDataRow> GetData()
     {
         return Directory.EnumerateFiles("rv32ui-p")

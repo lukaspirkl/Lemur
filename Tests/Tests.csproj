@@ -18,11 +18,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference  Include="..\Venture\Venture.csproj" />
+    <ProjectReference Include="..\Venture\Venture.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <None Include="rv32ui-p\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="rv32i_m\**\*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

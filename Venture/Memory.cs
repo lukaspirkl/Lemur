@@ -1,4 +1,5 @@
 using ELFSharp.ELF;
+using ELFSharp.ELF.Sections;
 using ELFSharp.ELF.Segments;
 
 namespace Venture;
@@ -7,6 +8,12 @@ public class Memory : IMemory
 {
     private readonly uint flashStart;
     private byte[] flashMemory;
+
+    public event EventHandler<MemoryWriteArgs>? OnWrite;
+
+    public uint ToHostAddress { get; }
+
+    public Dictionary<string, uint> Symbols { get; }
 
     public Memory(string binPath, uint flashStart, uint flashSize)
     {
@@ -19,6 +26,9 @@ public class Memory : IMemory
         }
 
         var elf = ELFReader.Load(binPath);
+
+        Symbols = ((ISymbolTable)elf.GetSection(".symtab")).Entries.OfType<SymbolEntry<uint>>().GroupBy(x => x.Name).ToDictionary(x => x.Key, x => x.First().Value);
+
         var loadableSegments = elf.Segments.OfType<Segment<UInt32>>().Where(x => x.Type == SegmentType.Load);
         foreach (var segment in loadableSegments)
         {
@@ -40,6 +50,8 @@ public class Memory : IMemory
 
     public void Write(uint address, byte[] data)
     {
+        OnWrite?.Invoke(this, new MemoryWriteArgs(address, data));
+
         if (flashStart <= address && address < flashStart + flashMemory.Length)
         {
             data.CopyTo(flashMemory, (int)(address - flashStart));

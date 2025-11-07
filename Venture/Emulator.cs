@@ -61,6 +61,8 @@ public class Emulator : IEmulator
 
     private bool TryDecompress(ref uint instruction)
     {
+        const uint nop = 0b0000_0000_0000_0000_0000_0000_0001_0011;
+
         uint op = instruction.ExtractBits(0, 2);
         
         if (op == 0b11)
@@ -71,19 +73,65 @@ public class Emulator : IEmulator
         if (op == 0b01)
         {
             var f = new CIInstructionFormat(instruction);
-            if (f.funct3 == 0b000 && f.rd != 0)
+            if (f.funct3 == 0b000)
             {
-                // c.addi
-                instruction = 0b0010011;
+                if (f.rd == 0)
+                {
+                    // Reserved for hints - no-op
+                    instruction = nop;
+                    return true;
+                }
+
+                // C.ADDI
+                // TODO: verify
+                instruction = 0b001_0011;
                 instruction |= f.rd << 7;
                 instruction |= f.rd << 15;
                 instruction |= (uint)f.imm << 20;
                 return true;
             }
+            if (f.funct3 == 0b010)
+            {
+                if (f.rd == 0)
+                {
+                    // Reserved for hints - no-op
+                    instruction = nop;
+                    return true;
+                }
+
+                // C.LI
+                instruction = 0b001_0011;
+                instruction |= f.rd << 7;
+                instruction |= (uint)f.imm << 20;
+                return true;
+            }
+            if (f.funct3 == 0b011)
+            {
+                if (f.rd == 0)
+                {
+                    // Reserved for hints - no-op
+                    // TODO: implement
+                    instruction = nop;
+                    return true;
+                }
+                if (f.rd == 2)
+                {
+                    // C.ADDI16SP
+                    instruction = nop;
+                    return true;
+                }
+
+                // C.LUI
+                // TODO: verify
+                instruction = 0b011_0111;
+                instruction |= f.rd << 7;
+                instruction |= (uint)f.imm << 12;
+                return true;
+            }
             if ((ushort)instruction == 0b0000_0000_0000_0001)
             {
-                // c.nop
-                instruction = 0b0000_0000_0000_0000_0000_0000_0001_0011;
+                // C.NOP
+                instruction = nop;
                 return true;
             }
         }

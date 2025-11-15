@@ -1,4 +1,5 @@
 ﻿using Venture;
+using Venture.Processor;
 
 namespace Tests;
 
@@ -58,9 +59,13 @@ public class TestsFromRiscof
                 isRunning = false;
             }
         };
-        
-        var e = new Emulator(m);
-        e.AddRV32I();
+
+        var e = new Processor(m);
+
+        e.EBreak += (s, a) =>
+        {
+            isRunning = false;
+        };
 
         int i = 0;
         while (isRunning && i <= maxSteps)

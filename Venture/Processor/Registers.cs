@@ -1,4 +1,4 @@
-namespace Venture;
+namespace Venture.Processor;
 
 public class Registers
 {

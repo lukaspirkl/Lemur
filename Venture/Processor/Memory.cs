@@ -2,7 +2,7 @@ using ELFSharp.ELF;
 using ELFSharp.ELF.Sections;
 using ELFSharp.ELF.Segments;
 
-namespace Venture;
+namespace Venture.Processor;
 
 public class Memory : IMemory
 {

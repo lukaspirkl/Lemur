@@ -1,4 +1,4 @@
-﻿using Venture;
+﻿using Venture.Processor;
 
 [assembly: CaptureConsole]
 
@@ -49,13 +49,15 @@ public class ComplianceTests
         var isRunning = true;
 
         var m = new Memory(path, 0x80000000, 1024 * 128);
-        var e = new Emulator(m);
-        e.AddRV32I(p =>
+
+        var e = new Processor(m);
+
+        e.ECall += (s, a) =>
         {
             isRunning = false;
-            Assert.Equal((uint)93, p.ServiceNumber);
-            Assert.Equal((uint)0, p.Argument);
-        });
+            Assert.Equal((uint)93, a.ServiceNumber);
+            Assert.Equal((uint)0, a.Argument);
+        };
 
         int i = 0;
         while (isRunning && i <= maxSteps)

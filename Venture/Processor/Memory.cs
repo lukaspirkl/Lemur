@@ -50,6 +50,8 @@ public class Memory : IMemory
 
     public void Write(uint address, byte[] data)
     {
+        Console.WriteLine($"mem[{address.ToHex()}] <- {data.ToHex()}");
+
         OnWrite?.Invoke(this, new MemoryWriteArgs(address, data));
 
         if (flashStart <= address && address < flashStart + flashMemory.Length)

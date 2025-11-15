@@ -21,7 +21,9 @@ public class Registers
             {
                 return;
             }
-            
+
+            Console.WriteLine($"x{index} <- {value.ToHex()}");
+
             data[index] = value;
         }
     }

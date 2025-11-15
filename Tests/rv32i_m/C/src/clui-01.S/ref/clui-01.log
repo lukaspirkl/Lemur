@@ -648,9 +648,15 @@ mem[X,0x80000192] -> 0x7DFD
 x27 <- 0xFFFFF000
 
 
+
+
+
 mem[X,0x80000194] -> 0xC46E
 [109] [M]: 0x80000194 (0xC46E) c.swsp s11, 2
 mem[0x8000311C] <- 0xFFFFF000
+
+
+
 
 
 mem[X,0x80000196] -> 0x5BF9

@@ -15,20 +15,18 @@ public class CSFormatFactory : CFormatFactoryBase
         var rs1 = instruction.ExtractBits(7, 3) + 8;
         var rs2 = instruction.ExtractBits(2, 3) + 8;
 
-        uint uimm = 0;
-        uimm |= (instruction >> 12 & 0x1) << 5;
-        uimm |= (instruction >> 6 & 0x1) << 4;
-        uimm |= (instruction >> 5 & 0x1) << 3;
-        uimm |= (instruction >> 11 & 0x1) << 2;
-        uimm |= (instruction >> 10 & 0x1) << 1;
-        uimm |= 0;               // implicit low bit
-        var offset = uimm << 2;  // because C.SW uses word offset
-
         switch (funct3)
         {
             case 0b110:
                 // C.SW -> sw rs2, offset(rs1)
-                // TODO: Verify
+
+                uint offset = 0;
+                offset |= (instruction >> 5 & 0x1) << 6;
+                offset |= (instruction >> 12 & 0x1) << 5;
+                offset |= (instruction >> 11 & 0x1) << 4;
+                offset |= (instruction >> 10 & 0x1) << 3;
+                offset |= (instruction >> 6 & 0x1) << 2;
+
                 return new SFormat
                 {
                     Mnemonic = SFormat.sw,

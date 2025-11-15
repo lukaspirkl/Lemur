@@ -26,7 +26,6 @@ public class CIFormatFactory : CFormatFactoryBase
                 if (rd != 0 && imm != 0)
                 {
                     // C.ADDI -> addi rd, rd, imm
-                    // TODO: verify
                     return new IFormat
                     {
                         Mnemonic = IFormat.addi,
@@ -78,12 +77,11 @@ public class CIFormatFactory : CFormatFactoryBase
                 }
 
                 // C.LUI -> lui rd, imm
-                // TODO: verify
                 return new UFormat
                 {
                     Mnemonic = UFormat.lui,
                     rd = rd,
-                    imm = (uint)imm,
+                    imm = (uint)imm << 12,
                     StepSize = 2,
                 };
 

@@ -82,7 +82,7 @@ public class TestsFromRiscof
         foreach (var line in signature)
         {
             var sigByte = m.ReadWord(sigAddress).ToHex();
-            Assert.Equal($"0x{line}", sigByte);
+            Assert.Equal($"0x{line.ToUpper()}", sigByte);
             sigAddress += 4;
         }
     }

@@ -9,7 +9,13 @@ public static class UInt32Extensions
 
     public static string ToHex(this uint value, int padLeft = 8)
     {
-        return $"0x{Convert.ToString(value, 16).PadLeft(padLeft, '0')}";
+        return $"0x{Convert.ToString(value, 16).PadLeft(padLeft, '0').ToUpper()}";
+    }
+
+    public static string ToHex(this byte[] data)
+    {
+        var s = string.Join("", data.Select(x => Convert.ToString(x, 16).PadLeft(2, '0')).Reverse()).ToUpper();
+        return $"0x{s}";
     }
 
     public static uint ExtractBits(this uint instruction, int startBit, int length)

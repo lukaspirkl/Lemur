@@ -43,7 +43,7 @@ public class Memory : IMemory
             long flashOffset = segment.Address - flashStart;
             if (flashOffset >= 0 && (flashOffset + segment.Size) <= flashMemory.Length)
             {
-                Console.Write("Segment is written to flash");
+                Console.WriteLine("Segment is written to flash");
                 byte[] segmentData = segment.GetMemoryContents();
                 Array.Copy(segmentData, 0, flashMemory, flashOffset, segmentData.Length);
                 continue;
@@ -52,7 +52,7 @@ public class Memory : IMemory
             long ramOffset = segment.Address - ramStart;
             if (ramOffset >= 0 && (ramOffset + segment.Size) <= ramMemory.Length)
             {
-                Console.Write("Segment is written to ram");
+                Console.WriteLine("Segment is written to ram");
                 byte[] segmentData = segment.GetMemoryContents();
                 Array.Copy(segmentData, 0, ramMemory, ramOffset, segmentData.Length);
                 continue;
@@ -77,6 +77,12 @@ public class Memory : IMemory
             return;
         }
 
+        if (ramStart <= address && address < ramStart + ramMemory.Length)
+        {
+            data.CopyTo(ramMemory, (int)(address - ramStart));
+            return;
+        }
+
         throw new IndexOutOfRangeException($"Writing to invalid memory: {address.ToHex()}");
     }
 
@@ -85,6 +91,11 @@ public class Memory : IMemory
         if (flashStart <= address && address < flashStart + flashMemory.Length)
         {
             return new ArraySegment<byte>(flashMemory, (int)(address - flashStart), count);
+        }
+
+        if (ramStart <= address && address < ramStart + ramMemory.Length)
+        {
+            return new ArraySegment<byte>(ramMemory, (int)(address - ramStart), count);
         }
 
         throw new IndexOutOfRangeException($"Reading invalid memory: {address.ToHex()}");

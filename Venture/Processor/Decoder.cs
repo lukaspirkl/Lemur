@@ -21,15 +21,18 @@ public class Decoder : IDecoder
 
     public FormatBase Decode(uint instruction)
     {
+
         var opcode = instruction.ExtractBits(0, 7);
         foreach (var factory in formatFactories)
         {
             if (factory.ForOpcodes.Contains(opcode))
             {
-                return factory.Decode(instruction);
+                var format = factory.Decode(instruction);
+                Console.WriteLine($"Instruction: {instruction.ToHex()} - {format.Mnemonic}");
+                return format;
             }
         }
 
-        throw new NotImplementedException($"Unknown instruction format for opcode {opcode.ToBin(7)}");
+        throw new NotImplementedException($"Unknown instruction format for opcode {opcode.ToBin(7)} (instruction {instruction.ToHex()})");
     }
 }

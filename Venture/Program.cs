@@ -13,7 +13,9 @@ internal class Program
         var e = new Processor.Processor(m);
 
         // Start from the main - TODO: figure out how to get there and where I should really start
-        //e.PC = 0x10000124;
+        e.PC = 0x10000036;
+
+        //e.CSR[0xbe5] = 0x00008000;
 
         while (isRunning)
         {

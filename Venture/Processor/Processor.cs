@@ -58,9 +58,10 @@ public class Processor : IProcessor
 
     public void Step()
     {
+        Console.WriteLine($"");
+        Console.WriteLine($"PC: {PC.ToHex()}");
+
         var instruction = Memory.ReadWord(PC);
-        Console.WriteLine($"PC: {PC.ToHex()} Instruction: {instruction.ToHex()} {instruction.ToBin()}");
-        //Console.WriteLine($"registers[5] {registers[5].ToHex()}");
 
         var format = decoder.Decode(instruction);
         

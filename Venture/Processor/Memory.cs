@@ -12,13 +12,16 @@ public class Memory : IMemory
     private readonly uint ramStart;
     private byte[] ramMemory;
 
+    private readonly uint romStart;
+    private byte[] romMemory;
+
     public event EventHandler<MemoryWriteArgs>? OnWrite;
 
     public uint ToHostAddress { get; }
 
-    public Dictionary<string, uint> Symbols { get; }
+    public Dictionary<string, uint> Symbols { get; } = new Dictionary<string, uint>();
 
-    public Memory(string binPath, uint flashStart, uint flashSize, uint ramStart = 0, uint ramSize = 0)
+    public Memory(string[] elfPaths, uint flashStart, uint flashSize, uint ramStart = 0, uint ramSize = 0, uint romStart = 0, uint romSize = 0)
     {
         this.flashStart = flashStart;
         this.flashMemory = new byte[flashSize];
@@ -26,40 +29,57 @@ public class Memory : IMemory
         this.ramStart = ramStart;
         this.ramMemory = new byte[ramSize];
 
+        this.romStart = romStart;
+        this.romMemory = new byte[romSize];
+
         if (!BitConverter.IsLittleEndian)
         {
             throw new InvalidOperationException("This platform is not little endian.");
         }
 
-        var elf = ELFReader.Load(binPath);
-
-        Symbols = ((ISymbolTable)elf.GetSection(".symtab")).Entries.OfType<SymbolEntry<uint>>().GroupBy(x => x.Name).ToDictionary(x => x.Key, x => x.First().Value);
-
-        var loadableSegments = elf.Segments.OfType<Segment<UInt32>>().Where(x => x.Type == SegmentType.Load);
-        foreach (var segment in loadableSegments)
+        foreach (var elfPath in elfPaths)
         {
-            Console.WriteLine($"Processing segment at 0x{segment.Address:X}...");
-            
-            long flashOffset = segment.Address - flashStart;
-            if (flashOffset >= 0 && (flashOffset + segment.Size) <= flashMemory.Length)
-            {
-                Console.WriteLine("Segment is written to flash");
-                byte[] segmentData = segment.GetMemoryContents();
-                Array.Copy(segmentData, 0, flashMemory, flashOffset, segmentData.Length);
-                continue;
-            }
+            Console.WriteLine($"Loading {elfPath}");
 
-            long ramOffset = segment.Address - ramStart;
-            if (ramOffset >= 0 && (ramOffset + segment.Size) <= ramMemory.Length)
-            {
-                Console.WriteLine("Segment is written to ram");
-                byte[] segmentData = segment.GetMemoryContents();
-                Array.Copy(segmentData, 0, ramMemory, ramOffset, segmentData.Length);
-                continue;
-            }
+            var elf = ELFReader.Load(elfPath);
 
-            Console.WriteLine($"Warning: Segment at 0x{segment.Address:X} (size 0x{segment.Size:X}) " +
-                                $"is outside the defined flash memory range. Skipping.");
+            Symbols = ((ISymbolTable)elf.GetSection(".symtab")).Entries.OfType<SymbolEntry<uint>>().GroupBy(x => x.Name).ToDictionary(x => x.Key, x => x.First().Value);
+
+            var loadableSegments = elf.Segments.OfType<Segment<UInt32>>().Where(x => x.Type == SegmentType.Load);
+            foreach (var segment in loadableSegments)
+            {
+                Console.WriteLine($"Processing segment at 0x{segment.Address:X}...");
+
+                long flashOffset = segment.Address - flashStart;
+                if (flashOffset >= 0 && (flashOffset + segment.Size) <= flashMemory.Length)
+                {
+                    Console.WriteLine("Segment is written to flash");
+                    byte[] segmentData = segment.GetMemoryContents();
+                    Array.Copy(segmentData, 0, flashMemory, flashOffset, segmentData.Length);
+                    continue;
+                }
+
+                long ramOffset = segment.Address - ramStart;
+                if (ramOffset >= 0 && (ramOffset + segment.Size) <= ramMemory.Length)
+                {
+                    Console.WriteLine("Segment is written to ram");
+                    byte[] segmentData = segment.GetMemoryContents();
+                    Array.Copy(segmentData, 0, ramMemory, ramOffset, segmentData.Length);
+                    continue;
+                }
+
+                long romOffset = segment.Address - romStart;
+                if (romOffset >= 0 && (romOffset + segment.Size) <= romMemory.Length)
+                {
+                    Console.WriteLine("Segment is written to rom");
+                    byte[] segmentData = segment.GetMemoryContents();
+                    Array.Copy(segmentData, 0, romMemory, romOffset, segmentData.Length);
+                    continue;
+                }
+
+                Console.WriteLine($"Warning: Segment at 0x{segment.Address:X} (size 0x{segment.Size:X}) " +
+                                    $"is outside the defined flash memory range. Skipping.");
+            }
         }
     }
 
@@ -96,6 +116,11 @@ public class Memory : IMemory
         if (ramStart <= address && address < ramStart + ramMemory.Length)
         {
             return new ArraySegment<byte>(ramMemory, (int)(address - ramStart), count);
+        }
+
+        if (romStart <= address && address < romStart + romMemory.Length)
+        {
+            return new ArraySegment<byte>(romMemory, (int)(address - romStart), count);
         }
 
         throw new IndexOutOfRangeException($"Reading invalid memory: {address.ToHex()}");

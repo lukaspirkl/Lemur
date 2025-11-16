@@ -48,7 +48,7 @@ public class ComplianceTests
         int maxSteps = 2000;
         var isRunning = true;
 
-        var m = new Memory(path, 0x80000000, 1024 * 128);
+        var m = new Memory([path], 0x80000000, 1024 * 128);
 
         var e = new Processor(m);
 

@@ -1,10 +1,13 @@
+using System.Net;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
 namespace Venture.Processor;
 
 public interface IProcessor
 {
     IMemory Memory { get; }
     Registers Registers { get; }
-    Dictionary<ushort, uint> CSR { get; }
+    CSR CSR { get; }
     uint PC { get; set; }
 
     event EventHandler? EBreak;
@@ -20,7 +23,7 @@ public class Processor : IProcessor
 
     public IMemory Memory { get; }
     public Registers Registers { get; }
-    public Dictionary<ushort, uint> CSR { get; } = new Dictionary<ushort, uint>();
+    public CSR CSR { get; } = new CSR();
 
     private bool m_IsPCModified = false;
     private uint m_PC;

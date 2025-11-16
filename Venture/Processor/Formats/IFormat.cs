@@ -241,30 +241,30 @@ public class IFormat : FormatBase
                 return;
 
             case csrrw:
-                x[rd] = e.CSR.GetValueOrDefault((ushort)imm, (uint)0);
-                e.CSR[(ushort)imm] = x[rs1];
+                x[rd] = e.CSR.Get((ushort)imm);
+                e.CSR.Set((ushort)imm, x[rs1]);
                 return;
 
             case csrrs:
-                uint original_csr_value = e.CSR.GetValueOrDefault((ushort)imm, (uint)0);
+                uint original_csr_value = e.CSR.Get((ushort)imm);
 
                 if (rs1 != 0)
                 {
                     uint rs1_mask = x[rs1];
                     uint new_csr_value = original_csr_value | rs1_mask;
-                    e.CSR[(ushort)imm] = new_csr_value;
+                    e.CSR.Set((ushort)imm, new_csr_value);
                 }
 
                 x[rd] = original_csr_value;
                 return;
 
             case csrrwi:
-                x[rd] = e.CSR.GetValueOrDefault((ushort)imm, (uint)0);
-                e.CSR[(ushort)imm] = (uint)imm;
+                x[rd] = e.CSR.Get((ushort)imm);
+                e.CSR.Set((ushort)imm, (uint)imm);
                 return;
 
             case mret:
-                e.PC = e.CSR[0x341];
+                e.PC = e.CSR.Get(0x341);
                 return;
 
             case ecall:

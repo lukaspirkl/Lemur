@@ -47,7 +47,7 @@ public class TestsFromRiscof
         int maxSteps = 10_000;
         var isRunning = true;
 
-        var m = new Memory(path, 0x80000000, 1024 * 1024 * 5);
+        var m = new Memory([path], 0x80000000, 1024 * 1024 * 5);
 
         m.OnWrite += (s, a) =>
         {

@@ -9,16 +9,22 @@ public class Memory : IMemory
     private readonly uint flashStart;
     private byte[] flashMemory;
 
+    private readonly uint ramStart;
+    private byte[] ramMemory;
+
     public event EventHandler<MemoryWriteArgs>? OnWrite;
 
     public uint ToHostAddress { get; }
 
     public Dictionary<string, uint> Symbols { get; }
 
-    public Memory(string binPath, uint flashStart, uint flashSize)
+    public Memory(string binPath, uint flashStart, uint flashSize, uint ramStart = 0, uint ramSize = 0)
     {
         this.flashStart = flashStart;
         this.flashMemory = new byte[flashSize];
+
+        this.ramStart = ramStart;
+        this.ramMemory = new byte[ramSize];
 
         if (!BitConverter.IsLittleEndian)
         {
@@ -33,16 +39,27 @@ public class Memory : IMemory
         foreach (var segment in loadableSegments)
         {
             Console.WriteLine($"Processing segment at 0x{segment.Address:X}...");
-            long arrayOffset = (long)(segment.Address - flashStart);
-            if (arrayOffset < 0 || (arrayOffset + (long)segment.Size) > flashMemory.Length)
+            
+            long flashOffset = segment.Address - flashStart;
+            if (flashOffset >= 0 && (flashOffset + segment.Size) <= flashMemory.Length)
             {
-                Console.WriteLine($"Warning: Segment at 0x{segment.Address:X} (size 0x{segment.Size:X}) " +
-                                  $"is outside the defined flash memory range. Skipping.");
+                Console.Write("Segment is written to flash");
+                byte[] segmentData = segment.GetMemoryContents();
+                Array.Copy(segmentData, 0, flashMemory, flashOffset, segmentData.Length);
                 continue;
             }
 
-            byte[] segmentData = segment.GetMemoryContents();
-            Array.Copy(segmentData, 0, flashMemory, arrayOffset, segmentData.Length);
+            long ramOffset = segment.Address - ramStart;
+            if (ramOffset >= 0 && (ramOffset + segment.Size) <= ramMemory.Length)
+            {
+                Console.Write("Segment is written to ram");
+                byte[] segmentData = segment.GetMemoryContents();
+                Array.Copy(segmentData, 0, ramMemory, ramOffset, segmentData.Length);
+                continue;
+            }
+
+            Console.WriteLine($"Warning: Segment at 0x{segment.Address:X} (size 0x{segment.Size:X}) " +
+                                $"is outside the defined flash memory range. Skipping.");
         }
     }
 

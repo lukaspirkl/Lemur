@@ -16,7 +16,12 @@ public class CDecoder : IDecoder
         [
             new CIFormatFactory(),
             new CSFormatFactory(),
+            new CLFormatFactory(),
             new CSSFormatFactory(),
+            new CRFormatFactory(),
+            new CAFormatFactory(),
+            new CBFormatFactory(),
+            new CJFormatFactory(),
         ];
     }
 
@@ -24,6 +29,7 @@ public class CDecoder : IDecoder
     {
         uint op = instruction.ExtractBits(0, 2);
 
+        // Instruction is not compressed
         if (op == 0b11)
         {
             return innerDecoder.Decode(instruction);
@@ -36,9 +42,13 @@ public class CDecoder : IDecoder
         var funct3 = instruction.ExtractBits(13, 3);
         foreach (var factory in formatFactories)
         {
-            if (factory.ForQuadrant == quadrant && factory.ForFunct3.Contains(funct3))
+            if (factory.ForQuadrant.Contains(quadrant) && factory.ForFunct3.Contains(funct3))
             {
-                return factory.Decode(funct3, instruction);
+                var format = factory.Decode(funct3, instruction);
+                if (format != null)
+                {
+                    return format;
+                }
             }
         }
 

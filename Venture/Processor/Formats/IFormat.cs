@@ -180,7 +180,7 @@ public class IFormat : FormatBase
         {
             case jalr:
                 uint targetAddress = (uint)((int)x[rs1] + imm);
-                x[rd] = e.PC + 4;
+                x[rd] = e.PC + StepSize;
                 e.PC = targetAddress & 0b11111111_11111111_11111111_11111110;
                 return;
 

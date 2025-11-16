@@ -4,10 +4,10 @@ namespace Venture.Processor.CFormats;
 
 public abstract class CFormatFactoryBase
 {
-    public abstract uint ForQuadrant { get; }
+    public abstract uint[] ForQuadrant { get; }
     public abstract uint[] ForFunct3 { get; }
 
-    public abstract FormatBase Decode(uint funct3, uint instruction);
+    public abstract FormatBase? Decode(uint funct3, uint instruction);
 
     protected readonly IFormat nop = new IFormat
     {

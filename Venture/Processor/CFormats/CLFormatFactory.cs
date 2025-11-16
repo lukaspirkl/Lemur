@@ -3,21 +3,21 @@ using Venture.Processor.Formats;
 
 namespace Venture.Processor.CFormats;
 
-public class CSFormatFactory : CFormatFactoryBase
+public class CLFormatFactory : CFormatFactoryBase
 {
     public override uint[] ForQuadrant => [0b00];
 
-    public override uint[] ForFunct3 => [0b110];
+    public override uint[] ForFunct3 => [0b010];
 
     public override FormatBase? Decode(uint funct3, uint instruction)
     {
         var rs1 = instruction.ExtractBits(7, 3) + 8;
-        var rs2 = instruction.ExtractBits(2, 3) + 8;
+        var rd = instruction.ExtractBits(2, 3) + 8;
 
         switch (funct3)
         {
-            case 0b110:
-                // C.SW -> sw rs2′, offset(rs1′)
+            case 0b010:
+                // C.LW -> lw rd′, offset(rs1′)
 
                 uint offset = 0;
                 offset |= (instruction >> 5 & 0x1) << 6;
@@ -26,11 +26,11 @@ public class CSFormatFactory : CFormatFactoryBase
                 offset |= (instruction >> 10 & 0x1) << 3;
                 offset |= (instruction >> 6 & 0x1) << 2;
 
-                return new SFormat
+                return new IFormat
                 {
-                    Mnemonic = SFormat.sw,
+                    Mnemonic = IFormat.lw,
                     imm = (int)offset,
-                    rs2 = rs2,
+                    rd = rd,
                     rs1 = rs1,
                     StepSize = 2,
                 };

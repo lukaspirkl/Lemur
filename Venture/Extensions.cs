@@ -1,6 +1,6 @@
 namespace Venture;
 
-public static class UInt32Extensions
+public static class Extensions
 {
     public static string ToBin(this uint value, int padLeft = 32)
     {
@@ -33,5 +33,23 @@ public static class UInt32Extensions
         uint extractedValue = shifted & mask;
 
         return extractedValue;
+    }
+
+    /// <summary>
+    /// Sign-extends an integer value from a specific bit width.
+    /// Assumes the value is in the lower bits and the sign bit
+    /// is at (bitWidth - 1).
+    /// </summary>
+    /// <param name="value">The integer to sign-extend.</param>
+    /// <param name="bitWidth">The original number of bits (e.g., 12 for your offset).</param>
+    /// <returns>The 32-bit sign-extended integer.</returns>
+    public static int SignExtend(this int value, int bitWidth)
+    {
+        // 32 is the total bits in an 'int'
+        int shiftAmount = 32 - bitWidth;
+
+        // Shift the value left to align its sign bit with the 'int' sign bit,
+        // then arithmetic shift right to perform the sign extension.
+        return (value << shiftAmount) >> shiftAmount;
     }
 }

@@ -5,15 +5,13 @@ namespace Venture.Processor.CFormats;
 
 public class CSSFormatFactory : CFormatFactoryBase
 {
-    public override uint ForQuadrant => 0b10;
+    public override uint[] ForQuadrant => [0b10];
 
     public override uint[] ForFunct3 => [0b110];
 
-    public override FormatBase Decode(uint funct3, uint instruction)
+    public override FormatBase? Decode(uint funct3, uint instruction)
     {
         var rs2 = instruction.ExtractBits(2, 5);
-
-        
 
         switch (funct3)
         {
@@ -38,6 +36,6 @@ public class CSSFormatFactory : CFormatFactoryBase
                 };
         }
 
-        throw new NotImplementedException($"Unknown funct3:{funct3.ToBin(3)} in CSSFormat. Instruction: {instruction.ToHex(4)}");
+        return null;
     }
 }

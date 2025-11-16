@@ -44,7 +44,7 @@ public class JFormat : FormatBase
     {
         var x = e.Registers;
 
-        x[rd] = e.PC + 4;
+        x[rd] = e.PC + StepSize;
         e.PC = (uint)(e.PC + imm);
     }
 }

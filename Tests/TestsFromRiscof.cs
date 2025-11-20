@@ -34,8 +34,7 @@ public class TestsFromRiscof
 
     public static IEnumerable<ITheoryDataRow> GetData()
     {
-        //"rv32i_m\\C\\add-01.S\\ref\\ref.elf"
-        return Directory.EnumerateFiles("rv32i_m", "ref.elf", SearchOption.AllDirectories).Order()
+        return Directory.EnumerateFiles("rv32i_m", "my.elf", SearchOption.AllDirectories).Order()
             .Select(x => new ComplianceTestRow(x));
     }
 
@@ -76,7 +75,7 @@ public class TestsFromRiscof
 
         Assert.True(i <= maxSteps);
 
-        var signature = File.ReadAllLines(path.Replace("ref.elf", "Reference-sail_c_simulator.signature"));
+        var signature = File.ReadAllLines(path.Replace("my.elf", "Reference-spike.signature"));
 
         var sigAddress = m.Symbols["begin_signature"];
         foreach (var line in signature)

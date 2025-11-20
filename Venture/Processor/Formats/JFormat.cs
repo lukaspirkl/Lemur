@@ -4,7 +4,7 @@ public class JFormatFactory : FormatFactoryBase
 {
     public override uint[] ForOpcodes => [0b1101111];
 
-    public override FormatBase Decode(uint instruction)
+    public override FormatBase? Decode(uint instruction)
     {
         var opcode = GetOpcode(instruction);
 

@@ -4,7 +4,7 @@ public class IFormatFactory : FormatFactoryBase
 {
     public override uint[] ForOpcodes => [0b1100111, 0b0000011, 0b0010011, 0b1110011, 0b0001111];
 
-    public override FormatBase Decode(uint instruction)
+    public override FormatBase? Decode(uint instruction)
     {
         var opcode = GetOpcode(instruction);
         var funct3 = instruction.ExtractBits(12, 3);
@@ -126,7 +126,7 @@ public class IFormatFactory : FormatFactoryBase
 
         if (mnemonic == "")
         {
-            throw new NotImplementedException($"Unknown opcode:{opcode.ToBin(7)} funct3:{funct3.ToBin(3)} funct7:{funct7.ToBin(7)} in IFormat. Instruction: {instruction.ToHex()}");
+            return null;
         }
 
         return new IFormat

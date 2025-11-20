@@ -6,7 +6,7 @@ public class SFormatFactory : FormatFactoryBase
 {
     public override uint[] ForOpcodes => [0b0100011];
 
-    public override FormatBase Decode(uint instruction)
+    public override FormatBase? Decode(uint instruction)
     {
         var opcode = GetOpcode(instruction);
         var funct3 = instruction.ExtractBits(12, 3);
@@ -28,7 +28,7 @@ public class SFormatFactory : FormatFactoryBase
 
         if (mnemonic == "")
         {
-            throw new NotImplementedException($"Unknown opcode:{opcode.ToBin(7)} funct3:{funct3.ToBin(3)} in SFormat. Instruction: {instruction.ToHex()}");
+            return null;
         }
 
         var rd = instruction.ExtractBits(7, 5);

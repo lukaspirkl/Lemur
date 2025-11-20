@@ -6,7 +6,7 @@ public class BFormatFactory : FormatFactoryBase
 {
     public override uint[] ForOpcodes => [0b1100011];
 
-    public override FormatBase Decode(uint instruction)
+    public override FormatBase? Decode(uint instruction)
     {
         var opcode = GetOpcode(instruction);
         var funct3 = instruction.ExtractBits(12, 3);
@@ -37,7 +37,7 @@ public class BFormatFactory : FormatFactoryBase
 
         if (mnemonic == "")
         {
-            throw new NotImplementedException($"Unknown opcode:{opcode.ToBin(7)} funct3:{funct3.ToBin(3)} in BFormat. Instruction: {instruction.ToHex()}");
+            return null;
         }
 
         // R-Type and I-Type fields are extracted by the base class:

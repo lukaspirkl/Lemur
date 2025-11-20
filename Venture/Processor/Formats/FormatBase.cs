@@ -4,7 +4,7 @@ public abstract class FormatFactoryBase
 {
     public abstract uint[] ForOpcodes { get; }
 
-    public abstract FormatBase Decode(uint instruction);
+    public abstract FormatBase? Decode(uint instruction);
 
     protected uint GetOpcode(uint instruction)
     {

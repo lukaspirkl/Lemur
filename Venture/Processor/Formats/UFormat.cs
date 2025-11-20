@@ -4,7 +4,7 @@ public class UFormatFactory : FormatFactoryBase
 {
     public override uint[] ForOpcodes => [0b0110111, 0b0010111];
 
-    public override FormatBase Decode(uint instruction)
+    public override FormatBase? Decode(uint instruction)
     {
         var opcode = GetOpcode(instruction);
 

@@ -16,6 +16,7 @@ public class Decoder : IDecoder
             new RFormatFactory(),
             new SFormatFactory(),
             new IFormatFactory(),
+            new BExtensionFormatFactory(),
         ];
     }
 
@@ -28,8 +29,11 @@ public class Decoder : IDecoder
             if (factory.ForOpcodes.Contains(opcode))
             {
                 var format = factory.Decode(instruction);
-                Console.WriteLine($"Instruction: {instruction.ToHex()} - {format.Mnemonic}");
-                return format;
+                if (format != null)
+                {
+                    Console.WriteLine($"Instruction: {instruction.ToHex()} - {format.Mnemonic}");
+                    return format;
+                }
             }
         }
 

@@ -4,7 +4,7 @@ public class RFormatFactory : FormatFactoryBase
 {
     public override uint[] ForOpcodes => [0b0110011];
 
-    public override FormatBase Decode(uint instruction)
+    public override FormatBase? Decode(uint instruction)
     {
         var opcode = GetOpcode(instruction);
 
@@ -90,7 +90,7 @@ public class RFormatFactory : FormatFactoryBase
 
         if (mnemonic == "")
         {
-            throw new NotImplementedException($"Unknown opcode:{opcode.ToBin(7)} funct3:{funct3.ToBin(3)} funct7:{funct7.ToBin(7)} in RFormat. Instruction: {instruction.ToHex()}");
+            return null;
         }
 
         return new RFormat

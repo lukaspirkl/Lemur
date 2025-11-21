@@ -51,7 +51,7 @@ public class CIFormatFactory : CFormatFactoryBase
                 }
                 else
                 {
-                    throw new NotImplementedException("reserved");
+                    return null; // reserved
                 }
         }
 

@@ -74,9 +74,9 @@ public class CAFormatFactory : CFormatFactoryBase
                     case 0b01:
                         throw new NotImplementedException("C.ADDW");
                     case 0b10:
-                        throw new NotImplementedException("reserved");
+                        return null; // reserved
                     case 0b11:
-                        throw new NotImplementedException("reserved");
+                        return null; // reserved
                 }
 
                 return null;

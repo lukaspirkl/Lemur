@@ -17,6 +17,7 @@ public class Decoder : IDecoder
             new SFormatFactory(),
             new IFormatFactory(),
             new BExtensionFormatFactory(),
+            new MExtensionFormatFactory(),
         ];
     }
 

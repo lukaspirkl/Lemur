@@ -56,7 +56,16 @@ public class CRFormatFactory : CFormatFactoryBase
             case 0b1001:
                 if (rs1 == 0 && rs2 == 0)
                 {
-                    throw new NotImplementedException("C.EBREAK");
+                    // C.EBREAK
+                    //throw new NotImplementedException("C.EBREAK");
+                    return new IFormat
+                    {
+                        Mnemonic = IFormat.ebreak,
+                        rd = 0,
+                        imm = 0,
+                        rs1 = 0,
+                        StepSize = 2,
+                    };
                 }
 
                 if (rs1 != 0 && rs2 == 0)

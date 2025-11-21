@@ -46,12 +46,15 @@ public class TestsFromRiscof
         int maxSteps = 10_000;
         var isRunning = true;
 
-        var m = new Memory([path], 0x80000000, 1024 * 1024 * 5);
+        var ram = new ReadWriteMemory("ram", 0x80000000, 1024 * 1024 * 5);
+        ram.Load(path);
 
-        m.OnWrite += (s, a) =>
+        var m = new Memory([ram]);
+
+        ram.OnWrite += (s, a) =>
         {
             // ToHost address
-            if (a.Address == m.Symbols["tohost"])
+            if (a.Address == ram.Symbols["tohost"])
             {
                 var data = BitConverter.ToUInt32(a.Data);
                 Assert.Equal((uint)1, data);
@@ -77,7 +80,7 @@ public class TestsFromRiscof
 
         var signature = File.ReadAllLines(path.Replace("my.elf", "Reference-spike.signature"));
 
-        var sigAddress = m.Symbols["begin_signature"];
+        var sigAddress = ram.Symbols["begin_signature"];
         foreach (var line in signature)
         {
             var sigByte = m.ReadWord(sigAddress).ToHex();

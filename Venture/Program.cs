@@ -18,16 +18,17 @@ internal class Program
         var flash = new ReadWriteMemory("flash", 0x10000000, 1024 * 1024 * 2); // 2MB
         flash.Load(@"Blink\KeySquareBlink.elf");
 
-        // Chapter 7. Resets
-        var reset = new ResetRegister();
-        var atomic_set = new ReadWriteMemory("atomic set", 0x40022000, 0xFFF);
-        var atomic_clear = new ReadWriteMemory("atomic clear", 0x40023000, 0xFFF);
-
-        // 9.11.2 IO - QSPI Bank
-        var qspi_bank = new ReadWriteMemory("reset", 0x40030000, 0x23C);
-
-
-        var m = new Memory([bootRom, bootRam, ram, flash, reset, atomic_set, atomic_clear, qspi_bank]);
+        var m = new Memory([
+            bootRom,
+            bootRam, 
+            ram, 
+            flash,
+            new ResetRegister(),  // Chapter 7. Resets
+            new Peripheral(0x4003_0000), // 9.11.2 IO - QSPI Bank
+            new Peripheral(0x5011_0000), // 12.7.5 - USB Registers
+            new ClocksRegister(), // 8.1.6 - Clocks Registers
+            new XOscRegister(), // 8.2.8 - XOSC Registers
+        ]);
 
         var e = new Processor.Processor(m);
 

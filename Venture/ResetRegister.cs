@@ -1,40 +1,28 @@
-﻿using Venture.Processor;
+﻿namespace Venture;
 
-namespace Venture;
-
-public class ResetRegister : ReadWriteMemoryBase
+public class ResetRegister : Peripheral
 {
-    byte[] reset = [0, 0, 0, 0];
-    byte[] wdsel = [0, 0, 0, 0];
-    byte[] reset_done = [0xFF, 0xFF, 0xFF, 0xFF];
-
     public ResetRegister()
-        : base(0x40020000, 0x12)
+        : base(0x40020000)
     {
+        ResetDone = 0xFFFF_FFFF;
     }
 
-    public override ArraySegment<byte> Read(uint address, int count)
+    public uint Reset
     {
-        if (address == 0x40020000 && count == 4)
-        {
-            return reset;
-        }
-
-        if (address == 0x40020004 && count == 4)
-        {
-            return wdsel;
-        }
-
-        if (address == 0x40020008 && count == 4)
-        {
-            return reset_done;
-        }
-
-        throw new NotImplementedException();
+        get => ReadWord(0x40020000);
+        set => WriteWord(0x40020000, value);
     }
 
-    public override void Write(uint address, byte[] data)
+    public uint WDSel
     {
-        throw new NotImplementedException();
+        get => ReadWord(0x40020004);
+        set => WriteWord(0x40020004, value);
+    }
+
+    public uint ResetDone
+    {
+        get => ReadWord(0x40020008);
+        set => WriteWord(0x40020008, value);
     }
 }

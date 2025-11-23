@@ -9,6 +9,8 @@
 
   <ItemGroup>
     <PackageReference Include="ELFSharp" Version="2.17.3" />
+
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>

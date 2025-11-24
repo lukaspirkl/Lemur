@@ -2,6 +2,8 @@
 using Microsoft.Extensions.Logging;
 using System.Buffers;
 using System.Text;
+using System.Text.RegularExpressions;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Venture;
 
@@ -12,10 +14,12 @@ namespace Venture;
 public class GdbConnectionHandler : ConnectionHandler
 {
     private readonly ILogger<GdbConnectionHandler> _logger;
+    private readonly RP2350Emulator emulator;
 
-    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger)
+    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, RP2350Emulator emulator)
     {
         _logger = logger;
+        this.emulator = emulator;
     }
 
     public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -46,7 +50,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
                     Console.WriteLine($">> {packet}");
 
-                    string response = ProcessGdbCommand(packet.Split(':'));
+                    string response = ProcessGdbCommand(packet);
 
                     Console.WriteLine($"<< {response}");
 
@@ -109,62 +113,187 @@ public class GdbConnectionHandler : ConnectionHandler
         return true;
     }
 
-    private string ProcessGdbCommand(string[] command)
+    private string ProcessGdbCommand(string command)
     {
-        switch (command[0])
+        if (command == "?")
         {
-            case "qSupported":
-                return "PacketSize=400;qXfer:features:read+";
-
-            //case "vCont": 
-            //    return "vCont;c;s;t"; // "I support continue, step, and stop"
-
-            //case "Hg": 
-            //    return "OK";
-
-            //case "Hc": 
-            //    return "OK";
-
-            case "?":
-                return "S05"; // Use stop reason SIGTRAP(5).
-
-            case "g":
-                // Mock Registers
-                var sb = new StringBuilder();
-                for (int i = 0; i < 32; i++) sb.Append("00000000");
-                sb.Append("FFFFFFFF");
-                return sb.ToString();
-
-            case "qXfer": 
-                // qXfer:features:read:target.xml:OFFSET,LENGTH
-                // 
-                if (command[1] == "features" && command[2] == "read" && command[3] == "target.xml")
-                {
-                    var args = command[4].Split(",").Select(hex => Convert.ToInt32(hex, 16)).ToArray();
-                    var offset = args[0];
-                    var length = args[1];
-
-                    if (offset > targetxml.Length)
-                    {
-                        return "l"; // nothing left
-                    }
-
-                    int remaining = targetxml.Length - offset;
-                    int chunkSize = Math.Min(length, remaining);
-                    string chunk = targetxml.Substring(offset, chunkSize);
-
-                    char indicator = (chunkSize == remaining) ? 'l' : 'm';
-                    return indicator + chunk;
-                }
-                return "";
-
-            //case "m": 
-            //    return "00000000";
-
-            default:
-                Console.WriteLine($"Unknown command: {command}");
-                return ""; // Empty = Not Supported (Correct for vMustReplyEmpty)
+            return "S05"; // Use stop reason SIGTRAP(5).
         }
+
+        if (command.StartsWith("qSupported"))
+        {
+            return "PacketSize=400";// ;qXfer:features:read+";
+        }
+
+        if (command == "g")
+        {
+            try
+            {
+                int registerCount = 33; // 32 GPRs + PC
+                int hexCharsPerReg = 8;
+                int totalLength = registerCount * hexCharsPerReg;
+
+                Span<char> response = stackalloc char[totalLength];
+                int position = 0;
+
+                // Read 32 general-purpose registers
+                for (int i = 0; i < 32; i++)
+                {
+                    uint regValue = emulator.Processor.Registers[(uint)i];
+                    WriteLittleEndianHex(regValue, response.Slice(position, hexCharsPerReg));
+                    position += hexCharsPerReg;
+                }
+
+                // Read PC register
+                uint pcValue = emulator.Processor.PC;
+                WriteLittleEndianHex(pcValue, response.Slice(position, hexCharsPerReg));
+
+                return new string(response);
+            }
+            catch (Exception)
+            {
+                return "E01";
+            }
+        }
+
+        if (Regex.IsMatch(command, @"G[0-9ABCDEFabcdef]+"))
+        {
+            var hexData = command.Substring(1);
+            if (hexData.Length != (32 + 1) * 8) // 32 registers + PC
+            {
+                return "E01"; // Error: insufficient data
+            }
+
+            try
+            {
+                for (int i = 0; i < 32; i++)
+                {
+                    emulator.Processor.Registers[(uint)i] = ParseLittleEndianHex(hexData.AsSpan(i * 8, 8));
+                }
+
+                emulator.Processor.PC = ParseLittleEndianHex(hexData.AsSpan((32 * 8), 8));
+
+                return "OK";
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Unexpected exception when getting register data");
+                return "E02"; // Error: parsing failed
+            }
+        }
+
+        // Read memory - mADDR,LEN
+        if (Regex.IsMatch(command, @"m[0-9abcdefABCDEF]+,[0-9abcdefABCDEF]+"))
+        {
+            try
+            {
+                var args = command.Substring(1).Split(',');
+                var address = Convert.ToUInt32(args[0], 16);
+                var length = Convert.ToUInt32(args[1], 16);
+
+                // TODO: Not sure if the endianness is correct
+                return string.Join("", emulator.Memory.Read(address, (int)length).Select(x => Convert.ToString(x, 16).PadLeft(2, '0')));
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Unexpected exception while reading memory");
+                return "E01";
+            }
+        }
+
+        // Write memory - MADDR,LEN:DATA
+        if (Regex.IsMatch(command, @"M[0-9abcdefABCDEF]+,[0-9abcdefABCDEF]+:[0-9abcdefABCDEF]+"))
+        {
+            try
+            {
+                var args = command.Substring(1).Split(',');
+                var address = Convert.ToUInt32(args[0], 16);
+                var args2 = args[1].Split(':');
+                var length = Convert.ToUInt32(args2[0], 16);
+                var hexData = args2[1];
+
+                var data = new byte[hexData.Length / 2];
+                for (int i = 0; i < data.Length; i++)
+                {
+                    // TODO: Not sure if the endianness is correct
+                    data[i] = Convert.ToByte(hexData.Substring(i * 2, 2), 16);
+                }
+                emulator.Memory.Write(address, data);
+
+                return "OK";
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Unexpected exception while writing memory");
+                return "E01";
+            }
+        }
+
+        if (command.StartsWith("qXfer:"))
+        {
+            var c = command.Split(':');
+            // qXfer:features:read:target.xml:OFFSET,LENGTH
+            if (c[1] == "features" && c[2] == "read" && c[3] == "target.xml")
+            {
+                var args = c[4].Split(",").Select(hex => Convert.ToInt32(hex, 16)).ToArray();
+                var offset = args[0];
+                var length = args[1];
+
+                if (offset > targetxml.Length)
+                {
+                    return "l"; // nothing left
+                }
+
+                int remaining = targetxml.Length - offset;
+                int chunkSize = Math.Min(length, remaining);
+                string chunk = targetxml.Substring(offset, chunkSize);
+
+                char indicator = (chunkSize == remaining) ? 'l' : 'm';
+                return indicator + chunk;
+            }
+            return "";
+        }
+
+        Console.WriteLine($"Unknown command: {command}");
+        return ""; // Empty = Not Supported (Correct for vMustReplyEmpty)
+    }
+
+    private uint ParseBigEndianHex(ReadOnlySpan<char> hex)
+    {
+        // TODO: Isn't this too complicated?
+        Span<byte> bytes = stackalloc byte[(hex.Length + (hex.Length % 2)) / 2];
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            bytes[bytes.Length - 1 - i] = Convert.ToByte(hex.Slice(i * 2, 2).ToString(), 16);
+        }
+        return BitConverter.ToUInt32(bytes);
+    }
+
+    private uint ParseLittleEndianHex(ReadOnlySpan<char> hex)
+    {
+        // TODO: Isn't this too complicated?
+        Span<byte> bytes = stackalloc byte[hex.Length / 2];
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            bytes[i] = Convert.ToByte(hex.Slice(i * 2, 2).ToString(), 16);
+        }
+        return BitConverter.ToUInt32(bytes);
+    }
+
+    private void WriteLittleEndianHex(uint value, Span<char> destination)
+    {
+        // Write bytes in little-endian order (LSB first)
+        for (int i = 0; i < 4; i++)
+        {
+            byte b = (byte)(value >> (i * 8));
+            destination[i * 2] = GetHexChar(b >> 4);
+            destination[i * 2 + 1] = GetHexChar(b & 0x0F);
+        }
+    }
+
+    private char GetHexChar(int value)
+    {
+        return value < 10 ? (char)('0' + value) : (char)('a' + value - 10);
     }
 
     private async Task SendPacketAsync(System.IO.Pipelines.PipeWriter output, string payload)

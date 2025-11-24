@@ -5,10 +5,8 @@ namespace Venture;
 
 public class RP2350Emulator : BackgroundService
 {
-    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    public RP2350Emulator()
     {
-        bool isRunning = true;
-
         var bootRom = new ReadWriteMemory("bootrom", 0x00000000, 1024 * 32); // 32kB
         bootRom.Load(@"Blink\riscv-bootrom.elf");
 
@@ -19,7 +17,7 @@ public class RP2350Emulator : BackgroundService
         var flash = new ReadWriteMemory("flash", 0x10000000, 1024 * 1024 * 2); // 2MB
         flash.Load(@"Blink\KeySquareBlink.elf");
 
-        var m = new Memory([
+        Memory = new Memory([
             bootRom,
             bootRam,
             ram,
@@ -31,15 +29,23 @@ public class RP2350Emulator : BackgroundService
             new XOscRegister(), // 8.2.8 - XOSC Registers
         ]);
 
-        var e = new Processor.Processor(m);
+        Processor = new Processor.Processor(Memory);
 
-        e.PC = 0x10000036; // Start at reset vector
+        Processor.PC = 0x10000036; // Start at reset vector
 
-        e.CSR.Set(0xfbe5, 0x00008000); // TODO: this should be 0xbe5 - something is wrong with CSR instructions
+        Processor.CSR.Set(0xfbe5, 0x00008000); // TODO: this should be 0xbe5 - something is wrong with CSR instructions
+    }
+
+    public Processor.Processor Processor { get; }
+    public Memory Memory { get; }
+
+    protected override Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        bool isRunning = false;
 
         while (isRunning)
         {
-            e.Step();
+            Processor.Step();
         }
 
         return Task.CompletedTask;

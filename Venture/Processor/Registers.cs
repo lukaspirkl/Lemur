@@ -28,6 +28,8 @@ public class Registers
         }
     }
 
+    public int Length => data.Length;
+
     public uint zero { get { return data[0]; } set { data[0] = value; } }
     public uint ra { get { return data[1]; } set { data[1] = value; } }
     public uint sp { get { return data[2]; } set { data[2] = value; } }

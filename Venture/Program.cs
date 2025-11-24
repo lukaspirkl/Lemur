@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 
 namespace Venture;
@@ -13,13 +14,14 @@ internal class Program
         
         builder.WebHost.ConfigureKestrel(serverOptions =>
         {
-            serverOptions.Listen(IPAddress.Loopback, 3333, listenOptions =>
+            serverOptions.Listen(IPAddress.Any, 3333, listenOptions =>
             {
                 listenOptions.UseConnectionHandler<GdbConnectionHandler>();
             });
         });
 
-        //builder.Services.AddHostedService<RP2350Emulator>();
+        builder.Services.AddSingleton<RP2350Emulator>();
+        builder.Services.AddHostedService(x => x.GetRequiredService<RP2350Emulator>());
 
         var app = builder.Build();
 

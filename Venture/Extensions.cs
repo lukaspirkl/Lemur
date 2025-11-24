@@ -7,9 +7,9 @@ public static class Extensions
         return $"0b{Convert.ToString(value, 2).PadLeft(padLeft, '0')}";
     }
 
-    public static string ToHex(this uint value, int padLeft = 8)
+    public static string ToHex(this uint value, int padLeft = 8, bool prefix = true)
     {
-        return $"0x{Convert.ToString(value, 16).PadLeft(padLeft, '0').ToUpper()}";
+        return $"{(prefix ? "0x" : "")}{Convert.ToString(value, 16).PadLeft(padLeft, '0').ToUpper()}";
     }
 
     public static string ToHex(this byte[] data)

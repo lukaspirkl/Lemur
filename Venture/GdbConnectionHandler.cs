@@ -33,6 +33,12 @@ public class GdbConnectionHandler : ConnectionHandler
             var result = await input.ReadAsync();
             var buffer = result.Buffer;
 
+            if (buffer.Length == 1 && buffer.FirstSpan[0] == 0x3)
+            {
+                emulator.Stop();
+                await SendPacketAsync(output, "S05");
+            }
+
             // We must track how much of the buffer we have used
             SequencePosition consumed = buffer.Start;
             SequencePosition examined = buffer.Start;
@@ -50,11 +56,13 @@ public class GdbConnectionHandler : ConnectionHandler
 
                     Console.WriteLine($">> {packet}");
 
-                    string response = ProcessGdbCommand(packet);
+                    var response = ProcessGdbCommand(packet);
+                    if (response != null)
+                    {
+                        Console.WriteLine($"<< {response}");
 
-                    Console.WriteLine($"<< {response}");
-
-                    await SendPacketAsync(output, response);
+                        await SendPacketAsync(output, response);
+                    }
 
                     // Update the buffer to skip what we just processed
                     consumed = consumedTo;
@@ -113,16 +121,53 @@ public class GdbConnectionHandler : ConnectionHandler
         return true;
     }
 
-    private string ProcessGdbCommand(string command)
+    private string? ProcessGdbCommand(string command)
     {
         if (command == "?")
         {
             return "S05"; // Use stop reason SIGTRAP(5).
         }
 
+
         if (command.StartsWith("qSupported"))
         {
-            return "PacketSize=400";// ;qXfer:features:read+";
+            return "PacketSize=400;vContSupported+";// ;qXfer:features:read+";
+        }
+
+        if (command == "vMustReplyEmpty")
+        {
+            // The correct reply to an unknown ‘v’ packet is to return the empty string.
+            // The ‘vMustReplyEmpty’ is used as a feature test to check how gdbserver handles unknown packets, it is important
+            // that this packet be handled in the same way as other unknown ‘v’ packets. If this packet is handled differently
+            // to other unknown ‘v’ packets then it is possible that GDB may run into problems in other areas,
+            // specifically around use of ‘vFile:setfs:’.
+            return "";
+        }
+
+        if (command == "vCont?")
+        {
+            // Supported vCont actions.
+            // s - step
+            // c - continue
+            return "vCont;c;C;s;S";
+        }
+
+        if (command.StartsWith("vCont;s"))
+        {
+            emulator.Processor.Step();
+            return "S05";
+        }
+
+        if (command.StartsWith("vCont;c"))
+        {
+            emulator.Run();
+            return null;
+        }
+
+        if (command.StartsWith("vCont;t"))
+        {
+            emulator.Stop();
+            return "S05";
         }
 
         if (command == "g")

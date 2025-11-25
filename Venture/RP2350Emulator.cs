@@ -50,4 +50,37 @@ public class RP2350Emulator : BackgroundService
 
         return Task.CompletedTask;
     }
+
+    private bool running = false;
+    private Task? run;
+
+    public void Run()
+    {
+        if (run != null)
+        {
+            throw new InvalidOperationException("Already running");
+        }
+
+        running = true;
+        run = Task.Run(() =>
+        {
+            while (running)
+            {   
+                Processor.Step();
+            }
+
+        });
+    }
+
+    public void Stop()
+    {
+        if (run == null)
+        {
+            throw new InvalidOperationException("Already stopped");
+        }
+
+        running = false;
+        run.Wait();
+        run = null;
+    }
 }

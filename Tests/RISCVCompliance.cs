@@ -1,9 +1,9 @@
 ﻿using Venture;
 using Venture.Processor;
 
-namespace Tests;
+namespace Processor;
 
-public class TestsFromRiscof
+public class RISCVCompliance
 {
     public class ComplianceTestRow : ITheoryDataRow
     {
@@ -62,7 +62,9 @@ public class TestsFromRiscof
             }
         };
 
-        var e = new Processor(m);
+        var e = new Hazard3Processor(m);
+        
+        e.PC = 0x80000000;
 
         e.EBreak += (s, a) =>
         {

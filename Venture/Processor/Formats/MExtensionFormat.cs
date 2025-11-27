@@ -76,7 +76,7 @@ public class MExtensionFormat : FormatBase
     public required uint rs2 { get; init; }
     public required uint rd { get; init; }
 
-    public override void Execute(IProcessor e)
+    public override void Execute(Hazard3Processor e)
     {
         var x = e.Registers;
 

@@ -14,8 +14,6 @@ public class Memory : IMemory
         this.memory = memory;
     }
 
-    public uint InitialPC => memory.FirstOrDefault()?.StartAddress ?? 0;
-
     public void Write(uint address, byte[] data)
     {
         var segment = memory.FirstOrDefault(x => x.CanHandle(address));

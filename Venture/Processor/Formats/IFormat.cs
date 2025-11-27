@@ -172,7 +172,7 @@ public class IFormat : FormatBase
     public required uint rs1 { get; init; }
     public required int imm { get; init; }
 
-    public override void Execute(IProcessor e)
+    public override void Execute(Hazard3Processor e)
     {
         var x = e.Registers;
 

@@ -25,7 +25,7 @@ public class UFormat : FormatBase
     public required uint rd { get; init; }
     public required uint imm { get; init; }
 
-    public override void Execute(IProcessor e)
+    public override void Execute(Hazard3Processor e)
     {
         var x = e.Registers;
 

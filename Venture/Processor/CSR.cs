@@ -6,7 +6,7 @@ public class CSR
 
     public void Set(ushort key, uint value)
     {
-        Console.WriteLine($"csr[{((uint)key).ToHex(4)}] <- {value.ToHex()}");
+        //Console.WriteLine($"csr[{((uint)key).ToHex(4)}] <- {value.ToHex()}");
         csr[key] = value;
     }
 

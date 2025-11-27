@@ -23,7 +23,7 @@ public class ReadWriteMemory : ReadWriteMemoryBase
 
     public override void Write(uint address, byte[] data)
     {
-        Console.WriteLine($"mem[{address.ToHex()}] <- {data.ToHex()}");
+        //Console.WriteLine($"mem[{address.ToHex()}] <- {data.ToHex()}");
 
         OnWrite?.Invoke(this, new MemoryWriteArgs(address, data));
 

@@ -2,7 +2,6 @@ namespace Venture.Processor;
 
 public interface IMemory
 {
-    uint InitialPC { get; }
     void Write(uint address, byte[] data);
     ArraySegment<byte> Read(uint address, int count);
 }

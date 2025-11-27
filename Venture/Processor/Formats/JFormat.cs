@@ -40,7 +40,7 @@ public class JFormat : FormatBase
     public required uint rd { get; init; }
     public required int imm { get; init; }
 
-    public override void Execute(IProcessor e)
+    public override void Execute(Hazard3Processor e)
     {
         var x = e.Registers;
 

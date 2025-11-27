@@ -16,7 +16,7 @@ public abstract class FormatBase
 {
     public required string Mnemonic { get; init; }
 
-    public abstract void Execute(IProcessor e);
+    public abstract void Execute(Hazard3Processor e);
 
     public uint StepSize { get; set; } = 4;
 }

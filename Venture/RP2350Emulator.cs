@@ -29,14 +29,14 @@ public class RP2350Emulator : BackgroundService
             new XOscRegister(), // 8.2.8 - XOSC Registers
         ]);
 
-        Processor = new Processor.Processor(Memory);
+        Processor = new Hazard3Processor(Memory);
 
         Processor.PC = 0x10000036; // Start at reset vector
 
         Processor.CSR.Set(0xfbe5, 0x00008000); // TODO: this should be 0xbe5 - something is wrong with CSR instructions
     }
 
-    public Processor.Processor Processor { get; }
+    public Hazard3Processor Processor { get; }
     public Memory Memory { get; }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -65,7 +65,7 @@ public class RP2350Emulator : BackgroundService
         run = Task.Run(() =>
         {
             while (running)
-            {   
+            {
                 Processor.Step();
             }
 

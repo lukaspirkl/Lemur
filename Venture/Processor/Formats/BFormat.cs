@@ -104,7 +104,7 @@ public class BFormat : FormatBase
     public required uint rs2 { get; init; }
     public required int imm_b { get; init; }
 
-    public override void Execute(IProcessor e)
+    public override void Execute(Hazard3Processor e)
     {
         var x = e.Registers;
 

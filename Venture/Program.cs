@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net;
+using Venture.Debug;
 
 namespace Venture;
 
@@ -22,6 +23,7 @@ internal class Program
 
         builder.Services.AddSingleton<RP2350Emulator>();
         builder.Services.AddHostedService(x => x.GetRequiredService<RP2350Emulator>());
+        builder.Services.AddSingleton<IEmulator>(x => x.GetRequiredService<RP2350Emulator>());
 
         var app = builder.Build();
 

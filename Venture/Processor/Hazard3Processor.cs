@@ -42,6 +42,8 @@ public class Hazard3Processor
 
     public void Step()
     {
+        Console.WriteLine($"PC: {PC.ToHex()}");
+
         var instruction = Memory.ReadWord(PC);
 
         var format = decoder.Decode(instruction);

@@ -1,7 +1,7 @@
 ﻿using Venture;
 using Venture.Processor;
 
-namespace Processor;
+namespace Tests.Processor;
 
 public class RISCVCompliance
 {
@@ -47,7 +47,7 @@ public class RISCVCompliance
         var isRunning = true;
 
         var ram = new ReadWriteMemory("ram", 0x80000000, 1024 * 1024 * 5);
-        ram.Load(path);
+        ram.LoadElf(path);
 
         var m = new Memory([ram]);
 

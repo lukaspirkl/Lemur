@@ -1,8 +1,16 @@
 namespace Venture.Processor;
 
-public class Registers
+public interface IIndexable<T>
+{
+    T this[uint index] { get; set; }
+    int Length { get; }
+}
+
+
+public class Registers : IIndexable<uint>
 {
     private uint[] data = new uint[32];
+    public int Length => 32;
 
     public uint this[uint index]
     {
@@ -27,4 +35,5 @@ public class Registers
             data[index] = value;
         }
     }
+
 }

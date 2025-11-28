@@ -35,11 +35,11 @@ public class ReadWriteMemory : ReadWriteMemoryBase
         return new ArraySegment<byte>(memory, (int)(address - StartAddress), count);
     }
 
-    public void Load(string elfPath)
+    public void LoadElf(string path)
     {
-        Console.WriteLine($"Loading {elfPath}");
+        Console.WriteLine($"Loading {path}");
 
-        var elf = ELFReader.Load(elfPath);
+        var elf = ELFReader.Load(path);
 
         Symbols = ((ISymbolTable)elf.GetSection(".symtab")).Entries.OfType<SymbolEntry<uint>>().GroupBy(x => x.Name).ToDictionary(x => x.Key, x => x.First().Value);
 
@@ -60,5 +60,11 @@ public class ReadWriteMemory : ReadWriteMemoryBase
             Console.WriteLine($"Warning: Segment at 0x{segment.Address:X} (size 0x{segment.Size:X}) " +
                                 $"is outside the defined flash memory range. Skipping.");
         }
+    }
+
+    public void LoadBin(string path)
+    {
+        var loaded = File.ReadAllBytes(path);
+        loaded.CopyTo(memory, 0);
     }
 }

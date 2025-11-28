@@ -1,4 +1,4 @@
-set debug remote 1
+#set debug remote 1
 
 file ../Venture/Blink/KeySquareBlink.elf
 

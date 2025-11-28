@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
+using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace Venture;
+namespace Venture.Debug;
 
 // https://sourceware.org/gdb/current/onlinedocs/gdb.html/Remote-Protocol.html
 // https://medium.com/swlh/implement-gdb-remote-debug-protocol-stub-from-scratch-1-a6ab2015bfc5
@@ -13,9 +15,9 @@ namespace Venture;
 public class GdbConnectionHandler : ConnectionHandler
 {
     private readonly ILogger<GdbConnectionHandler> _logger;
-    private readonly RP2350Emulator emulator;
+    private readonly IEmulator emulator;
 
-    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, RP2350Emulator emulator)
+    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, IEmulator emulator)
     {
         _logger = logger;
         this.emulator = emulator;
@@ -81,6 +83,7 @@ public class GdbConnectionHandler : ConnectionHandler
             if (result.IsCompleted) break;
         }
 
+        output.Complete();
         _logger.LogInformation("Debugger disconnected.");
     }
 
@@ -130,7 +133,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
         if (command.StartsWith("qSupported"))
         {
-            return "PacketSize=400;vContSupported+";// ;qXfer:features:read+";
+            return "PacketSize=400;vContSupported+;multiprocess-";// ;qXfer:features:read+";
         }
 
         if (command == "vMustReplyEmpty")
@@ -143,6 +146,65 @@ public class GdbConnectionHandler : ConnectionHandler
             return "";
         }
 
+        if (command == "qfThreadInfo")
+        {
+            return "m1";
+        }
+
+        if (command == "qsThreadInfo")
+        {
+            return "1";
+        }
+
+        if (command == "qC")
+        {
+            // Get current thread
+            return "1";
+        }
+
+        if (command == "qSymbol::")
+        {
+            // Notify the target that GDB is prepared to serve symbol lookup requests. Accept requests from the target for the values of symbols.
+            return "OK"; // The target does not need to look up any (more) symbols
+        }
+
+        if (command.StartsWith("Hg"))
+        {
+            // Set thread for subsequent operations
+            // Hc-1  - all threads
+            // Hc1   - thread 1
+            return "OK";
+        }
+
+        if (command.StartsWith("Hc"))
+        {
+            // Selector for the thread used for continue operations.
+            // Hc-1  - select all threads for continue
+            // Hc1   - select thread 1 for continue
+            return "OK";
+        }
+
+        if (command == "qOffsets")
+        {
+            // This queries relocation offsets between sections, normally used by targets with dynamic loading or strange memory maps.
+            return "Text=0;Data=0;Bss=0";
+        }
+
+        if (command == "qTStatus")
+        {
+            // https://sourceware.org/gdb/current/onlinedocs/gdb.html/Tracepoint-Packets.html#Tracepoint-Packets
+            // Return nothing as I am not supporting tracepoints
+            return "";
+        }
+
+        if (command == "qAttached")
+        {
+            //Return an indication of whether the remote server attached to an existing process or created a new process.
+            // 1 - attached to existing process
+            // 0 - created new process
+            return "1";
+        }
+
         if (command == "vCont?")
         {
             // Supported vCont actions.
@@ -153,7 +215,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
         if (command.StartsWith("vCont;s"))
         {
-            emulator.Processor.Step();
+            emulator.Step();
             return "S05";
         }
 
@@ -173,24 +235,19 @@ public class GdbConnectionHandler : ConnectionHandler
         {
             try
             {
-                int registerCount = 33; // 32 GPRs + PC
+                int registerCount = emulator.Registers.Length;
                 int hexCharsPerReg = 8;
                 int totalLength = registerCount * hexCharsPerReg;
 
                 Span<char> response = stackalloc char[totalLength];
                 int position = 0;
 
-                // Read 32 general-purpose registers
-                for (int i = 0; i < 32; i++)
+                for (int i = 0; i < registerCount; i++)
                 {
-                    uint regValue = emulator.Processor.Registers[(uint)i];
+                    uint regValue = emulator.Registers[(uint)i];
                     WriteLittleEndianHex(regValue, response.Slice(position, hexCharsPerReg));
                     position += hexCharsPerReg;
                 }
-
-                // Read PC register
-                uint pcValue = emulator.Processor.PC;
-                WriteLittleEndianHex(pcValue, response.Slice(position, hexCharsPerReg));
 
                 return new string(response);
             }
@@ -203,19 +260,17 @@ public class GdbConnectionHandler : ConnectionHandler
         if (Regex.IsMatch(command, @"G[0-9ABCDEFabcdef]+"))
         {
             var hexData = command.Substring(1);
-            if (hexData.Length != (32 + 1) * 8) // 32 registers + PC
+            if (hexData.Length != emulator.Registers.Length * 8)
             {
                 return "E01"; // Error: insufficient data
             }
 
             try
             {
-                for (int i = 0; i < 32; i++)
+                for (int i = 0; i < emulator.Registers.Length; i++)
                 {
-                    emulator.Processor.Registers[(uint)i] = ParseLittleEndianHex(hexData.AsSpan(i * 8, 8));
+                    emulator.Registers[(uint)i] = ParseLittleEndianHex(hexData.AsSpan(i * 8, 8));
                 }
-
-                emulator.Processor.PC = ParseLittleEndianHex(hexData.AsSpan((32 * 8), 8));
 
                 return "OK";
             }
@@ -236,7 +291,7 @@ public class GdbConnectionHandler : ConnectionHandler
                 var length = Convert.ToUInt32(args[1], 16);
 
                 // TODO: Not sure if the endianness is correct
-                return string.Join("", emulator.Memory.Read(address, (int)length).Select(x => Convert.ToString(x, 16).PadLeft(2, '0')));
+                return string.Join("", emulator.MemoryRead(address, (int)length).Select(x => Convert.ToString(x, 16).PadLeft(2, '0')));
             }
             catch (Exception e)
             {
@@ -262,7 +317,7 @@ public class GdbConnectionHandler : ConnectionHandler
                     // TODO: Not sure if the endianness is correct
                     data[i] = Convert.ToByte(hexData.Substring(i * 2, 2), 16);
                 }
-                emulator.Memory.Write(address, data);
+                emulator.MemoryWrite(address, data);
 
                 return "OK";
             }

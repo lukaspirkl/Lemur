@@ -46,10 +46,10 @@ public class RISCVCompliance
         int maxSteps = 10_000;
         var isRunning = true;
 
-        var ram = new ReadWriteMemory("ram", 0x80000000, 1024 * 1024 * 5);
+        var ram = new Memory("ram", 0x80000000, 1024 * 1024 * 5);
         ram.LoadElf(path);
 
-        var m = new Memory([ram]);
+        var m = new BusFabric([ram]);
 
         ram.OnWrite += (s, a) =>
         {

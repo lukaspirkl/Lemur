@@ -6,7 +6,7 @@ public class Hazard3Processor
  
     private bool m_IsPCModified = false;
 
-    public IMemory Memory { get; }
+    public IBusFabric Memory { get; }
     public Registers Registers { get; }
     public CSR CSR { get; } = new CSR();
 
@@ -34,7 +34,7 @@ public class Hazard3Processor
         }
     }
 
-    public Hazard3Processor(IMemory memory)
+    public Hazard3Processor(IBusFabric memory)
     {
         Memory = memory;
         Registers = new Registers();

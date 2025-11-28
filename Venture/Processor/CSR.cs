@@ -6,12 +6,14 @@ public class CSR
 
     public void Set(ushort key, uint value)
     {
-        //Console.WriteLine($"csr[{((uint)key).ToHex(4)}] <- {value.ToHex()}");
+        Console.WriteLine($"csr[{((uint)key).ToHex(4)}] <- {value.ToHex()} (set)");
         csr[key] = value;
     }
 
     public uint Get(ushort key)
     {
-        return csr.GetValueOrDefault(key, (uint)0);
+        var value = csr.GetValueOrDefault(key, (uint)0);
+        Console.WriteLine($"csr[{((uint)key).ToHex(4)}] -> {value.ToHex()} (get)");
+        return value;
     }
 }

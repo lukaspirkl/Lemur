@@ -6,7 +6,7 @@ namespace Venture
     {
         IIndexable<uint> Registers { get; }
 
-        ArraySegment<byte> MemoryRead(uint address, int count);
+        byte[] MemoryRead(uint address, int count);
         void MemoryWrite(uint address, byte[] data);
         void Run();
         void Step();

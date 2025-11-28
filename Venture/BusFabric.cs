@@ -1,22 +1,27 @@
-namespace Venture.Processor;
+namespace Venture;
 
-public class Memory : IMemory
+public class BusFabric : IBusFabric
 {
-    private readonly ReadWriteMemoryBase[] memory;
+    private readonly IAddressableResource[] resources;
 
-    public Memory(ReadWriteMemoryBase[] memory)
+    public BusFabric(IAddressableResource[] resources)
     {
         if (!BitConverter.IsLittleEndian)
         {
             throw new InvalidOperationException("This platform is not little endian.");
         }
 
-        this.memory = memory;
+        this.resources = resources;
+    }
+
+    private bool CanHandle(IAddressableResource resource, uint address)
+    {
+        return address - resource.StartAddress >= 0 && address - resource.StartAddress < resource.Size; ;
     }
 
     public void Write(uint address, byte[] data)
     {
-        var segment = memory.FirstOrDefault(x => x.CanHandle(address));
+        var segment = resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
         {
             throw new IndexOutOfRangeException($"Writing to invalid memory: {address.ToHex()}");
@@ -25,9 +30,9 @@ public class Memory : IMemory
         segment.Write(address, data);
     }
 
-    public ArraySegment<byte> Read(uint address, int count)
+    public byte[] Read(uint address, int count)
     {
-        var segment = memory.FirstOrDefault(x => x.CanHandle(address));
+        var segment = resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
         {
             throw new IndexOutOfRangeException($"Reading invalid memory: {address.ToHex()}");

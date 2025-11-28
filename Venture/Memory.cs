@@ -2,26 +2,31 @@ using ELFSharp.ELF;
 using ELFSharp.ELF.Sections;
 using ELFSharp.ELF.Segments;
 
+namespace Venture;
 
-namespace Venture.Processor;
+public record MemoryWriteArgs(uint Address, byte[] Data);
 
-public class ReadWriteMemory : ReadWriteMemoryBase
+public class Memory : IAddressableResource
 {
     private readonly string name;
     private readonly byte[] memory;
+
+    public uint StartAddress { get; }
+    public uint Size { get; }
 
     public event EventHandler<MemoryWriteArgs>? OnWrite;
 
     public Dictionary<string, uint> Symbols { get; set; } = new Dictionary<string, uint>();
 
-    public ReadWriteMemory(string name, uint startAddress, uint size)
-        : base(startAddress, size)
+    public Memory(string name, uint startAddress, uint size)
     {
         this.name = name;
         memory = new byte[size];
+        StartAddress = startAddress;
+        Size = size;
     }
 
-    public override void Write(uint address, byte[] data)
+    public void Write(uint address, byte[] data)
     {
         //Console.WriteLine($"mem[{address.ToHex()}] <- {data.ToHex()}");
 
@@ -30,9 +35,9 @@ public class ReadWriteMemory : ReadWriteMemoryBase
         data.CopyTo(memory, (int)(address - StartAddress));
     }
 
-    public override ArraySegment<byte> Read(uint address, int count)
+    public byte[] Read(uint address, int count)
     {
-        return new ArraySegment<byte>(memory, (int)(address - StartAddress), count);
+        return memory.Skip((int)(address - StartAddress)).Take(count).ToArray();
     }
 
     public void LoadElf(string path)

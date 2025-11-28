@@ -20,9 +20,9 @@ public class MockEmulator : IEmulator
 
     public byte[] Memory = new byte[32];
 
-    public ArraySegment<byte> MemoryRead(uint address, int count)
+    public byte[] MemoryRead(uint address, int count)
     {
-        return new ArraySegment<byte>(Memory, (int)address, count);
+        return Memory.Skip((int)address).Take(count).ToArray();
     }
 
     public void MemoryWrite(uint address, byte[] data)

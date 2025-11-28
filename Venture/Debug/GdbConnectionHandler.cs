@@ -55,12 +55,12 @@ public class GdbConnectionHandler : ConnectionHandler
 
                     string packet = Encoding.ASCII.GetString(packetData);
 
-                    Console.WriteLine($">> {packet}");
+                    //Console.WriteLine($">> {packet}");
 
                     var response = ProcessGdbCommand(packet);
                     if (response != null)
                     {
-                        Console.WriteLine($"<< {response}");
+                        //Console.WriteLine($"<< {response}");
 
                         await SendPacketAsync(output, response);
                     }
@@ -353,7 +353,7 @@ public class GdbConnectionHandler : ConnectionHandler
             return "";
         }
 
-        Console.WriteLine($"Unknown command: {command}");
+        Console.WriteLine($"Unknown GDB command: {command}");
         return ""; // Empty = Not Supported (Correct for vMustReplyEmpty)
     }
 

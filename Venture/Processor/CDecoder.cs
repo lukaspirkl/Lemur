@@ -23,6 +23,7 @@ public class CDecoder : IDecoder
             new CBFormatFactory(),
             new CJFormatFactory(),
             new ZcbExtensionFormatFactory(),
+            new ZcmpFormatFactory(),
         ];
     }
 

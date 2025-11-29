@@ -16,11 +16,14 @@ public class UnimplementedPeripheral : IAddressableResource
 
     public byte[] Read(uint address, int count)
     {
-        throw new NotImplementedException($"Read from {address.ToHex()} - unimplemented peripheral: {name}");
+        //throw new NotImplementedException($"Read from {address.ToHex()} - unimplemented peripheral: {name}");
+        Console.Write($"WARNING: Reading from {address.ToHex()} - unimplemented peripheral: {name}");
+        return new byte[count];
     }
 
     public void Write(uint address, byte[] data)
     {
-        throw new NotImplementedException($"Read to {address.ToHex()} - unimplemented peripheral: {name}");
+        //throw new NotImplementedException($"Write to {address.ToHex()} - unimplemented peripheral: {name}");
+        Console.Write($"WARNING: Write to {address.ToHex()} - unimplemented peripheral: {name} value {data.ToHex()}");
     }
 }

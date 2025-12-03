@@ -16,7 +16,8 @@ public class RP2350Emulator : BackgroundService, IEmulator
     public RP2350Emulator()
     {
         var rom = new Memory("ROM", 0x00000000, 1024 * 32); // 32kB
-        rom.LoadBin(@"Blink\bootrom-combined.bin");
+        //rom.LoadBin(@"Blink\bootrom-combined.bin");
+        rom.LoadBin(@"Blink\bootrom-dumped.bin");
 
         var xip = new Memory("XIP", 0x10000000, 1024 * 1024 * 2); // 2MB
         xip.LoadElf(@"Blink\KeySquareBlink.elf");

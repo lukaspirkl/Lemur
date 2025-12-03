@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Connections;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
-using System.Diagnostics;
 using System.Text;
 using System.Text.RegularExpressions;
 

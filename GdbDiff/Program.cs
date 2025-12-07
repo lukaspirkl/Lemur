@@ -72,14 +72,22 @@ class Program
                 Console.WriteLine(diffLog);
                 streamWriter.WriteLine(diffLog);
 
-                Console.Write("[S] set value to emulator and continue | [ANY] exit");
-                if (Console.ReadKey().KeyChar == 's')
+                if (regsReal.Last() == 0x7472) // This is bootrom address that is getting value from TRNG
                 {
+                    Console.Write("AUTOMATIC REG REPLACEMENT");
                     gdbEmu.WriteRegister((uint)i, regsReal[i]);
                 }
                 else
                 {
-                    return false;
+                    Console.Write("[S] set value to emulator and continue | [ANY] exit");
+                    if (Console.ReadKey().KeyChar == 's')
+                    {
+                        gdbEmu.WriteRegister((uint)i, regsReal[i]);
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
             }
         }

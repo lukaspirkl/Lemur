@@ -17,7 +17,7 @@ public class RP2350Emulator : BackgroundService, IEmulator
     {
         var rom = new Memory("ROM", 0x00000000, 1024 * 32); // 32kB
         //rom.LoadBin(@"Blink\bootrom-combined.bin");
-        rom.LoadBin(@"Blink\bootrom-dumped.bin");
+        rom.LoadBin(@"Blink\A2\bootrom-combined.bin");
 
         var xip = new Memory("XIP", 0x10000000, 1024 * 1024 * 2); // 2MB
         xip.LoadElf(@"Blink\KeySquareBlink.elf");
@@ -35,7 +35,8 @@ public class RP2350Emulator : BackgroundService, IEmulator
             new UnimplementedPeripheral(0x40008000, "SYSCFG_BASE"),
             new UnimplementedPeripheral(0x40010000, "CLOCKS_BASE"),
             new UnimplementedPeripheral(0x40018000, "PSM_BASE"),
-            new UnimplementedPeripheral(0x40020000, "RESETS_BASE"),
+            new Resets(),
+            //new UnimplementedPeripheral(0x40020000, "RESETS_BASE"),
             new UnimplementedPeripheral(0x40028000, "IO_BANK0_BASE"),
             new UnimplementedPeripheral(0x40030000, "IO_QSPI_BASE"),
             new UnimplementedPeripheral(0x40038000, "PADS_BANK0_BASE"),
@@ -60,12 +61,12 @@ public class RP2350Emulator : BackgroundService, IEmulator
             new UnimplementedPeripheral(0x400d0000, "XIP_QMI_BASE"),
             new UnimplementedPeripheral(0x400d8000, "WATCHDOG_BASE"),
             new Memory("bootRAM", 0x400e0000, 1024), // 1kB
-            //new UnimplementedPeripheral(0x400e0000, "BOOTRAM_BASE"),
-            //new UnimplementedPeripheral(0x400e0400, "BOOTRAM_END"),
+            new UnimplementedPeripheral(0x400e0800, 0x02c, "BOOTRAM_BASE"),
             new UnimplementedPeripheral(0x400e8000, "ROSC_BASE"),
             new UnimplementedPeripheral(0x400f0000, "TRNG_BASE"),
             new UnimplementedPeripheral(0x400f8000, "SHA256_BASE"),
-            new UnimplementedPeripheral(0x40100000, "POWMAN_BASE"),
+            new Powman(),
+            //new UnimplementedPeripheral(0x40100000, "POWMAN_BASE"),
             new UnimplementedPeripheral(0x40108000, "TICKS_BASE"),
             new UnimplementedPeripheral(0x40120000, "OTP_BASE"),
             new UnimplementedPeripheral(0x40130000, "OTP_DATA_BASE"),
@@ -97,7 +98,7 @@ public class RP2350Emulator : BackgroundService, IEmulator
             new UnimplementedPeripheral(0x50700000, "CORESIGHT_TRACE_BASE"),
             // 0xd0000000 - SIO
             //new UnimplementedPeripheral(0xd0000000, "SIO_BASE"),
-            new PeriphheralHost(new SIO()),
+            new SIO(),
             new UnimplementedPeripheral(0xd0020000, "SIO_NONSEC_BASE"),
             // 0xe0000000 - Cortex-M33 private registers
         };
@@ -109,6 +110,10 @@ public class RP2350Emulator : BackgroundService, IEmulator
         processor.PC = 0x00007dfc; // riscv_entry_point - it is always on this address
 
         processor.CSR.Set(0xfbe5, 0x00008000); // TODO: this should be 0xbe5 - something is wrong with CSR instructions
+
+        // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.
+        // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/csrs/mip.html#mip-MTIP-def
+        processor.CSR.Set(0x344, 0x00000080);
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)

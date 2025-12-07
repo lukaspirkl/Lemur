@@ -63,7 +63,11 @@ public class RISCVCompliance
         };
 
         var e = new Hazard3Processor(m);
-        
+
+        // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.
+        // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/csrs/mip.html#mip-MTIP-def
+        e.CSR.Set(0x344, 0x00000080);
+
         e.PC = 0x80000000;
 
         e.EBreak += (s, a) =>

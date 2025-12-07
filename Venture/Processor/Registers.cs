@@ -29,8 +29,9 @@ public class Registers : IIndexable<uint>
             {
                 return;
             }
-                
-            //Console.WriteLine($"x{index} <- {value.ToHex()}");
+
+            ;
+            Console.WriteLine($"x{index}{(index.ToString().Length == 1 ? " " : "")} {value.ToHex()}");
 
             data[index] = value;
         }

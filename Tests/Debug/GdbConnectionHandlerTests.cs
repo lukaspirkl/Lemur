@@ -16,7 +16,7 @@ public class GdbConnectionHandlerTests
     {
         await using var fixture = new GdbConnectionFixture();
         var result = await fixture.SendPacketAsync("qSupported", TestContext.Current.CancellationToken);
-        Assert.Equal("PacketSize=400;vContSupported+", result);
+        Assert.Equal("PacketSize=400;vContSupported+;multiprocess-", result);
     }
 
     [Fact]

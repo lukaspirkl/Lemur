@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using System.Text;
 
 namespace GdbDiff;
 
-/// <summary>
-/// A C# Client for the GDB Remote Serial Protocol (RSP).
-/// </summary>
 public class GdbClient : IDisposable
 {
     private TcpClient _client;
@@ -18,13 +13,8 @@ public class GdbClient : IDisposable
 
     public bool IsConnected => _client != null && _client.Connected;
 
-    /// <summary>
-    /// Connects to a GDB Stub (e.g., OpenOCD, QEMU, gdbserver) over TCP.
-    /// </summary>
-    public void Connect(string host, int port)
+    public GdbClient(string host, int port)
     {
-        if (IsConnected) Disconnect();
-
         Console.WriteLine($"[GDB] Connecting to {host}:{port}...");
         _client = new TcpClient();
         _client.Connect(host, port);
@@ -44,38 +34,35 @@ public class GdbClient : IDisposable
         Console.WriteLine($"[GDB] Connected. Initial State: {response}");
     }
 
-    public void Disconnect()
-    {
-        _stream?.Close();
-        _client?.Close();
-        _client = null;
-    }
-
     public void Dispose()
     {
-        Disconnect();
+        _stream.Close();
+        _stream.Dispose();
+        _client.Close();
+        _client.Dispose();
     }
 
-    #region Core Protocol Implementation
-
-    /// <summary>
-    /// Sends a command packet, handles ACK/NACK, and waits for the response packet.
-    /// </summary>
-    /// <param name="commandData">The raw command string (e.g., "g", "m100,20")</param>
-    /// <returns>The response payload.</returns>
     public string SendCommand(string commandData)
+    {
+        var response = "";
+        SendCommand(commandData, r => 
+        {
+            response = r;
+            return true;
+        });
+        return response;
+    }
+
+    public void SendCommand(string commandData, Func<string, bool> handleResponse)
     {
         lock (_lock)
         {
-            // 1. Construct the packet: $data#checksum
             string packet = FormatPacket(commandData);
 
-            // 2. Send loop (handle NACKs)
             while (true)
             {
                 WriteRaw(packet);
 
-                // 3. Read immediate acknowledgment (+ or -)
                 char ack = ReadChar();
                 if (ack == '+')
                 {
@@ -88,14 +75,12 @@ public class GdbClient : IDisposable
                 }
                 else
                 {
-                    // Some stubs might send output (O packet) or stop reply directly if we are out of sync.
-                    // For this simple client, we treat it as a protocol violation.
                     throw new Exception($"[GDB] Protocol Error: Expected ACK (+), got '{ack}'");
                 }
             }
 
-            // 4. Read the response packet
-            return ReadResponsePacket();
+            while(!handleResponse(ReadResponsePacket()))
+            { }
         }
     }
 
@@ -128,10 +113,6 @@ public class GdbClient : IDisposable
         return (char)b;
     }
 
-    /// <summary>
-    /// Reads a standard packet from the stream.
-    /// Format: $payload#checksum
-    /// </summary>
     private string ReadResponsePacket()
     {
         while (true)
@@ -175,118 +156,70 @@ public class GdbClient : IDisposable
         }
     }
 
-    #endregion
-
-    #region High-Level Commands
-
-    /// <summary>
-    /// Reads memory at the specified address.
-    /// Protocol: m addr,length
-    /// </summary>
-    public byte[] ReadMemory(ulong address, int length)
+    public uint[] ReadRegisters()
     {
-        string cmd = $"m{address:x},{length:x}";
-        string resp = SendCommand(cmd);
-
-        if (resp.StartsWith("E"))
-            throw new Exception($"ReadMemory Failed. Error: {resp}");
-
-        return HexStringToBytes(resp);
-    }
-
-    /// <summary>
-    /// Writes memory at the specified address.
-    /// Protocol: M addr,length:hex-data
-    /// </summary>
-    public void WriteMemory(ulong address, byte[] data)
-    {
-        string hexData = BytesToHexString(data);
-        string cmd = $"M{address:x},{data.Length:x}:{hexData}";
-        string resp = SendCommand(cmd);
-
-        if (resp != "OK")
-            throw new Exception($"WriteMemory Failed. Response: {resp}");
-    }
-
-    /// <summary>
-    /// Reads a specific register.
-    /// Protocol: p n
-    /// </summary>
-    public ulong ReadRegister(int registerIndex)
-    {
-        string cmd = $"p{registerIndex:x}";
-        string resp = SendCommand(cmd);
-
-        if (resp.StartsWith("E"))
-            throw new Exception($"ReadRegister Failed. Error: {resp}");
-
-        // GDB sends register data in target byte order (usually little endian for x86/ARM)
-        // but as a raw hex string. 
-        // Example: 0x1234 -> sent as "34120000" (if 32 bit).
-
-        // For simplicity, we assume we want to parse it as a number.
-        // Note: Actual implementation depends on architecture bit-width.
-        return ParseGdbHexAsULong(resp);
-    }
-
-    /// <summary>
-    /// Writes a specific register.
-    /// Protocol: P n=val
-    /// </summary>
-    public void WriteRegister(int registerIndex, ulong value, int byteWidth = 4)
-    {
-        // Convert value to hex string in target byte order (Little Endian assumed)
-        byte[] bytes = BitConverter.GetBytes(value);
-        if (!BitConverter.IsLittleEndian) Array.Reverse(bytes); // Host is Big, convert to LE? 
-                                                                // Actually, GDB expects bytes in target order. Let's assume target is LE.
-
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < byteWidth; i++)
-            sb.Append(bytes[i].ToString("x2"));
-
-        string cmd = $"P{registerIndex:x}={sb}";
-        string resp = SendCommand(cmd);
-
-        if (resp != "OK")
-            throw new Exception($"WriteRegister Failed. Response: {resp}");
-    }
-
-    /// <summary>
-    /// Single Step instruction.
-    /// Protocol: s [addr]
-    /// </summary>
-    public string Step()
-    {
-        // 's' does not return OK immediately. It returns a Stop Reply Packet (T signal...)
-        // when the step is done.
-        return SendCommand("vCont;s");
-    }
-
-    /// <summary>
-    /// Continue execution.
-    /// Protocol: c [addr]
-    /// </summary>
-    public string Continue()
-    {
-        // 'c' returns when a breakpoint is hit or execution stops.
-        return SendCommand("c");
-    }
-
-    /// <summary>
-    /// Sends an interrupt (Ctrl+C) 0x03 byte to halt the target.
-    /// </summary>
-    public void SendInterrupt()
-    {
-        lock (_lock)
+        var registers = SendCommand("g");
+        var length = registers.Length / 8;
+        if (registers.Length % 8 != 0)
         {
-            _stream.WriteByte(0x03);
-            // We expect a stop reply packet after this, handled by the next Read
+            throw new InvalidDataException();
+        }
+
+        var regs = new uint[length];
+
+        for (int i = 0; i < length; i++)
+        {
+            regs[i] = ParseLittleEndianHex(registers.AsSpan(i * 8, 8));
+        }
+
+        return regs;
+    }
+
+    public void WriteRegister(uint reg, uint value)
+    {
+        var response = SendCommand($"P{reg.ToHex(prefix: false)}={BytesToHexString(BitConverter.GetBytes(value))}");
+        if (response != "OK")
+        {
+            throw new InvalidOperationException($"Response is not OK - {response}");
         }
     }
 
-    #endregion
+    public string Monitor(string command)
+    {
+        return SendCommand($"qRcmd,{BytesToHexString(Encoding.ASCII.GetBytes(command))}");
+    }
 
-    #region Utilities
+    public byte[] ReadMemory(uint address, uint length)
+    {
+        var hex = SendCommand($"m{address.ToHex(prefix: false)},{length.ToHex(prefix: false)}");
+        return HexStringToBytes(hex);
+    }
+
+    public void WriteMemory(uint address, byte[] data)
+    {
+        var result = SendCommand($"M{address.ToHex(prefix: false)},{((uint)data.Length).ToHex(prefix: false)}:{BytesToHexString(data)}");
+    }
+
+    public void Step()
+    {
+        SendCommand("vCont;s:1;c", r =>
+        {
+            // Ignore all messages and wait for information that the stub is not running.
+            return r.StartsWith("T05");
+        });
+    }
+
+    // TODO: This should be in some shared library
+    private static uint ParseLittleEndianHex(ReadOnlySpan<char> hex)
+    {
+        // TODO: Isn't this too complicated?
+        Span<byte> bytes = stackalloc byte[hex.Length / 2];
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            bytes[i] = Convert.ToByte(hex.Slice(i * 2, 2).ToString(), 16);
+        }
+        return BitConverter.ToUInt32(bytes);
+    }
 
     private static byte[] HexStringToBytes(string hex)
     {
@@ -323,6 +256,4 @@ public class GdbClient : IDisposable
         // Assume Little Endian (Standard for x86/ARM GDB Stubs)
         return BitConverter.ToUInt64(data, 0);
     }
-
-    #endregion
 }

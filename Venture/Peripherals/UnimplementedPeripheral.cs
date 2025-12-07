@@ -6,7 +6,7 @@ public class UnimplementedPeripheral : IAddressableResource
 
     public uint StartAddress { get; }
 
-    public uint Size => 0x4000;
+    public uint Size { get; } = 0x4000;
 
     public UnimplementedPeripheral(uint startAddress, string name)
     {
@@ -14,16 +14,23 @@ public class UnimplementedPeripheral : IAddressableResource
         this.name = name;
     }
 
+    public UnimplementedPeripheral(uint startAddress, uint size, string name)
+    {
+        StartAddress = startAddress;
+        Size = size;
+        this.name = name;
+    }
+
     public byte[] Read(uint address, int count)
     {
         //throw new NotImplementedException($"Read from {address.ToHex()} - unimplemented peripheral: {name}");
-        Console.Write($"WARNING: Reading from {address.ToHex()} - unimplemented peripheral: {name}");
+        Console.WriteLine($"WARNING: Reading from {address.ToHex()} - unimplemented peripheral: {name}");
         return new byte[count];
     }
 
     public void Write(uint address, byte[] data)
     {
         //throw new NotImplementedException($"Write to {address.ToHex()} - unimplemented peripheral: {name}");
-        Console.Write($"WARNING: Write to {address.ToHex()} - unimplemented peripheral: {name} value {data.ToHex()}");
+        Console.WriteLine($"WARNING: Write to {address.ToHex()} data {data.ToHex()} - unimplemented peripheral: {name} value {data.ToHex()}");
     }
 }

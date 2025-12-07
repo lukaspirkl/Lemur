@@ -21,6 +21,8 @@ public class BusFabric : IBusFabric
 
     public void Write(uint address, byte[] data)
     {
+        Console.WriteLine($"mem {address.ToHex()} {data.ToHex()}");
+
         var segment = resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
         {

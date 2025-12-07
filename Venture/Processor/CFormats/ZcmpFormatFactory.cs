@@ -207,22 +207,12 @@ public class ZcmpFormat : FormatBase
 
     private int CalculateStackAdjustment()
     {
-        // Stack adjustment base depends on rlist.
-        // Based on Zc spec Table 2.
-        // 4-6: 16 bytes
-        // 7-9: 32 bytes
-        // 10-12: 48 bytes
-        // 13-14: 64 bytes (13,14 reserved but align to 64)
-        // 15: 64 bytes
-
         int stackAdjBase;
-        if (rlist >= 4 && rlist <= 6) stackAdjBase = 16;
-        else if (rlist >= 7 && rlist <= 9) stackAdjBase = 32;
-        else if (rlist >= 10 && rlist <= 12) stackAdjBase = 48;
-        else if (rlist >= 13 && rlist <= 15) stackAdjBase = 64;
-        else stackAdjBase = 0; // Invalid rlist < 4
-
-        if (rlist < 4) throw new InvalidOperationException($"Invalid rlist {rlist} for Zcmp Push/Pop");
+        if (rlist >= 4 && rlist <= 7) stackAdjBase = 16;
+        else if (rlist >= 8 && rlist <= 11) stackAdjBase = 32;
+        else if (rlist >= 12 && rlist <= 14) stackAdjBase = 48;
+        else if (rlist == 15) stackAdjBase = 64;
+        else throw new InvalidOperationException($"Invalid rlist {rlist} for Zcmp Push/Pop");
 
         // total = base + (spimm * 16)
         return stackAdjBase + ((int)spimm * 16);
@@ -230,65 +220,47 @@ public class ZcmpFormat : FormatBase
 
     private List<uint> GetRegisterList()
     {
-        // Spec Table 1:
-        // 4:  ra, s0
-        // 5:  ra, s0-s1
-        // 6:  ra, s0-s2
-        // ...
-        // 15: ra, s0-s11
-
         var list = new List<uint>();
 
-        if (rlist < 4) return list; // Invalid
+        if (rlist < 4) throw new InvalidOperationException($"Invalid rlist {rlist} for Zcmp Push/Pop");
 
-        // RA (x1) and S0 (x8) are always present for rlist >= 4
         list.Add(1);
-        list.Add(8);
         if (rlist == 4) return list;
 
-        // S1 (x9)
-        list.Add(9);
+        list.Add(8);
         if (rlist == 5) return list;
 
-        // S2 (x18)
-        list.Add(18);
+        list.Add(9);
         if (rlist == 6) return list;
 
-        // S3 (x19)
-        list.Add(19);
+        list.Add(18);
         if (rlist == 7) return list;
 
-        // S4 (x20)
-        list.Add(20);
+        list.Add(19);
         if (rlist == 8) return list;
 
-        // S5 (x21)
-        list.Add(21);
+        list.Add(20);
         if (rlist == 9) return list;
 
-        // S6 (x22)
-        list.Add(22);
+        list.Add(21);
         if (rlist == 10) return list;
 
-        // S7 (x23)
-        list.Add(23);
+        list.Add(22);
         if (rlist == 11) return list;
 
-        // rlist 12-14 are reserved in standard Zcmp, but if executed,
-        // they behave as if no more registers are added beyond s7? 
-        // Or they might faults. For emulation, we'll stop here or handle 15.
-        // Spec says 12-14 are reserved. 
-        if (rlist >= 12 && rlist <= 14) return list;
+        list.Add(23);
+        if (rlist == 12) return list;
 
-        // S8 (x24) - S11 (x27) only for rlist 15
-        if (rlist == 15)
-        {
-            list.Add(24); // s8
-            list.Add(25); // s9
-            list.Add(26); // s10
-            list.Add(27); // s11
-        }
+        list.Add(24);
+        if (rlist == 13) return list;
 
-        return list;
+        list.Add(25);
+        if (rlist == 14) return list;
+
+        list.Add(26);
+        list.Add(27);
+        if (rlist == 15) return list;
+
+        throw new InvalidOperationException($"Invalid rlist {rlist} for Zcmp Push/Pop");
     }
 }

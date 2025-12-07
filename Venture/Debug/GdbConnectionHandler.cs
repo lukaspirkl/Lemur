@@ -214,7 +214,7 @@ public class GdbConnectionHandler : ConnectionHandler
         if (command.StartsWith("vCont;s"))
         {
             emulator.Step();
-            return "S05";
+            return "T05";
         }
 
         if (command.StartsWith("vCont;c"))
@@ -227,6 +227,15 @@ public class GdbConnectionHandler : ConnectionHandler
         {
             emulator.Stop();
             return "S05";
+        }
+
+        if (command.StartsWith("qRcmd,"))
+        {
+            var str = Encoding.ASCII.GetString(HexStringToBytes(command.Substring(6)));
+            if (str == "reset halt")
+            {
+                // TODO: Reset
+            }
         }
 
         if (command == "g")
@@ -255,6 +264,7 @@ public class GdbConnectionHandler : ConnectionHandler
             }
         }
 
+        // Read registers
         if (Regex.IsMatch(command, @"G[0-9ABCDEFabcdef]+"))
         {
             var hexData = command.Substring(1);
@@ -277,6 +287,21 @@ public class GdbConnectionHandler : ConnectionHandler
                 _logger.LogError(e, "Unexpected exception when getting register data");
                 return "E02"; // Error: parsing failed
             }
+        }
+
+        if (Regex.IsMatch(command, @"P[0-9ABCDEFabcdef]+=[0-9ABCDEFabcdef]"))
+        {
+            var args = command.Substring(1).Split('=');
+            if (args.Length != 2)
+            {
+                return "E01";
+            }
+
+            var reg = Convert.ToUInt32(args[0], 16);
+            var value = BitConverter.ToUInt32(HexStringToBytes(args[1]));
+
+            emulator.Registers[reg] = value;
+            return "OK";
         }
 
         // Read memory - mADDR,LEN
@@ -386,6 +411,17 @@ public class GdbConnectionHandler : ConnectionHandler
             destination[i * 2] = GetHexChar(b >> 4);
             destination[i * 2 + 1] = GetHexChar(b & 0x0F);
         }
+    }
+
+    private static byte[] HexStringToBytes(string hex)
+    {
+        if (hex.Length % 2 != 0) throw new ArgumentException("Hex string must have even length");
+        byte[] bytes = new byte[hex.Length / 2];
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+        }
+        return bytes;
     }
 
     private char GetHexChar(int value)

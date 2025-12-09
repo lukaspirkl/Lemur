@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+
 namespace Venture.Processor;
 
 public interface IIndexable<T>
@@ -10,7 +12,16 @@ public interface IIndexable<T>
 public class Registers : IIndexable<uint>
 {
     private uint[] data = new uint[32];
+    private readonly ILogger<Registers> logger;
+
     public int Length => 32;
+
+    
+
+    public Registers(ILogger<Registers> logger)
+    {
+        this.logger = logger;
+    }
 
     public uint this[uint index]
     {
@@ -30,8 +41,7 @@ public class Registers : IIndexable<uint>
                 return;
             }
 
-            ;
-            Console.WriteLine($"x{index}{(index.ToString().Length == 1 ? " " : "")} {value.ToHex()}");
+            logger.LogDebug("x{index} {value}", index, value.ToHex());
 
             data[index] = value;
         }

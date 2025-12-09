@@ -1,4 +1,5 @@
-﻿using Venture;
+﻿using Microsoft.Extensions.Logging.Testing;
+using Venture;
 using Venture.Processor;
 
 namespace Tests.Processor;
@@ -15,8 +16,9 @@ public class InstructionTests
         // 0x400E0204
         var memory = new Memory("memory", 0x400E0000, 0x500);
 
-        var m = new BusFabric([instruction, memory]);
-        var e = new Hazard3Processor(m);
+        var r = new Registers(new FakeLogger<Registers>());
+        var m = new BusFabric([instruction, memory], new FakeLogger<BusFabric>());
+        var e = new Hazard3Processor(m, new FakeLogger<Hazard3Processor>(), r);
         e.Registers[01] = 0x000071C8;
         e.Registers[02] = 0x400E0208;
         e.Registers[03] = 0xFFFFFFE1;

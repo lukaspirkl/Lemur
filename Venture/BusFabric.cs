@@ -1,10 +1,14 @@
+using Microsoft.Extensions.Logging;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
 namespace Venture;
 
 public class BusFabric : IBusFabric
 {
-    private readonly IAddressableResource[] resources;
+    private readonly IEnumerable<IAddressableResource> resources;
+    private readonly ILogger<BusFabric> logger;
 
-    public BusFabric(IAddressableResource[] resources)
+    public BusFabric(IEnumerable<IAddressableResource> resources, ILogger<BusFabric> logger)
     {
         if (!BitConverter.IsLittleEndian)
         {
@@ -12,6 +16,7 @@ public class BusFabric : IBusFabric
         }
 
         this.resources = resources;
+        this.logger = logger;
     }
 
     private bool CanHandle(IAddressableResource resource, uint address)
@@ -21,7 +26,7 @@ public class BusFabric : IBusFabric
 
     public void Write(uint address, byte[] data)
     {
-        Console.WriteLine($"mem {address.ToHex()} {data.ToHex()}");
+        logger.LogDebug("Write to memory {address} value {data}", address.ToHex(), data.ToHex());
 
         var segment = resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
@@ -34,6 +39,8 @@ public class BusFabric : IBusFabric
 
     public byte[] Read(uint address, int count)
     {
+        logger.LogDebug("Reading from memory {address} (count: {count})", address.ToHex(), count);
+
         var segment = resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
         {

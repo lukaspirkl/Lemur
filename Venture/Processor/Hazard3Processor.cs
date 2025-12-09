@@ -1,9 +1,12 @@
+using Microsoft.Extensions.Logging;
+using System.Diagnostics;
+
 namespace Venture.Processor;
 
 public class Hazard3Processor
 {
     private readonly IDecoder decoder = new CDecoder(new Decoder());
- 
+    private readonly ILogger<Hazard3Processor> logger;
     private bool m_IsPCModified = false;
 
     public IBusFabric Memory { get; }
@@ -34,15 +37,17 @@ public class Hazard3Processor
         }
     }
 
-    public Hazard3Processor(IBusFabric memory)
+    public Hazard3Processor(IBusFabric memory, ILogger<Hazard3Processor> logger, Registers registers)
     {
         Memory = memory;
-        Registers = new Registers();
+        this.logger = logger;
+        Registers = registers;
     }
 
     public void Step()
     {
-        Console.WriteLine($"PC: {PC.ToHex()}");
+        using var activity = Program.ActivitySource.StartActivity("Instruction");
+        activity?.AddTag("PC", PC.ToHex());
 
         var instruction = Memory.ReadWord(PC);
 

@@ -1,4 +1,5 @@
-﻿using Venture;
+﻿using Microsoft.Extensions.Logging.Testing;
+using Venture;
 using Venture.Processor;
 
 namespace Tests.Processor;
@@ -16,6 +17,14 @@ public class RISCVCompliance
         public int? Timeout { get; set; }
 
         public Dictionary<string, HashSet<string>>? Traits { get; set; }
+
+        public string? Label { get; set; }
+
+        public Type? SkipType { get; set; }
+
+        public string? SkipUnless { get; set; }
+
+        public string? SkipWhen { get; set; }
 
         private string path;
 
@@ -49,7 +58,7 @@ public class RISCVCompliance
         var ram = new Memory("ram", 0x80000000, 1024 * 1024 * 5);
         ram.LoadElf(path);
 
-        var m = new BusFabric([ram]);
+        var m = new BusFabric([ram], new FakeLogger<BusFabric>());
 
         ram.OnWrite += (s, a) =>
         {
@@ -62,7 +71,8 @@ public class RISCVCompliance
             }
         };
 
-        var e = new Hazard3Processor(m);
+        var r = new Registers(new FakeLogger<Registers>());
+        var e = new Hazard3Processor(m, new FakeLogger<Hazard3Processor>(), r);
 
         // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.
         // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/csrs/mip.html#mip-MTIP-def

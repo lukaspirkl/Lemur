@@ -1,4 +1,5 @@
-﻿using Venture.Peripherals;
+﻿using Microsoft.Extensions.Logging.Testing;
+using Venture.Peripherals;
 
 namespace Tests.Peripherals;
 
@@ -7,7 +8,7 @@ public class Sha256Tests
     [Fact]
     public void WhenUsedFromBootROM()
     {
-        var p = new Sha256();
+        var p = new Sha256(new FakeLogger<Sha256>());
 
         p.Write(p.StartAddress + 0x00, BitConverter.GetBytes((uint)0x00001207));
 

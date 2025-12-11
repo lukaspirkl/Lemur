@@ -9,16 +9,17 @@ public class InstructionTests
     [Fact]
     public void CM_Push()
     {
-        var instruction = new Memory("instruction", 0x0, 1024 * 5); // 5kB
+        var instruction = new Memory("instruction", 0x0, 1024 * 5, new FakeLogger<Memory>()); // 5kB
         // b872 cm.push { ra,s0 - s2},-16
         instruction.Write(0x0, [0x72, 0xb8]);
 
         // 0x400E0204
-        var memory = new Memory("memory", 0x400E0000, 0x500);
+        var memory = new Memory("memory", 0x400E0000, 0x500, new FakeLogger<Memory>());
 
         var r = new Registers(new FakeLogger<Registers>());
         var m = new BusFabric([instruction, memory], new FakeLogger<BusFabric>());
-        var e = new Hazard3Processor(m, new FakeLogger<Hazard3Processor>(), r);
+        var csr = new CSR(new FakeLogger<CSR>());
+        var e = new Hazard3Processor(m, new FakeLogger<Hazard3Processor>(), r, csr);
         e.Registers[01] = 0x000071C8;
         e.Registers[02] = 0x400E0208;
         e.Registers[03] = 0xFFFFFFE1;

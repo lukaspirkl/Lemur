@@ -2,14 +2,9 @@
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using OpenTelemetry.Exporter;
-using OpenTelemetry.Logs;
-using OpenTelemetry.Metrics;
-using OpenTelemetry.Resources;
-using OpenTelemetry.Trace;
-using System.Diagnostics;
-using System.Diagnostics.Tracing;
+using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
 using System.Net;
 using Venture.Debug;
 using Venture.Peripherals;
@@ -19,13 +14,14 @@ namespace Venture;
 
 internal class Program
 {
-    private static OpenTelemetryDebugListener? _otelDebug;
-
-    public static readonly ActivitySource ActivitySource = new ActivitySource("RP2350");
+    private static readonly string logFile = "log.clef";
 
     private static async Task Main(string[] args)
     {
-        _otelDebug = new OpenTelemetryDebugListener();
+        if (File.Exists(logFile))
+        {
+            File.Delete(logFile);
+        }
 
         var builder = WebApplication.CreateSlimBuilder(args);
 
@@ -38,49 +34,16 @@ internal class Program
         });
 
 
-        builder.Services.AddOpenTelemetry()
-        .ConfigureResource(resource =>
-        {
-            resource.AddService("RP2350Emulator");
-        })
-        .WithTracing(c =>
-        {
-            c.AddAspNetCoreInstrumentation();
-            c.AddSource("RP2350");
-            c.AddOtlpExporter(o =>
-            {
-                o.Endpoint = new Uri("https://seq.prkl.cz/ingest/otlp/v1/traces");
-                o.Protocol = OtlpExportProtocol.HttpProtobuf;
-            });
-            c.AddConsoleExporter();
-        });
-        //.WithMetrics(c =>
-        //{
-        //    c.AddAspNetCoreInstrumentation();
-        //    c.AddOtlpExporter(o =>
-        //    {
-        //        o.Endpoint = new Uri("https://seq.prkl.cz/ingest/otlp/v1/metrics");
-        //        o.Protocol = OtlpExportProtocol.HttpProtobuf;
-        //    });
-        //    c.AddConsoleExporter();
-        //});
-
-        builder.Logging.AddOpenTelemetry(c =>
-        {
-            c.AddOtlpExporter(o =>
-            {
-                o.Endpoint = new Uri("https://seq.prkl.cz/ingest/otlp/v1/logs");
-                o.Protocol = OtlpExportProtocol.HttpProtobuf;
-            });
-            c.AddConsoleExporter();
-        });
-
+        builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
+            .MinimumLevel.Is(LogEventLevel.Debug)
+            .Enrich.FromLogContext()
+            .WriteTo.File(new CompactJsonFormatter(), logFile)
+            .WriteTo.Console());
 
         builder.Services.AddRP2350Emulator();
 
         var app = builder.Build();
 
-        using var activity = Program.ActivitySource.StartActivity("Main");
         await app.RunAsync();
     }
 }
@@ -106,6 +69,18 @@ public static class RP2350ServiceCollectionExtensions
         return services;
     }
 
+    private static IServiceCollection AddMemory(this IServiceCollection services, string name, uint address, uint size, Action<Memory>? init = null)
+    {
+        services.AddSingleton<IAddressableResource>(sp => 
+        {
+            var memory = sp.GetRequiredService<MemoryFactory>().Create(name, address, size);
+            init?.Invoke(memory);
+            return memory;
+        });
+
+        return services;
+    }
+
     public static IServiceCollection AddRP2350Emulator(this IServiceCollection services)
     {
         services.AddSingleton<RP2350Emulator>();
@@ -115,21 +90,19 @@ public static class RP2350ServiceCollectionExtensions
         services.AddSingleton<Hazard3Processor>();
         services.AddSingleton<IBusFabric, BusFabric>();
         services.AddSingleton<Registers>();
-
+        services.AddSingleton<CSR>();
+        services.AddSingleton<MemoryFactory>();
         services.AddSingleton<UnimplementedPeripheralFactory>();
 
+
         // 0x00000000 - ROM
-        var rom = new Memory("ROM", 0x00000000, 1024 * 32); // 32kB
-        rom.LoadBin(@"Blink\A2\bootrom-combined.bin");
-        services.AddSingleton<IAddressableResource>(rom);
+        services.AddMemory("ROM", 0x00000000, 1024 * 32, m => m.LoadBin(@"Blink\A2\bootrom-combined.bin")); // 32kB
 
         // 0x10000000 - XIP
-        var xip = new Memory("XIP", 0x10000000, 1024 * 1024 * 2); // 2MB
-        xip.LoadElf(@"Blink\KeySquareBlink.elf");
-        services.AddSingleton<IAddressableResource>(xip);
-
+        services.AddMemory("XIP", 0x10000000, 1024 * 1024 * 2, m => m.LoadElf(@"Blink\KeySquareBlink.elf")); // 2MB
+        
         // 0x20000000 - SRAM
-        services.AddSingleton<IAddressableResource>(new Memory("SRAM", 0x20000000, 1024 * 520)); // 520kB
+        services.AddMemory("SRAM", 0x20000000, 1024 * 520); // 520kB
 
         // 0x40000000 - APB Peripherals
         services.AddUnimpelentedPeripheral(0x40000000, "SYSINFO_BASE");
@@ -161,7 +134,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddUnimpelentedPeripheral(0x400c8000, "XIP_CTRL_BASE");
         services.AddUnimpelentedPeripheral(0x400d0000, "XIP_QMI_BASE");
         services.AddUnimpelentedPeripheral(0x400d8000, "WATCHDOG_BASE");
-        services.AddSingleton<IAddressableResource>(new Memory("bootRAM", 0x400e0000, 1024)); // 1kB
+        services.AddMemory("bootRAM", 0x400e0000, 1024); // 1kB
         services.AddUnimpelentedPeripheral(0x400e0800, 0x02c, "BOOTRAM_BASE");
         services.AddUnimpelentedPeripheral(0x400e8000, "ROSC_BASE");
         services.AddUnimpelentedPeripheral(0x400f0000, "TRNG_BASE");
@@ -212,47 +185,4 @@ public static class RP2350ServiceCollectionExtensions
 }
 
 
-internal class OpenTelemetryDebugListener : EventListener
-{
-    protected override void OnEventSourceCreated(EventSource eventSource)
-    {
-        // STRICT FILTER: Only enable sources that start with "OpenTelemetry-"
-        if (eventSource.Name != null && eventSource.Name.StartsWith("OpenTelemetry-"))
-        {
-            EnableEvents(eventSource, EventLevel.Verbose);
-        }
-    }
-
-    protected override void OnEventWritten(EventWrittenEventArgs eventData)
-    {
-        // Double check to be sure (in case events were enabled before the filter was applied)
-        if (!eventData.EventSource.Name.StartsWith("OpenTelemetry-"))
-        {
-            return;
-        }
-
-        // Try to format the message using the standard formatted string
-        string message;
-        if (eventData.Message != null)
-        {
-            try
-            {
-                message = string.Format(eventData.Message, eventData.Payload?.ToArray() ?? Array.Empty<object>());
-            }
-            catch
-            {
-                // Fallback if formatting fails
-                message = eventData.Message;
-            }
-        }
-        else
-        {
-            // If there is no message, just join the payload parts
-            message = eventData.Payload != null
-                ? string.Join(", ", eventData.Payload)
-                : "No payload";
-        }
-
-        Console.WriteLine($"[OTEL-DEBUG] [{eventData.EventSource.Name}] {message}");
-    }
-}
+// https://github.com/andrewlock/blog-comments/discussions/229#discussioncomment-10187328

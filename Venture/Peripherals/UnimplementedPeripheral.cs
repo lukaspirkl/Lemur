@@ -29,6 +29,7 @@ public class UnimplementedPeripheral : IAddressableResource
     public UnimplementedPeripheral(uint startAddress, uint size, string name, ILogger<UnimplementedPeripheral> logger)
     {
         StartAddress = startAddress;
+        Size = size;
         this.name = name;
         this.logger = logger;
     }

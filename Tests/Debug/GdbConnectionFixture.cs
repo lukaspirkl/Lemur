@@ -1,11 +1,25 @@
 ﻿using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Hosting;
 using System.IO.Pipelines;
 using System.Text;
 using System.Text.RegularExpressions;
 using Venture.Debug;
 
 namespace Tests.Debug;
+
+public class FakeHostApplicationLigetime : IHostApplicationLifetime
+{
+    public CancellationToken ApplicationStarted => CancellationToken.None;
+
+    public CancellationToken ApplicationStopped => CancellationToken.None;
+
+    public CancellationToken ApplicationStopping => CancellationToken.None;
+
+    public void StopApplication()
+    {
+    }
+}
 
 public sealed partial class GdbConnectionFixture : ConnectionContext, IAsyncDisposable
 {
@@ -22,7 +36,7 @@ public sealed partial class GdbConnectionFixture : ConnectionContext, IAsyncDisp
         Features = new FeatureCollection();
 
         _emulator = new MockEmulator();
-        var handler = new GdbConnectionHandler(new NullLogger<GdbConnectionHandler>(), _emulator);
+        var handler = new GdbConnectionHandler(new NullLogger<GdbConnectionHandler>(), _emulator, new FakeHostApplicationLigetime());
         _handlerTask = handler.OnConnectedAsync(this);
     }
 

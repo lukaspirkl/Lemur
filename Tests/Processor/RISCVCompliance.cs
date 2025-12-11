@@ -55,7 +55,7 @@ public class RISCVCompliance
         int maxSteps = 10_000;
         var isRunning = true;
 
-        var ram = new Memory("ram", 0x80000000, 1024 * 1024 * 5);
+        var ram = new Memory("ram", 0x80000000, 1024 * 1024 * 5, new FakeLogger<Memory>());
         ram.LoadElf(path);
 
         var m = new BusFabric([ram], new FakeLogger<BusFabric>());
@@ -71,8 +71,10 @@ public class RISCVCompliance
             }
         };
 
+        var csr = new CSR(new FakeLogger<CSR>());
+
         var r = new Registers(new FakeLogger<Registers>());
-        var e = new Hazard3Processor(m, new FakeLogger<Hazard3Processor>(), r);
+        var e = new Hazard3Processor(m, new FakeLogger<Hazard3Processor>(), r, csr);
 
         // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.
         // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/csrs/mip.html#mip-MTIP-def

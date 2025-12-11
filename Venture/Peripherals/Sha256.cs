@@ -1,12 +1,11 @@
-﻿using System.Buffers.Binary;
+﻿using Microsoft.Extensions.Logging;
+using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 
 namespace Venture.Peripherals;
 
 public class Sha256 : PeripheralBase
 {
-    private readonly FileLogger fileLogger = new FileLogger("sha256.log");
-
     // Control and status register
     private const uint SCR = 0x00;
 
@@ -25,14 +24,15 @@ public class Sha256 : PeripheralBase
         bit32 = 0x2,
     }
 
-    public Sha256() : base(0x400f8000)
+    public Sha256(ILogger<Sha256> logger) 
+        : base(0x400f8000)
     {
-        fileLogger.Clear();
+        this.logger = logger;
     }
 
     protected override byte[] HandleRead(uint offset, int count)
     {
-        fileLogger.Log($"READ offset: {offset.ToHex()} count: {count}");
+        logger.LogInformation("READ offset: {offset} count: {count}", offset.ToHex(), count);
 
         if (offset == SCR)
         {
@@ -64,15 +64,14 @@ public class Sha256 : PeripheralBase
         }
         else
         {
-            Console.WriteLine($"WARNING: Reading from {offset.ToHex()} - Sha256");
+            logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
             return new byte[count];
-            //throw new NotImplementedException();
         }
     }
 
     protected override void HandleWrite(uint offset, byte[] data)
     {
-        fileLogger.Log($"WRITE offset: {offset.ToHex()} data: {data.ToHex()}");
+        logger.LogInformation("WRITE offset: {offset} data: {data}", offset.ToHex(), data.ToHex());
 
 
         if (offset == SCR)
@@ -112,8 +111,7 @@ public class Sha256 : PeripheralBase
         else
         {
             var value = BitConverter.ToUInt32(data);
-            Console.WriteLine($"WARNING: Writing to {offset.ToHex()} data {value.ToHex()} - Sha256");
-            //throw new NotImplementedException();
+            logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
         }
     }
 
@@ -198,6 +196,7 @@ public class Sha256 : PeripheralBase
         0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5, 0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3,
         0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208, 0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2
     };
+    private readonly ILogger<Sha256> logger;
 
     private static UInt32 ROTL(UInt32 x, byte n)
     {

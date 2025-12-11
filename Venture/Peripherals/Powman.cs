@@ -1,9 +1,15 @@
-﻿namespace Venture.Peripherals;
+﻿using Microsoft.Extensions.Logging;
+
+namespace Venture.Peripherals;
 
 public class Powman : Peripheral32
 {
-    public Powman() : base(0x40100000)
+    private readonly ILogger<Powman> logger;
+
+    public Powman(ILogger<Powman> logger) 
+        : base(0x40100000)
     {
+        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)
@@ -15,14 +21,12 @@ public class Powman : Peripheral32
             return 1 << 27; 
         }
 
-        Console.WriteLine($"WARNING: Reading from {offset.ToHex()} - POWMAN");
+        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
         return 0;
-        //throw new NotImplementedException();
     }
 
     protected override void HandleWrite(uint offset, uint value)
     {
-        Console.WriteLine($"WARNING: Writing to {offset.ToHex()} data {value.ToHex()} - POWMAN");
-        //throw new NotImplementedException();
+        logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
     }
 }

@@ -1,14 +1,31 @@
 using ELFSharp.ELF;
 using ELFSharp.ELF.Sections;
 using ELFSharp.ELF.Segments;
+using Microsoft.Extensions.Logging;
 
 namespace Venture;
 
 public record MemoryWriteArgs(uint Address, byte[] Data);
 
+public class MemoryFactory
+{
+    private readonly ILogger<Memory> logger;
+
+    public MemoryFactory(ILogger<Memory> logger)
+    {
+        this.logger = logger;
+    }
+
+    public Memory Create(string name, uint startAddress, uint size)
+    {
+        return new Memory(name, startAddress, size, logger);
+    }
+}
+
 public class Memory : IAddressableResource
 {
     private readonly string name;
+    private readonly ILogger<Memory> logger;
     private readonly byte[] memory;
 
     public uint StartAddress { get; }
@@ -18,17 +35,18 @@ public class Memory : IAddressableResource
 
     public Dictionary<string, uint> Symbols { get; set; } = new Dictionary<string, uint>();
 
-    public Memory(string name, uint startAddress, uint size)
+    public Memory(string name, uint startAddress, uint size, ILogger<Memory> logger)
     {
         this.name = name;
         memory = new byte[size];
         StartAddress = startAddress;
         Size = size;
+        this.logger = logger;
     }
 
     public void Write(uint address, byte[] data)
     {
-        //Console.WriteLine($"mem[{address.ToHex()}] <- {data.ToHex()}");
+        logger.LogInformation("mem[{address}] <- {data}", address.ToHex(), data.ToHex());
 
         OnWrite?.Invoke(this, new MemoryWriteArgs(address, data));
 
@@ -42,7 +60,7 @@ public class Memory : IAddressableResource
 
     public void LoadElf(string path)
     {
-        Console.WriteLine($"Loading {path}");
+        logger.LogInformation("Loading {path}", path);
 
         var elf = ELFReader.Load(path);
 
@@ -51,19 +69,18 @@ public class Memory : IAddressableResource
         var loadableSegments = elf.Segments.OfType<Segment<UInt32>>().Where(x => x.Type == SegmentType.Load);
         foreach (var segment in loadableSegments)
         {
-            Console.WriteLine($"Processing segment at 0x{segment.Address:X}...");
+            logger.LogInformation("Processing segment at {address}...", segment.Address.ToHex());
 
             long flashOffset = segment.Address - StartAddress;
             if (flashOffset >= 0 && (flashOffset + segment.Size) <= memory.Length)
             {
-                Console.WriteLine($"Segment is written to {name}");
+                logger.LogInformation("Segment is written to {name}", name);
                 byte[] segmentData = segment.GetMemoryContents();
                 Array.Copy(segmentData, 0, memory, flashOffset, segmentData.Length);
                 continue;
             }
 
-            Console.WriteLine($"Warning: Segment at 0x{segment.Address:X} (size 0x{segment.Size:X}) " +
-                                $"is outside the defined flash memory range. Skipping.");
+            logger.LogWarning("Segment at {addres} (size {size}) is outside the defined flash memory range. Skipping.", segment.Address.ToHex(), segment.Size.ToHex());
         }
     }
 

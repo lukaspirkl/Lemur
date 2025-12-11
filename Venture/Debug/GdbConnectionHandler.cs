@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Connections;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
 using System.Text;
@@ -14,75 +15,99 @@ public class GdbConnectionHandler : ConnectionHandler
 {
     private readonly ILogger<GdbConnectionHandler> _logger;
     private readonly IEmulator emulator;
+    private readonly IHostApplicationLifetime hostLifetime;
 
-    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, IEmulator emulator)
+    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, IEmulator emulator, IHostApplicationLifetime hostLifetime)
     {
         _logger = logger;
         this.emulator = emulator;
+        this.hostLifetime = hostLifetime;
     }
 
     public override async Task OnConnectedAsync(ConnectionContext connection)
     {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(connection.ConnectionClosed, hostLifetime.ApplicationStopping);
+        var cancellationToken = cts.Token;
+
         _logger.LogInformation($"Debugger connected: {connection.RemoteEndPoint}");
-        var input = connection.Transport.Input;
-        var output = connection.Transport.Output;
 
-        while (true)
+        try
         {
-            var result = await input.ReadAsync();
-            var buffer = result.Buffer;
+            var input = connection.Transport.Input;
+            var output = connection.Transport.Output;
 
-            if (buffer.Length == 1 && buffer.FirstSpan[0] == 0x3)
+            while (!cancellationToken.IsCancellationRequested)
             {
-                emulator.Stop();
-                await SendPacketAsync(output, "S05");
-            }
+                var result = await input.ReadAsync(cancellationToken);
+                var buffer = result.Buffer;
 
-            // We must track how much of the buffer we have used
-            SequencePosition consumed = buffer.Start;
-            SequencePosition examined = buffer.Start;
-
-            try
-            {
-                // Loop through all available packets in the buffer
-                while (TryFindPacket(buffer, out var packetData, out var consumedTo))
+                if (buffer.Length == 1 && buffer.FirstSpan[0] == 0x3)
                 {
-                    // Send ACK
-                    await output.WriteAsync(new byte[] { (byte)'+' });
-
-
-                    string packet = Encoding.ASCII.GetString(packetData);
-
-                    //Console.WriteLine($">> {packet}");
-
-                    var response = ProcessGdbCommand(packet);
-                    if (response != null)
-                    {
-                        //Console.WriteLine($"<< {response}");
-
-                        await SendPacketAsync(output, response);
-                    }
-
-                    // Update the buffer to skip what we just processed
-                    consumed = consumedTo;
-                    buffer = buffer.Slice(consumed);
-
-                    // Mark that we examined up to here
-                    examined = consumed;
+                    emulator.Stop();
+                    await SendPacketAsync(output, "S05");
                 }
-            }
-            finally
-            {
-                // Advance the pipe to where we stopped
-                // If we didn't find a full packet, consumed stays at start (wait for more data)
-                input.AdvanceTo(consumed, buffer.End);
+
+                // We must track how much of the buffer we have used
+                SequencePosition consumed = buffer.Start;
+                SequencePosition examined = buffer.Start;
+
+                try
+                {
+                    // Loop through all available packets in the buffer
+                    while (TryFindPacket(buffer, out var packetData, out var consumedTo))
+                    {
+                        // Send ACK
+                        await output.WriteAsync(new byte[] { (byte)'+' });
+
+
+                        string packet = Encoding.ASCII.GetString(packetData);
+
+                        _logger.LogDebug("GDB>> {packet}", packet);
+
+                        var response = ProcessGdbCommand(packet);
+                        if (response != null)
+                        {
+                            _logger.LogDebug("GDB<< {response}", response);
+
+                            await SendPacketAsync(output, response);
+                        }
+
+                        // Update the buffer to skip what we just processed
+                        consumed = consumedTo;
+                        buffer = buffer.Slice(consumed);
+
+                        // Mark that we examined up to here
+                        examined = consumed;
+                    }
+                }
+                finally
+                {
+                    // Advance the pipe to where we stopped
+                    // If we didn't find a full packet, consumed stays at start (wait for more data)
+                    input.AdvanceTo(consumed, buffer.End);
+                }
+
+                if (result.IsCompleted) break;
             }
 
-            if (result.IsCompleted) break;
+            output.Complete();
         }
-
-        output.Complete();
-        _logger.LogInformation("Debugger disconnected.");
+        catch (OperationCanceledException)
+        {
+            _logger.LogInformation("GDB connection cancelled");
+        }
+        catch (ConnectionResetException e)
+        {
+            _logger.LogWarning(e, "Connection reset");
+        }
+        catch (Exception e)
+        {
+            _logger.LogError(e, "Unexpected exception while handling GDB connection");
+        }
+        finally
+        {
+            _logger.LogInformation("Debugger disconnected.");
+        }
     }
 
     // Helper to find '$...#CC' in the buffer
@@ -123,6 +148,8 @@ public class GdbConnectionHandler : ConnectionHandler
 
     private string? ProcessGdbCommand(string command)
     {
+        using var _ = _logger.BeginScope("GDB command: {gdbCommand}", command);
+
         if (command == "?")
         {
             return "S05"; // Use stop reason SIGTRAP(5).
@@ -376,7 +403,7 @@ public class GdbConnectionHandler : ConnectionHandler
             return "";
         }
 
-        Console.WriteLine($"Unknown GDB command: {command}");
+        _logger.LogWarning("Unknown GDB command: {command}", command);
         return ""; // Empty = Not Supported (Correct for vMustReplyEmpty)
     }
 

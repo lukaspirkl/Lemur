@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace Venture.Processor;
 
@@ -11,7 +10,7 @@ public class Hazard3Processor
 
     public IBusFabric Memory { get; }
     public Registers Registers { get; }
-    public CSR CSR { get; } = new CSR();
+    public CSR CSR { get; }
 
     public event EventHandler? EBreak;
 
@@ -37,27 +36,33 @@ public class Hazard3Processor
         }
     }
 
-    public Hazard3Processor(IBusFabric memory, ILogger<Hazard3Processor> logger, Registers registers)
+    public Hazard3Processor(IBusFabric memory, ILogger<Hazard3Processor> logger, Registers registers, CSR csr)
     {
         Memory = memory;
         this.logger = logger;
         Registers = registers;
+        CSR = csr;
     }
 
     public void Step()
     {
-        using var activity = Program.ActivitySource.StartActivity("Instruction");
-        activity?.AddTag("PC", PC.ToHex());
-
-        var instruction = Memory.ReadWord(PC);
-
-        var format = decoder.Decode(instruction);
-        
-        m_IsPCModified = false;
-        format.Execute(this);
-        if (!m_IsPCModified)
+        using (logger.BeginScope("PC: {PC}", PC.ToHex()))
         {
-            PC = PC + format.StepSize;
+            var instruction = Memory.ReadWord(PC);
+
+            var format = decoder.Decode(instruction);
+
+            using (logger.BeginScope("Execute {instruction} {mnemonic}", instruction.ToHex(), format.Mnemonic))
+            {
+                logger.LogInformation("Execute instruction");
+
+                m_IsPCModified = false;
+                format.Execute(this);
+                if (!m_IsPCModified)
+                {
+                    PC = PC + format.StepSize;
+                }
+            }
         }
     }
 }

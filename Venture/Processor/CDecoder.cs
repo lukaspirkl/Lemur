@@ -49,7 +49,6 @@ public class CDecoder : IDecoder
                 var format = factory.Decode(funct3, instruction);
                 if (format != null)
                 {
-                    //Console.WriteLine($"Instruction: {instruction.ToHex(4)} - {format.Mnemonic}");
                     return format;
                 }
             }

@@ -33,7 +33,6 @@ public class Decoder : IDecoder
                 var format = factory.Decode(instruction);
                 if (format != null)
                 {
-                    //Console.WriteLine($"Instruction: {instruction.ToHex()} - {format.Mnemonic}");
                     return format;
                 }
             }

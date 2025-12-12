@@ -14,10 +14,10 @@ namespace Venture.Debug;
 public class GdbConnectionHandler : ConnectionHandler
 {
     private readonly ILogger<GdbConnectionHandler> _logger;
-    private readonly IEmulator emulator;
+    private readonly IDebuggable emulator;
     private readonly IHostApplicationLifetime hostLifetime;
 
-    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, IEmulator emulator, IHostApplicationLifetime hostLifetime)
+    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, IDebuggable emulator, IHostApplicationLifetime hostLifetime)
     {
         _logger = logger;
         this.emulator = emulator;

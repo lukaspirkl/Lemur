@@ -3,7 +3,7 @@ using Venture.Processor;
 
 namespace Tests;
 
-public class MockEmulator : IEmulator
+public class MockEmulator : IDebuggable
 {
     public class MockRegisters : IIndexable<uint>
     {

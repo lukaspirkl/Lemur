@@ -1,9 +1,9 @@
-﻿namespace GdbDiff;
+﻿using Venture.Debug;
+
+namespace GdbDiff;
 
 class Program
 {
-    
-
     static void Main(string[] args)
     {
         try

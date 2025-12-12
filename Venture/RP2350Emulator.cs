@@ -3,7 +3,7 @@ using Venture.Processor;
 
 namespace Venture;
 
-public class RP2350Emulator : BackgroundService, IEmulator
+public class RP2350Emulator : BackgroundService, IDebuggable
 {
     private readonly Hazard3Processor processor;
     private readonly RegistersWrapper registers;

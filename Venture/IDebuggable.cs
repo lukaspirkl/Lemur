@@ -2,7 +2,7 @@
 
 namespace Venture
 {
-    public interface IEmulator
+    public interface IDebuggable
     {
         IIndexable<uint> Registers { get; }
 

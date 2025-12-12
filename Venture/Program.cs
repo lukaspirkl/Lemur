@@ -85,7 +85,7 @@ public static class RP2350ServiceCollectionExtensions
     {
         services.AddSingleton<RP2350Emulator>();
         services.AddHostedService(x => x.GetRequiredService<RP2350Emulator>());
-        services.AddSingleton<IEmulator>(x => x.GetRequiredService<RP2350Emulator>());
+        services.AddSingleton<IDebuggable>(x => x.GetRequiredService<RP2350Emulator>());
 
         services.AddSingleton<Hazard3Processor>();
         services.AddSingleton<IBusFabric, BusFabric>();

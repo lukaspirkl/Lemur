@@ -1,7 +1,50 @@
 ﻿using System.Net.Sockets;
 using System.Text;
+using Venture.Processor;
 
-namespace GdbDiff;
+namespace Venture.Debug;
+
+public class RP2350GDB : IDebuggable, IDisposable
+{
+    private readonly GdbClient gdbClient;
+
+    public RP2350GDB(string host, int port)
+    {
+        gdbClient = new GdbClient(host, port);
+    }
+
+    public IIndexable<uint> Registers => throw new NotImplementedException();
+
+    public void Dispose()
+    {
+        gdbClient.Dispose();
+    }
+
+    public byte[] MemoryRead(uint address, int count)
+    {
+        return gdbClient.ReadMemory(address, (uint)count);
+    }
+
+    public void MemoryWrite(uint address, byte[] data)
+    {
+        gdbClient.WriteMemory(address, data);
+    }
+
+    public void Run()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Step()
+    {
+        throw new NotImplementedException();
+    }
+
+    public void Stop()
+    {
+        throw new NotImplementedException();
+    }
+}
 
 public class GdbClient : IDisposable
 {

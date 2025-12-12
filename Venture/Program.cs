@@ -37,7 +37,7 @@ internal class Program
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
             .MinimumLevel.Is(LogEventLevel.Debug)
             .Enrich.FromLogContext()
-            .WriteTo.File(new CompactJsonFormatter(), logFile)
+            .WriteTo.Async(a => a.File(new CompactJsonFormatter(), logFile))
             .WriteTo.Console());
 
         builder.Services.AddRP2350Emulator();
@@ -69,11 +69,11 @@ public static class RP2350ServiceCollectionExtensions
         return services;
     }
 
-    private static IServiceCollection AddMemory(this IServiceCollection services, string name, uint address, uint size, Action<Memory>? init = null)
+    private static IServiceCollection AddMemory(this IServiceCollection services, string name, uint address, uint size, Action<Memory>? init = null, bool isReadonly = false)
     {
         services.AddSingleton<IAddressableResource>(sp => 
         {
-            var memory = sp.GetRequiredService<MemoryFactory>().Create(name, address, size);
+            var memory = sp.GetRequiredService<MemoryFactory>().Create(name, address, size, isReadonly);
             init?.Invoke(memory);
             return memory;
         });
@@ -96,10 +96,10 @@ public static class RP2350ServiceCollectionExtensions
 
 
         // 0x00000000 - ROM
-        services.AddMemory("ROM", 0x00000000, 1024 * 32, m => m.LoadBin(@"Blink\A2\bootrom-combined.bin")); // 32kB
+        services.AddMemory("ROM", 0x00000000, 1024 * 32, m => m.LoadBin(@"Blink\A2\bootrom-combined.bin"), isReadonly: true); // 32kB
 
         // 0x10000000 - XIP
-        services.AddMemory("XIP", 0x10000000, 1024 * 1024 * 2, m => m.LoadElf(@"Blink\KeySquareBlink.elf")); // 2MB
+        services.AddMemory("XIP", 0x10000000, 1024 * 1024 * 2, m => m.LoadElf(@"Blink\KeySquareBlink.elf"), isReadonly: true); // 2MB // This is not really read only but I want to catch possible issues
         
         // 0x20000000 - SRAM
         services.AddMemory("SRAM", 0x20000000, 1024 * 520); // 520kB
@@ -144,7 +144,8 @@ public static class RP2350ServiceCollectionExtensions
         //new UnimplementedPeripheral(0x40100000, "POWMAN_BASE"),
         services.AddUnimpelentedPeripheral(0x40108000, "TICKS_BASE");
         services.AddUnimpelentedPeripheral(0x40120000, "OTP_BASE");
-        services.AddUnimpelentedPeripheral(0x40130000, "OTP_DATA_BASE");
+        services.AddPeripheral<OtpData>();
+        //services.AddUnimpelentedPeripheral(0x40130000, "OTP_DATA_BASE");
         services.AddUnimpelentedPeripheral(0x40134000, "OTP_DATA_RAW_BASE");
         services.AddUnimpelentedPeripheral(0x40138000, "OTP_DATA_GUARDED_BASE");
         services.AddUnimpelentedPeripheral(0x4013c000, "OTP_DATA_RAW_GUARDED_BASE");
@@ -163,8 +164,9 @@ public static class RP2350ServiceCollectionExtensions
 
         // 0x50000000 - AHB Peripherals
         services.AddUnimpelentedPeripheral(0x50000000, "DMA_BASE");
-        services.AddUnimpelentedPeripheral(0x50100000, "USBCTRL_BASE");
-        services.AddUnimpelentedPeripheral(0x50100000, "USBCTRL_DPRAM_BASE");
+        //services.AddUnimpelentedPeripheral(0x50100000, "USBCTRL_BASE");
+        //services.AddUnimpelentedPeripheral(0x50100000, "USBCTRL_DPRAM_BASE");
+        services.AddMemory("USB DPRAM", 0x50100000, 1024 * 4); // 4kB
         services.AddUnimpelentedPeripheral(0x50110000, "USBCTRL_REGS_BASE");
         services.AddUnimpelentedPeripheral(0x50200000, "PIO0_BASE");
         services.AddUnimpelentedPeripheral(0x50300000, "PIO1_BASE");

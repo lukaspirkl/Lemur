@@ -16,15 +16,16 @@ public class MemoryFactory
         this.logger = logger;
     }
 
-    public Memory Create(string name, uint startAddress, uint size)
+    public Memory Create(string name, uint startAddress, uint size, bool isReadonly = false)
     {
-        return new Memory(name, startAddress, size, logger);
+        return new Memory(name, startAddress, size, isReadonly, logger);
     }
 }
 
 public class Memory : IAddressableResource
 {
     private readonly string name;
+    private readonly bool isReadonly;
     private readonly ILogger<Memory> logger;
     private readonly byte[] memory;
 
@@ -35,17 +36,24 @@ public class Memory : IAddressableResource
 
     public Dictionary<string, uint> Symbols { get; set; } = new Dictionary<string, uint>();
 
-    public Memory(string name, uint startAddress, uint size, ILogger<Memory> logger)
+    public Memory(string name, uint startAddress, uint size, bool isReadonly, ILogger<Memory> logger)
     {
         this.name = name;
         memory = new byte[size];
         StartAddress = startAddress;
         Size = size;
+        this.isReadonly = isReadonly;
         this.logger = logger;
     }
 
     public void Write(uint address, byte[] data)
     {
+        if (isReadonly)
+        {
+            logger.LogError("Writing to read only memory {name} address {address} value {value}", name, address.ToHex(), data.ToHex());
+            return;
+        }
+
         logger.LogInformation("mem[{address}] <- {data}", address.ToHex(), data.ToHex());
 
         OnWrite?.Invoke(this, new MemoryWriteArgs(address, data));

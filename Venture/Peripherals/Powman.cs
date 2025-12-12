@@ -21,6 +21,8 @@ public class Powman : Peripheral32
             return 1 << 27; 
         }
 
+        // POWMAN: STATE Register - offset 0x00000038 has value 0x00000100 
+
         logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
         return 0;
     }

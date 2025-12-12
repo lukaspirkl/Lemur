@@ -20,6 +20,8 @@ public class SIO : Peripheral32
             return 0;
         }
 
+        // 0xD0000008 has value 0xC8000000
+
         logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
         return 0;
     }

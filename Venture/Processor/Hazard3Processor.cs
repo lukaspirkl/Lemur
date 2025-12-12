@@ -54,7 +54,7 @@ public class Hazard3Processor
 
             using (logger.BeginScope("Execute {instruction} {mnemonic}", instruction.ToHex(), format.Mnemonic))
             {
-                logger.LogInformation("Execute instruction");
+                logger.LogInformation("Execute PC:{PC} instruction:{instruction} - {mnemonic}", PC.ToHex(), instruction.ToHex(), format.Mnemonic);
 
                 m_IsPCModified = false;
                 format.Execute(this);

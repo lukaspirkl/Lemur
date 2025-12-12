@@ -19,7 +19,7 @@ public class Resets : Peripheral32
             logger.LogInformation("Read RESET_DONE Register");
             // This register contains a bit for each component that is automatically set when the component is out of
             // reset.This allows software to wait for this status bit in case the component requires initialisation before use.
-            return 0xFFFFFFFF;
+            return 0x1FFFFFFF;
         }
 
         logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());

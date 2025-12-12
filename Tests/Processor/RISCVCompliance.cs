@@ -55,7 +55,7 @@ public class RISCVCompliance
         int maxSteps = 10_000;
         var isRunning = true;
 
-        var ram = new Memory("ram", 0x80000000, 1024 * 1024 * 5, new FakeLogger<Memory>());
+        var ram = new Memory("ram", 0x80000000, 1024 * 1024 * 5, false, new FakeLogger<Memory>());
         ram.LoadElf(path);
 
         var m = new BusFabric([ram], new FakeLogger<BusFabric>());

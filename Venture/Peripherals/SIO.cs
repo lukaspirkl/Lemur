@@ -16,11 +16,16 @@ public class SIO : Peripheral32
     {   
         if (offset == 0x000) // CPUID Register
         {
-            logger.LogInformation("Read CPUID Register");
             return 0;
         }
-
-        // 0xD0000008 has value 0xC8000000
+        else if (offset == 0x004) // GPIO_IN Register
+        {
+            return 0x02000000;
+        }
+        else if (offset == 0x008) // GPIO_HI_IN Register
+        {
+            return 0xC8000000;
+        }
 
         logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
         return 0;

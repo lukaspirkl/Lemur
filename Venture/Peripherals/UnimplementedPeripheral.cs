@@ -11,9 +11,9 @@ public class UnimplementedPeripheralFactory
         _logger = logger;
     }
 
-    public UnimplementedPeripheral Create(uint address, string name, uint size = 0x4000)
+    public UnimplementedPeripheral Create(uint address, string name, uint? size)
     {
-        return new UnimplementedPeripheral(address, size, name, _logger);
+        return new UnimplementedPeripheral(address, size ?? 0x4000, name, _logger);
     }
 }
 

@@ -1,4 +1,6 @@
-﻿namespace Venture.Peripherals;
+﻿using Microsoft.Extensions.Logging;
+
+namespace Venture.Peripherals;
 
 public abstract class Peripheral32 : PeripheralBase
 {
@@ -53,11 +55,6 @@ public abstract class PeripheralBase : IAddressableResource
 
     public byte[] Read(uint address, int count)
     {
-        if (count != 4)
-        {
-            throw new InvalidOperationException();
-        }
-
         return HandleRead((address - StartAddress) % 0x1000, count);
     }
 
@@ -65,11 +62,6 @@ public abstract class PeripheralBase : IAddressableResource
 
     public void Write(uint address, byte[] data)
     {
-        if (data.Length != 4)
-        {
-            throw new InvalidOperationException();
-        }
-
         // TODO: Handle narrow write
         // To disable this behaviour on RP2350, set bit 14 of the address by accessing the peripheral at an offset
         // of +0x4000. This causes invalid byte lanes to be driven to zero, rather than being driven with replicated

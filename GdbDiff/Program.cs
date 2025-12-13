@@ -1,21 +1,30 @@
-﻿using Venture.Debug;
+﻿using Serilog;
+using Serilog.Events;
+using Serilog.Formatting.Compact;
+using Venture.Debug;
 
 namespace GdbDiff;
 
 class Program
 {
+    private static readonly string logFile = "GdbDiff.clef";
+
     static void Main(string[] args)
     {
+        if (File.Exists(logFile))
+        {
+            File.Delete(logFile);
+        }
+
+        Log.Logger = new LoggerConfiguration()
+            .MinimumLevel.Is(LogEventLevel.Debug)
+            .Enrich.FromLogContext()
+            .WriteTo.Async(a => a.File(new CompactJsonFormatter(), logFile, restrictedToMinimumLevel: LogEventLevel.Debug))
+            .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
+            .CreateLogger();
+
         try
         {
-            var logFile = "output.log";
-            if (File.Exists(logFile))
-            {
-                File.Delete(logFile);
-            }
-            using var stream = File.OpenWrite(logFile);
-            using var streamWriter = new StreamWriter(stream);
-
             using var gdbReal = new GdbClient("127.0.0.1", 50000);
 
             gdbReal.Monitor("reset halt");
@@ -25,20 +34,21 @@ class Program
             using var gdbEmu = new GdbClient("127.0.0.1", 3333);
 
             uint count = 0;
-            while (Compare(gdbReal, gdbEmu, streamWriter))
+            while (Compare(gdbReal, gdbEmu))
             {
-                Console.WriteLine($"Count {count++}");
+                Log.Information($"Count {count++}");
                 gdbReal.Step();
                 gdbEmu.Step();
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Log.Fatal(ex, "Unexpected exception caused application crash.");
         }
-
-        Console.WriteLine("Press Enter to exit...");
-        Console.ReadLine();
+        finally
+        {
+            Log.CloseAndFlush();
+        }
     }
 
     static void WipeRam(GdbClient gdb)
@@ -51,50 +61,56 @@ class Program
         }
     }
 
-    static bool Compare(GdbClient gdbReal, GdbClient gdbEmu, StreamWriter streamWriter)
+    static bool Compare(GdbClient gdbReal, GdbClient gdbEmu)
     {
         var regsReal = gdbReal.ReadRegisters();
         var regsSim = gdbEmu.ReadRegisters();
 
         for (int i = 0; i < regsReal.Length; i++)
         {
-            streamWriter.Write($"{i}: {regsReal[i].ToHex()} ");
+            Log.Debug($"{i}: {regsReal[i].ToHex()} ");
         }
-        streamWriter.WriteLine();
-        streamWriter.WriteLine();
-
 
         for (int i = 0; i < regsReal.Length; i++)
         {
             if (regsReal[i] != regsSim[i])
             {
-                var diffLog = $"DIFF in register {i} - real:{regsReal[i].ToHex()} sim: {regsSim[i].ToHex()}";
-                Console.WriteLine(diffLog);
-                streamWriter.WriteLine(diffLog);
+                Log.Warning($"DIFF in register {i} - real:{regsReal[i].ToHex()} sim: {regsSim[i].ToHex()}");
 
                 if (regsReal.Last() == 0x7472) // This is bootrom address that is getting value from TRNG
                 {
-                    Console.Write("AUTOMATIC REG REPLACEMENT");
+                    Log.Information("AUTOMATIC REG REPLACEMENT (value from TRNG)");
                     gdbEmu.WriteRegister((uint)i, regsReal[i]);
                 }
                 else
                 {
+                    //Log.Fatal("AUTOMATIC REG REPLACEMENT");
+                    //gdbEmu.WriteRegister((uint)i, regsReal[i]);
+
                     Console.Write("[S] set value to emulator and continue | [ANY] exit");
-                    if (Console.ReadKey().KeyChar == 's')
+                    while (true)
                     {
-                        gdbEmu.WriteRegister((uint)i, regsReal[i]);
-                    }
-                    else
-                    {
-                        return false;
+                        var keyChar = Console.ReadKey().KeyChar;
+                        if (keyChar == 's')
+                        {
+                            Log.Information("USER REG REPLACEMENT");
+                            gdbEmu.WriteRegister((uint)i, regsReal[i]);
+                            break;
+                        }
+                        else if (keyChar == 'x')
+                        {
+                            return false;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Unknown char '{keyChar.ToString()}'");
+                        }
                     }
                 }
             }
         }
 
-        var pcLog = $"PC - real:{regsReal.Last().ToHex()} sim: {regsSim.Last().ToHex()}";
-        Console.WriteLine(pcLog);
-        streamWriter.WriteLine(pcLog);
+        Log.Information($"PC - real:{regsReal.Last().ToHex()} sim: {regsSim.Last().ToHex()}");
 
         //uint address = 0x20000000;
         //for (int i = 0; i < 512 * 4; i++)

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
@@ -14,7 +15,7 @@ namespace Venture;
 
 internal class Program
 {
-    private static readonly string logFile = "log.clef";
+    private static readonly string logFile = "Venture.clef";
 
     private static async Task Main(string[] args)
     {
@@ -48,16 +49,51 @@ internal class Program
     }
 }
 
+public class XIP : IAddressableResource
+{
+    private readonly Memory memory;
+    private readonly ILogger<XIP> logger;
+
+    public uint StartAddress => 0x10000000;
+
+    public uint Size => 0x1FFFFFFF;
+
+    public XIP(Memory memory, ILogger<XIP> logger)
+    {
+        this.memory = memory;
+        this.logger = logger;
+    }
+
+    public byte[] Read(uint address, int count)
+    {
+        var offset = (address - StartAddress) % 0x0400_0000;
+        
+        var type = (address - StartAddress) / 0x0400_0000;
+        if (type != 1)
+        {
+            logger.LogWarning("Reading from XIP address: {address} offset: {offset} type: {type}", address, offset, type);
+        }
+
+        return memory.Read(StartAddress + offset, count);
+    }
+
+    public void Write(uint address, byte[] data)
+    {
+        var offset = (address - StartAddress) % 0x0400_0000;
+
+        var type = (address - StartAddress) / 0x0400_0000;
+        if (type != 1)
+        {
+            logger.LogWarning("Writing to XIP address: {address} offset: {offset} type: {type}", address, offset, type);
+        }
+
+        memory.Write(StartAddress + offset, data);
+    }
+}
 
 public static class RP2350ServiceCollectionExtensions
 {
-    private static IServiceCollection AddUnimpelentedPeripheral(this IServiceCollection services, uint address, string name)
-    {
-        services.AddSingleton<IAddressableResource>(sp => sp.GetRequiredService<UnimplementedPeripheralFactory>().Create(address, name));
-        return services;
-    }
-
-    private static IServiceCollection AddUnimpelentedPeripheral(this IServiceCollection services, uint address, uint size, string name)
+    private static IServiceCollection AddUnimpelentedPeripheral(this IServiceCollection services, uint address, string name, uint? size = null)
     {
         services.AddSingleton<IAddressableResource>(sp => sp.GetRequiredService<UnimplementedPeripheralFactory>().Create(address, name, size));
         return services;
@@ -81,8 +117,23 @@ public static class RP2350ServiceCollectionExtensions
         return services;
     }
 
+    private static IServiceCollection AddXIP(this IServiceCollection services, uint size, Action<Memory>? init = null)
+    {
+        services.AddSingleton<IAddressableResource>(sp =>
+        {
+            // This is not really read only but I want to catch possible issues
+            var memory = sp.GetRequiredService<MemoryFactory>().Create("XIP", 0x10000000, size, isReadonly: true);
+            init?.Invoke(memory);
+            return new XIP(memory, sp.GetRequiredService<ILogger<XIP>>());
+        });
+        return services;
+    }
+
     public static IServiceCollection AddRP2350Emulator(this IServiceCollection services)
     {
+        // TODO: cm.mvsa01 is probably wrong!!
+        // 7616:	ac26                	cm.mvsa01	s0,s1
+
         services.AddSingleton<RP2350Emulator>();
         services.AddHostedService(x => x.GetRequiredService<RP2350Emulator>());
         services.AddSingleton<IDebuggable>(x => x.GetRequiredService<RP2350Emulator>());
@@ -94,12 +145,11 @@ public static class RP2350ServiceCollectionExtensions
         services.AddSingleton<MemoryFactory>();
         services.AddSingleton<UnimplementedPeripheralFactory>();
 
-
         // 0x00000000 - ROM
         services.AddMemory("ROM", 0x00000000, 1024 * 32, m => m.LoadBin(@"Blink\A2\bootrom-combined.bin"), isReadonly: true); // 32kB
 
         // 0x10000000 - XIP
-        services.AddMemory("XIP", 0x10000000, 1024 * 1024 * 2, m => m.LoadElf(@"Blink\KeySquareBlink.elf"), isReadonly: true); // 2MB // This is not really read only but I want to catch possible issues
+        services.AddXIP(1024 * 1024 * 2, m => m.LoadBin(@"Blink\KeySquareBlink.bin")); // 2MB
         
         // 0x20000000 - SRAM
         services.AddMemory("SRAM", 0x20000000, 1024 * 520); // 520kB
@@ -114,7 +164,10 @@ public static class RP2350ServiceCollectionExtensions
         services.AddUnimpelentedPeripheral(0x40028000, "IO_BANK0_BASE");
         services.AddUnimpelentedPeripheral(0x40030000, "IO_QSPI_BASE");
         services.AddUnimpelentedPeripheral(0x40038000, "PADS_BANK0_BASE");
+        
         services.AddUnimpelentedPeripheral(0x40040000, "PADS_QSPI_BASE");
+        // Reading 0x40040008 value should be 0x00000056
+
         services.AddUnimpelentedPeripheral(0x40048000, "XOSC_BASE");
         services.AddUnimpelentedPeripheral(0x40050000, "PLL_SYS_BASE");
         services.AddUnimpelentedPeripheral(0x40058000, "PLL_USB_BASE");
@@ -132,10 +185,17 @@ public static class RP2350ServiceCollectionExtensions
         services.AddUnimpelentedPeripheral(0x400b8000, "TIMER1_BASE");
         services.AddUnimpelentedPeripheral(0x400c0000, "HSTX_CTRL_BASE");
         services.AddUnimpelentedPeripheral(0x400c8000, "XIP_CTRL_BASE");
+
         services.AddUnimpelentedPeripheral(0x400d0000, "XIP_QMI_BASE");
+        // Reading 0x400D0000 value should be 0x03010801
+        // Reading 0x400D0000 value should be 0x03010805
+
         services.AddUnimpelentedPeripheral(0x400d8000, "WATCHDOG_BASE");
-        services.AddMemory("bootRAM", 0x400e0000, 1024); // 1kB
-        services.AddUnimpelentedPeripheral(0x400e0800, 0x02c, "BOOTRAM_BASE");
+
+        //services.AddMemory("bootRAM", 0x400e0000, 1024); // 1kB
+        //services.AddUnimpelentedPeripheral(0x400e0800, 0x02c, "BOOTRAM_BASE");
+        services.AddPeripheral<BootRAM>();
+
         services.AddUnimpelentedPeripheral(0x400e8000, "ROSC_BASE");
         services.AddUnimpelentedPeripheral(0x400f0000, "TRNG_BASE");
         services.AddPeripheral<Sha256>();
@@ -143,7 +203,10 @@ public static class RP2350ServiceCollectionExtensions
         services.AddPeripheral<Powman>();
         //new UnimplementedPeripheral(0x40100000, "POWMAN_BASE"),
         services.AddUnimpelentedPeripheral(0x40108000, "TICKS_BASE");
+        
         services.AddUnimpelentedPeripheral(0x40120000, "OTP_BASE");
+        // Reading 0x4012015C value should be 0x00000003
+
         services.AddPeripheral<OtpData>();
         //services.AddUnimpelentedPeripheral(0x40130000, "OTP_DATA_BASE");
         services.AddUnimpelentedPeripheral(0x40134000, "OTP_DATA_RAW_BASE");

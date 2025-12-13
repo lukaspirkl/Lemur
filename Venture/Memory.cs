@@ -40,6 +40,8 @@ public class Memory : IAddressableResource
     {
         this.name = name;
         memory = new byte[size];
+        Array.Fill<byte>(memory, 0xFF);
+
         StartAddress = startAddress;
         Size = size;
         this.isReadonly = isReadonly;

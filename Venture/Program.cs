@@ -56,7 +56,7 @@ public class XIP : IAddressableResource
 
     public uint StartAddress => 0x10000000;
 
-    public uint Size => 0x1FFFFFFF;
+    public uint Size => 0x10000000;
 
     public XIP(Memory memory, ILogger<XIP> logger)
     {
@@ -131,9 +131,6 @@ public static class RP2350ServiceCollectionExtensions
 
     public static IServiceCollection AddRP2350Emulator(this IServiceCollection services)
     {
-        // TODO: cm.mvsa01 is probably wrong!!
-        // 7616:	ac26                	cm.mvsa01	s0,s1
-
         services.AddSingleton<RP2350Emulator>();
         services.AddHostedService(x => x.GetRequiredService<RP2350Emulator>());
         services.AddSingleton<IDebuggable>(x => x.GetRequiredService<RP2350Emulator>());
@@ -145,29 +142,29 @@ public static class RP2350ServiceCollectionExtensions
         services.AddSingleton<MemoryFactory>();
         services.AddSingleton<UnimplementedPeripheralFactory>();
 
+
         // 0x00000000 - ROM
         services.AddMemory("ROM", 0x00000000, 1024 * 32, m => m.LoadBin(@"Blink\A2\bootrom-combined.bin"), isReadonly: true); // 32kB
+
 
         // 0x10000000 - XIP
         services.AddXIP(1024 * 1024 * 2, m => m.LoadBin(@"Blink\KeySquareBlink.bin")); // 2MB
         
+
         // 0x20000000 - SRAM
         services.AddMemory("SRAM", 0x20000000, 1024 * 520); // 520kB
 
+        
         // 0x40000000 - APB Peripherals
         services.AddUnimpelentedPeripheral(0x40000000, "SYSINFO_BASE");
         services.AddUnimpelentedPeripheral(0x40008000, "SYSCFG_BASE");
         services.AddUnimpelentedPeripheral(0x40010000, "CLOCKS_BASE");
         services.AddUnimpelentedPeripheral(0x40018000, "PSM_BASE");
-        services.AddPeripheral<Resets>();
-        //new UnimplementedPeripheral(0x40020000, "RESETS_BASE"),
+        services.AddPeripheral<Resets>(); //new UnimplementedPeripheral(0x40020000, "RESETS_BASE"),
         services.AddUnimpelentedPeripheral(0x40028000, "IO_BANK0_BASE");
         services.AddUnimpelentedPeripheral(0x40030000, "IO_QSPI_BASE");
         services.AddUnimpelentedPeripheral(0x40038000, "PADS_BANK0_BASE");
-        
-        services.AddUnimpelentedPeripheral(0x40040000, "PADS_QSPI_BASE");
-        // Reading 0x40040008 value should be 0x00000056
-
+        services.AddPeripheral<PadsQSPI>(); // services.AddUnimpelentedPeripheral(0x40040000, "PADS_QSPI_BASE");
         services.AddUnimpelentedPeripheral(0x40048000, "XOSC_BASE");
         services.AddUnimpelentedPeripheral(0x40050000, "PLL_SYS_BASE");
         services.AddUnimpelentedPeripheral(0x40058000, "PLL_USB_BASE");
@@ -185,30 +182,16 @@ public static class RP2350ServiceCollectionExtensions
         services.AddUnimpelentedPeripheral(0x400b8000, "TIMER1_BASE");
         services.AddUnimpelentedPeripheral(0x400c0000, "HSTX_CTRL_BASE");
         services.AddUnimpelentedPeripheral(0x400c8000, "XIP_CTRL_BASE");
-
-        services.AddUnimpelentedPeripheral(0x400d0000, "XIP_QMI_BASE");
-        // Reading 0x400D0000 value should be 0x03010801
-        // Reading 0x400D0000 value should be 0x03010805
-
+        services.AddPeripheral<XIPQMI>(); // services.AddUnimpelentedPeripheral(0x400d0000, "XIP_QMI_BASE");
         services.AddUnimpelentedPeripheral(0x400d8000, "WATCHDOG_BASE");
-
-        //services.AddMemory("bootRAM", 0x400e0000, 1024); // 1kB
-        //services.AddUnimpelentedPeripheral(0x400e0800, 0x02c, "BOOTRAM_BASE");
-        services.AddPeripheral<BootRAM>();
-
+        services.AddPeripheral<BootRAM>(); //services.AddMemory("bootRAM", 0x400e0000, 1024); // 1kB + BOOTRAM_BASE register
         services.AddUnimpelentedPeripheral(0x400e8000, "ROSC_BASE");
         services.AddUnimpelentedPeripheral(0x400f0000, "TRNG_BASE");
-        services.AddPeripheral<Sha256>();
-        //new UnimplementedPeripheral(0x400f8000, "SHA256_BASE"),
-        services.AddPeripheral<Powman>();
-        //new UnimplementedPeripheral(0x40100000, "POWMAN_BASE"),
+        services.AddPeripheral<Sha256>(); //new UnimplementedPeripheral(0x400f8000, "SHA256_BASE"),
+        services.AddPeripheral<Powman>(); //new UnimplementedPeripheral(0x40100000, "POWMAN_BASE"),
         services.AddUnimpelentedPeripheral(0x40108000, "TICKS_BASE");
-        
-        services.AddUnimpelentedPeripheral(0x40120000, "OTP_BASE");
-        // Reading 0x4012015C value should be 0x00000003
-
-        services.AddPeripheral<OtpData>();
-        //services.AddUnimpelentedPeripheral(0x40130000, "OTP_DATA_BASE");
+        services.AddPeripheral<OTP>(); // services.AddUnimpelentedPeripheral(0x40120000, "OTP_BASE");
+        services.AddPeripheral<OTPData>(); //services.AddUnimpelentedPeripheral(0x40130000, "OTP_DATA_BASE");
         services.AddUnimpelentedPeripheral(0x40134000, "OTP_DATA_RAW_BASE");
         services.AddUnimpelentedPeripheral(0x40138000, "OTP_DATA_GUARDED_BASE");
         services.AddUnimpelentedPeripheral(0x4013c000, "OTP_DATA_RAW_GUARDED_BASE");
@@ -225,11 +208,14 @@ public static class RP2350ServiceCollectionExtensions
         services.AddUnimpelentedPeripheral(0x40158000, "GLITCH_DETECTOR_BASE");
         services.AddUnimpelentedPeripheral(0x40160000, "TBMAN_BASE");
 
+        
         // 0x50000000 - AHB Peripherals
         services.AddUnimpelentedPeripheral(0x50000000, "DMA_BASE");
+
         //services.AddUnimpelentedPeripheral(0x50100000, "USBCTRL_BASE");
         //services.AddUnimpelentedPeripheral(0x50100000, "USBCTRL_DPRAM_BASE");
         services.AddMemory("USB DPRAM", 0x50100000, 1024 * 4); // 4kB
+
         services.AddUnimpelentedPeripheral(0x50110000, "USBCTRL_REGS_BASE");
         services.AddUnimpelentedPeripheral(0x50200000, "PIO0_BASE");
         services.AddUnimpelentedPeripheral(0x50300000, "PIO1_BASE");
@@ -238,10 +224,11 @@ public static class RP2350ServiceCollectionExtensions
         services.AddUnimpelentedPeripheral(0x50600000, "HSTX_FIFO_BASE");
         services.AddUnimpelentedPeripheral(0x50700000, "CORESIGHT_TRACE_BASE");
 
+
         // 0xd0000000 - SIO
-        //new UnimplementedPeripheral(0xd0000000, "SIO_BASE"),
-        services.AddPeripheral<SIO>();
+        services.AddPeripheral<SIO>(); //new UnimplementedPeripheral(0xd0000000, "SIO_BASE"),
         services.AddUnimpelentedPeripheral(0xd0020000, "SIO_NONSEC_BASE");
+
 
         // 0xe0000000 - Cortex-M33 private registers
 

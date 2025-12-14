@@ -11,9 +11,10 @@ public class RP2350GDB : IDebuggable, IDisposable
     public RP2350GDB(string host, int port)
     {
         gdbClient = new GdbClient(host, port);
+        Registers = new GdbRegisters(gdbClient);
     }
 
-    public IIndexable<uint> Registers => throw new NotImplementedException();
+    public IIndexable<uint> Registers { get; }
 
     public void Dispose()
     {
@@ -37,12 +38,38 @@ public class RP2350GDB : IDebuggable, IDisposable
 
     public void Step()
     {
-        throw new NotImplementedException();
+        gdbClient.Step();
     }
 
     public void Stop()
     {
         throw new NotImplementedException();
+    }
+
+
+    class GdbRegisters : IIndexable<uint>
+    {
+        private readonly GdbClient gdbClient;
+
+        public GdbRegisters(GdbClient gdbClient)
+        {
+            this.gdbClient = gdbClient;
+        }
+
+        public uint this[uint index]
+        {
+            get
+            {
+                var regs = gdbClient.ReadRegisters();
+                return regs[index];
+            }
+            set
+            {
+                gdbClient.WriteRegister(index, value);
+            }
+        }
+
+        public int Length => 33;
     }
 }
 
@@ -88,7 +115,7 @@ public class GdbClient : IDisposable
     public string SendCommand(string commandData)
     {
         var response = "";
-        SendCommand(commandData, r => 
+        SendCommand(commandData, r =>
         {
             response = r;
             return true;
@@ -122,7 +149,7 @@ public class GdbClient : IDisposable
                 }
             }
 
-            while(!handleResponse(ReadResponsePacket()))
+            while (!handleResponse(ReadResponsePacket()))
             { }
         }
     }

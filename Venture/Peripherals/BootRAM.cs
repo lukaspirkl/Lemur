@@ -13,6 +13,9 @@ public class BootRAM : PeripheralBase
         this.logger = logger;
     }
 
+
+    // TODO: There is also BOOTRAM_BASE register on 0x400e0800
+
     protected override byte[] HandleRead(uint offset, int count)
     {
         if (offset + count <= ram.Length)

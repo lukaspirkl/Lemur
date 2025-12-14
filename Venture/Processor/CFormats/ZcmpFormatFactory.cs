@@ -27,19 +27,29 @@ public class ZcmpFormatFactory : CFormatFactoryBase
 
         switch (subOp)
         {
-            // cm.mvsa01: 101 001 sreg1 sreg2 10
-            case 0b001:
-                mnemonic = ZcmpFormat.cm_mvsa01;
-                sreg1 = instruction.ExtractBits(7, 3);
-                sreg2 = instruction.ExtractBits(4, 3);
-                break;
-
-            // cm.mva01s: 101 011 sreg1 sreg2 10
             case 0b011:
-                mnemonic = ZcmpFormat.cm_mva01s;
-                sreg1 = instruction.ExtractBits(7, 3);
-                sreg2 = instruction.ExtractBits(4, 3);
-                break;
+                {
+                    switch (instruction.ExtractBits(5, 2))
+                    {
+                        case 0b01:
+                            {
+                                // cm.mvsa01: 101 011 sreg1 01 sreg2 10
+                                mnemonic = ZcmpFormat.cm_mvsa01;
+                                sreg1 = instruction.ExtractBits(7, 3);
+                                sreg2 = instruction.ExtractBits(2, 3);
+                                break;
+                            }
+                        case 0b11:
+                            {
+                                // cm.mva01s: 101 011 sreg1 11 sreg2 10
+                                mnemonic = ZcmpFormat.cm_mva01s;
+                                sreg1 = instruction.ExtractBits(7, 3);
+                                sreg2 = instruction.ExtractBits(2, 3);
+                                break;
+                            }
+                    }
+                    break;
+                }
 
             // cm.push: 101 11000 rlist spimm 10
             // Top 5 bits [15:11] must be 10111. 

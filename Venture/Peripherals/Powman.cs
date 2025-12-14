@@ -14,6 +14,8 @@ public class Powman : Peripheral32
 
     protected override uint HandleRead(uint offset)
     {
+        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+
         if (offset == 0x02c) // CHIP_RESET Register
         {
             // 27 - HAD_HZD_SYS_RESET_REQ: Last reset was a system reset from the hazard debugger.
@@ -22,10 +24,10 @@ public class Powman : Peripheral32
         }
         else if (offset == 0x038) // STATE Register
         {
+            // Can also be 0x00000000
             return 0x00000100;
         }
 
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
         return 0;
     }
 

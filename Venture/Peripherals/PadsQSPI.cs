@@ -2,12 +2,12 @@
 
 namespace Venture.Peripherals;
 
-public class OTPData : Peripheral32
+public class PadsQSPI : Peripheral32
 {
-    private readonly ILogger<OTPData> logger;
+    private readonly ILogger<PadsQSPI> logger;
 
-    public OTPData(ILogger<OTPData> logger)
-        : base(0x40120000)
+    public PadsQSPI(ILogger<PadsQSPI> logger)
+        : base(0x40040000)
     {
         this.logger = logger;
     }
@@ -16,9 +16,9 @@ public class OTPData : Peripheral32
     {
         logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
 
-        if (offset == 0x15C)
+        if (offset == 0x8)
         {
-            return 0x00000003;
+            return 0x00000056;
         }
         else
         {

@@ -14,6 +14,8 @@ public class Resets : Peripheral32
 
     protected override uint HandleRead(uint offset)
     {
+        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+
         if (offset == 0x8) // RESET_DONE Register
         {
             logger.LogInformation("Read RESET_DONE Register");
@@ -22,7 +24,6 @@ public class Resets : Peripheral32
             return 0x1FFFFFFF;
         }
 
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
         return 0;
     }
 

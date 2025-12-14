@@ -2,12 +2,12 @@
 
 namespace Venture.Peripherals;
 
-public class OTPData : Peripheral32
+public class OTP : Peripheral32
 {
-    private readonly ILogger<OTPData> logger;
+    private readonly ILogger<OTP> logger;
 
-    public OTPData(ILogger<OTPData> logger)
-        : base(0x40120000)
+    public OTP(ILogger<OTP> logger)
+        : base(0x40130000)
     {
         this.logger = logger;
     }
@@ -16,9 +16,14 @@ public class OTPData : Peripheral32
     {
         logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
 
-        if (offset == 0x15C)
+        // TODO: Read other values from hardware
+        if (offset == 0x0)
         {
-            return 0x00000003;
+            return 0xCFAFF9B0;
+        }
+        else if (offset == 0x4)
+        {
+            return 0x9F6D2E4B;
         }
         else
         {

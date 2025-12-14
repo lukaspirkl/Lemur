@@ -7,7 +7,49 @@ namespace Tests.Processor;
 public class InstructionTests
 {
     [Fact]
-    public void CM_Push()
+    public void cm_mvsa01()
+    {
+        var rp2350 = RP2350Builder.CreateEmulator();
+
+        //                                                          funct3     r1s    r2s
+        rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_011_000_01_001_10));
+
+        rp2350.Registers[8] = 0x00000000;
+        rp2350.Registers[9] = 0x00000000;
+        rp2350.Registers[10] = 0x11111111;
+        rp2350.Registers[11] = 0x22222222;
+        rp2350.Registers[32] = 0x20000000;
+
+        rp2350.Step();
+
+        Assert.Equal((uint)0x11111111, rp2350.Registers[8]);
+        Assert.Equal((uint)0x22222222, rp2350.Registers[9]);
+    }
+
+    [Fact]
+    public void cm_mva01s()
+    {
+        var rp2350 = RP2350Builder.CreateEmulator();
+
+        //                                                          funct3     r1s    r2s
+        rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_011_000_11_001_10));
+
+        rp2350.Registers[10] = 0x00000000;
+        rp2350.Registers[11] = 0x00000000;
+        rp2350.Registers[8] = 0x11111111;
+        rp2350.Registers[9] = 0x22222222;
+        rp2350.Registers[32] = 0x20000000;
+
+        rp2350.Step();
+
+        Assert.Equal((uint)0x11111111, rp2350.Registers[10]);
+        Assert.Equal((uint)0x22222222, rp2350.Registers[11]);
+    }
+
+
+
+    [Fact]
+    public void cm_push()
     {
         var instruction = new Memory("instruction", 0x0, 1024 * 5, false, new FakeLogger<Memory>()); // 5kB
         // b872 cm.push { ra,s0 - s2},-16

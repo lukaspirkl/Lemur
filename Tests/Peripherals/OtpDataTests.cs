@@ -1,23 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Testing;
-using Venture;
-using Venture.Debug;
-
-namespace Tests.Peripherals;
+﻿namespace Tests.Peripherals;
 
 public class OtpDataTests
 {
     [Fact]
     public void HardcodedRandomValues()
     {
-        var services = new ServiceCollection();
-        services.AddSingleton(typeof(ILogger<>), typeof(FakeLogger<>));
-        services.AddRP2350Emulator();
-        var sp = services.BuildServiceProvider();
-        var rp2350 = sp.GetRequiredService<IDebuggable>();
-
-        //using var rp2350 = new RP2350GDB("127.0.0.1", 50000);
+        var rp2350 = RP2350Builder.CreateEmulator();
 
         uint StartAddress = 0x40130000;
 

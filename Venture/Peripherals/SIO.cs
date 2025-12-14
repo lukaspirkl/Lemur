@@ -14,6 +14,8 @@ public class SIO : Peripheral32
 
     protected override uint HandleRead(uint offset)
     {   
+        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+
         if (offset == 0x000) // CPUID Register
         {
             return 0;
@@ -27,7 +29,6 @@ public class SIO : Peripheral32
             return 0xC8000000;
         }
 
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
         return 0;
     }
 

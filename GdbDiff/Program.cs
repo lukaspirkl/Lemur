@@ -28,13 +28,13 @@ class Program
             using var gdbReal = new GdbClient("127.0.0.1", 50000);
 
             gdbReal.Monitor("reset halt");
-            //WipeRam(gdbReal);
+            WipeRam(gdbReal);
 
 
             using var gdbEmu = new GdbClient("127.0.0.1", 3333);
 
             uint count = 0;
-            while (Compare(gdbReal, gdbEmu))
+            while (Compare(gdbReal, gdbEmu, count))
             {
                 Log.Information($"Count {count++}");
                 gdbReal.Step();
@@ -53,15 +53,18 @@ class Program
 
     static void WipeRam(GdbClient gdb)
     {
+        Log.Information("Wipe RAM with ones");
         uint address = 0x20000000;
-        for (int i = 0; i < 512*2; i++)
+        var data = new byte[1024 / 2];
+        Array.Fill<byte>(data, 0xFF);
+        for (int i = 0; i < 520*2; i++)
         {
-            gdb.WriteMemory(address, new byte[1024/2]);
+            gdb.WriteMemory(address, data);
             address += 1024/2;
         }
     }
 
-    static bool Compare(GdbClient gdbReal, GdbClient gdbEmu)
+    static bool Compare(GdbClient gdbReal, GdbClient gdbEmu, uint count)
     {
         var regsReal = gdbReal.ReadRegisters();
         var regsSim = gdbEmu.ReadRegisters();
@@ -82,15 +85,23 @@ class Program
                     Log.Information("AUTOMATIC REG REPLACEMENT (value from TRNG)");
                     gdbEmu.WriteRegister((uint)i, regsReal[i]);
                 }
+                else if (count <= 118364)
+                {
+                    Log.Information("AUTOMATIC REG REPLACEMENT (instruction count less then limit)");
+                    gdbEmu.WriteRegister((uint)i, regsReal[i]);
+                }
                 else
                 {
-                    //Log.Fatal("AUTOMATIC REG REPLACEMENT");
-                    //gdbEmu.WriteRegister((uint)i, regsReal[i]);
-
-                    Console.Write("[S] set value to emulator and continue | [ANY] exit");
+                    Console.Write("[S] set value to emulator and continue | [X] exit");
                     while (true)
                     {
-                        var keyChar = Console.ReadKey().KeyChar;
+                        // Clear any buffered key presses
+                        while (Console.KeyAvailable)
+                        {
+                            Console.ReadKey(intercept: true);
+                        }
+
+                        var keyChar = Console.ReadKey(intercept: true).KeyChar;
                         if (keyChar == 's')
                         {
                             Log.Information("USER REG REPLACEMENT");

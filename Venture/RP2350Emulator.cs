@@ -19,7 +19,7 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 
         processor.PC = 0x00007dfc; // riscv_entry_point - it is always on this address
 
-        processor.CSR.Set(0xfbe5, 0x00008000); // TODO: this should be 0xbe5 - something is wrong with CSR instructions
+        processor.CSR.Set(0xbe5, 0x00008000);
 
         // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.
         // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/csrs/mip.html#mip-MTIP-def

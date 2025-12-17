@@ -100,24 +100,27 @@ public class IFormatFactory : FormatFactoryBase
                         }
                         break;
                     case 0b001:
-                        mnemonic = IFormat.csrrw;
-                        break;
+                        return CreateCSR(ICSRFormat.csrrw, instruction);
                     case 0b010:
-                        mnemonic = IFormat.csrrs;
-                        break;
+                        return CreateCSR(ICSRFormat.csrrs, instruction);
+                    case 0b011:
+                        return CreateCSR(ICSRFormat.csrrc, instruction);
                     case 0b101:
-                        mnemonic = IFormat.csrrwi;
-                        break;
+                        return CreateCSR(ICSRFormat.csrrwi, instruction);
+                    case 0b110:
+                        return CreateCSR(ICSRFormat.csrrsi, instruction);
+                    case 0b111:
+                        return CreateCSR(ICSRFormat.csrrci, instruction);
                 }
                 break;
 
             case 0b0001111:
-                switch (instruction)
+                switch (funct3)
                 {
-                    case 0x0ff0000f:
+                    case 0x000:
                         mnemonic = IFormat.fence;
                         break;
-                    case 0x0000100f:
+                    case 0x001:
                         mnemonic = IFormat.fencei;
                         break;
                 }
@@ -136,6 +139,90 @@ public class IFormatFactory : FormatFactoryBase
             rs1 = instruction.ExtractBits(15, 5),
             imm = (int)instruction >> 20, // Sign is preserved when shifting signed int
         };
+    }
+
+    private ICSRFormat CreateCSR(string mnemonic, uint instruction)
+    {
+        return new ICSRFormat
+        {
+            Mnemonic = mnemonic,
+            rd = instruction.ExtractBits(7, 5),
+            rs1 = instruction.ExtractBits(15, 5),
+            csr = (ushort)(instruction >>> 20) // Zero extend
+        };
+    }
+}
+
+public class ICSRFormat : FormatBase
+{
+    public const string csrrw = "csrrw";
+    public const string csrrs = "csrrs";
+    public const string csrrc = "csrrc";
+    public const string csrrwi = "csrrwi";
+    public const string csrrsi = "csrrsi";
+    public const string csrrci = "csrrci";
+
+    public required uint rd { get; init; }
+    public required uint rs1 { get; init; }
+    public required ushort csr { get; init; }
+
+    public override void Execute(Hazard3Processor e)
+    {
+        var x = e.Registers;
+
+        switch (Mnemonic)
+        {
+            case csrrw:
+                if (rd != 0)
+                {
+                    x[rd] = e.CSR.Get(csr);
+                }
+                e.CSR.Set(csr, x[rs1]);
+                return;
+
+            case csrrs:
+                {
+                    uint value = e.CSR.Get(csr);
+                    e.CSR.Set(csr, value | x[rs1]);
+                    x[rd] = value;
+                }
+                return;
+
+            case csrrc:
+                {
+                    uint value = e.CSR.Get(csr);
+                    e.CSR.Set(csr, value & ~x[rs1]);
+                    x[rd] = value;
+                }
+                return;
+
+            case csrrwi:
+                if (rd != 0)
+                {
+                    x[rd] = e.CSR.Get(csr);
+                }
+                e.CSR.Set(csr, rs1);
+                return;
+
+            case csrrsi:
+                {
+                    uint value = e.CSR.Get(csr);
+                    e.CSR.Set(csr, value | rs1);
+                    x[rd] = value;
+                }
+                return;
+
+            case csrrci:
+                {
+                    uint value = e.CSR.Get(csr);
+                    e.CSR.Set(csr, value & ~rs1);
+                    x[rd] = value;
+                }
+                return; ;
+
+            default:
+                throw new NotImplementedException($"Unimplemented mnemonic {Mnemonic} in IFormat.");
+        }
     }
 }
 
@@ -161,9 +248,6 @@ public class IFormat : FormatBase
     public const string mret = "mret";
     public const string ecall = "ecall";
     public const string ebreak = "ebreak";
-    public const string csrrw = "csrrw";
-    public const string csrrs = "csrrs";
-    public const string csrrwi = "csrrwi";
 
     public const string fence = "fence";
     public const string fencei = "fence.i";
@@ -238,29 +322,6 @@ public class IFormat : FormatBase
 
             case andi:
                 x[rd] = x[rs1] & (uint)imm;
-                return;
-
-            case csrrw:
-                x[rd] = e.CSR.Get((ushort)imm);
-                e.CSR.Set((ushort)imm, x[rs1]);
-                return;
-
-            case csrrs:
-                uint original_csr_value = e.CSR.Get((ushort)imm);
-
-                if (rs1 != 0)
-                {
-                    uint rs1_mask = x[rs1];
-                    uint new_csr_value = original_csr_value | rs1_mask;
-                    e.CSR.Set((ushort)imm, new_csr_value);
-                }
-
-                x[rd] = original_csr_value;
-                return;
-
-            case csrrwi:
-                x[rd] = e.CSR.Get((ushort)imm);
-                e.CSR.Set((ushort)imm, (uint)imm);
                 return;
 
             case mret:

@@ -23,37 +23,37 @@ public class AExtensionFormatFactory : FormatFactoryBase
                 {
                     return null;
                 }
-                mnemonic = AExtensionFormat.lr_d;
+                mnemonic = AExtensionFormat.lr_w;
                 break;
             case 0b00011:
-                mnemonic = AExtensionFormat.sc_d;
+                mnemonic = AExtensionFormat.sc_w;
                 break;
             case 0b00001:
-                mnemonic = AExtensionFormat.amoswap_d;
+                mnemonic = AExtensionFormat.amoswap_w;
                 break;
             case 0b00000:
-                mnemonic = AExtensionFormat.amoadd_d;
+                mnemonic = AExtensionFormat.amoadd_w;
                 break;
             case 0b00100:
-                mnemonic = AExtensionFormat.amoxor_d;
+                mnemonic = AExtensionFormat.amoxor_w;
                 break;
             case 0b01100:
-                mnemonic = AExtensionFormat.amoand_d;
+                mnemonic = AExtensionFormat.amoand_w;
                 break;
             case 0b01000:
-                mnemonic = AExtensionFormat.amoor_d;
+                mnemonic = AExtensionFormat.amoor_w;
                 break;
             case 0b10000:
-                mnemonic = AExtensionFormat.amomin_d;
+                mnemonic = AExtensionFormat.amomin_w;
                 break;
             case 0b10100:
-                mnemonic = AExtensionFormat.amomax_d;
+                mnemonic = AExtensionFormat.amomax_w;
                 break;
             case 0b11000:
-                mnemonic = AExtensionFormat.amominu_d;
+                mnemonic = AExtensionFormat.amominu_w;
                 break;
             case 0b11100:
-                mnemonic = AExtensionFormat.amomaxu_d;
+                mnemonic = AExtensionFormat.amomaxu_w;
                 break;
             default:
                 return null;
@@ -95,6 +95,88 @@ public class AExtensionFormat : FormatBase
 
     public override void Execute(Hazard3Processor e)
     {
-        throw new NotImplementedException($"Unimplemented mnemonic {Mnemonic} in AExtensionFormat.");
+        var x = e.Registers;
+
+        switch (Mnemonic)
+        {
+            // TODO: Implement lr.w and sc.w
+
+            case amoswap_w:
+                {
+                    var addr = x[rs1];
+                    var old = e.Memory.ReadWord(addr);
+                    e.Memory.WriteWord(addr, x[rs2]);
+                    x[rd] = old;
+                }
+                break;
+            case amoadd_w:
+                {
+                    var addr = x[rs1];
+                    var old = e.Memory.ReadWord(addr);
+                    e.Memory.WriteWord(addr, (uint)(old + (int)x[rs2]));
+                    x[rd] = old;
+                }
+                break;
+            case amoxor_w:
+                {
+                    var addr = x[rs1];
+                    var old = e.Memory.ReadWord(addr);
+                    e.Memory.WriteWord(addr, old ^ x[rs2]);
+                    x[rd] = old;
+                }
+                break;
+            case amoand_w:
+                {
+                    var addr = x[rs1];
+                    var old = e.Memory.ReadWord(addr);
+                    e.Memory.WriteWord(addr, old & x[rs2]);
+                    x[rd] = old;
+                }
+                break;
+            case amoor_w:
+                {
+                    var addr = x[rs1];
+                    var old = e.Memory.ReadWord(addr);
+                    e.Memory.WriteWord(addr, old | x[rs2]);
+                    x[rd] = old;
+                }
+                break;
+            case amomin_w:
+                {
+                    var addr = x[rs1];
+                    var old = e.Memory.ReadWord(addr);
+                    e.Memory.WriteWord(addr, (uint)Math.Min((int)old, (int)x[rs2]));
+                    x[rd] = old;
+                }
+                break;
+
+            case amominu_w:
+                {
+                    var addr = x[rs1];
+                    var old = e.Memory.ReadWord(addr);
+                    e.Memory.WriteWord(addr, Math.Min(old, x[rs2]));
+                    x[rd] = old;
+                }
+                break;
+            case amomax_w:
+                {
+                    var addr = x[rs1];
+                    var old = e.Memory.ReadWord(addr);
+                    e.Memory.WriteWord(addr, (uint)Math.Max((int)old, (int)x[rs2]));
+                    x[rd] = old;
+                }
+                break;
+
+            case amomaxu_w:
+                {
+                    var addr = x[rs1];
+                    var old = e.Memory.ReadWord(addr);
+                    e.Memory.WriteWord(addr, Math.Max(old, x[rs2]));
+                    x[rd] = old;
+                }
+                break;
+            default:
+                throw new NotImplementedException($"Unimplemented mnemonic {Mnemonic} in AExtensionFormat.");
+        }
     }
 }

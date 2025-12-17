@@ -16,6 +16,7 @@ public class Decoder : IDecoder
             new RFormatFactory(),
             new SFormatFactory(),
             new IFormatFactory(),
+            new AExtensionFormatFactory(),
             new BExtensionFormatFactory(),
             new MExtensionFormatFactory(),
             new Xh3bextmExtensionFormatFactory(),

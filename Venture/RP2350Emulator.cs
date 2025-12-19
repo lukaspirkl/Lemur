@@ -14,16 +14,8 @@ public class RP2350Emulator : BackgroundService, IDebuggable
     public RP2350Emulator(Hazard3Processor processor)
     {
         this.processor = processor;
-
         registers = new RegistersWrapper(processor);
-
-        processor.PC = 0x00007dfc; // riscv_entry_point - it is always on this address
-
-        processor.CSR.Set(0xbe5, 0x00008000);
-
-        // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.
-        // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/csrs/mip.html#mip-MTIP-def
-        processor.CSR.Set(0x344, 0x00000080);
+        Reset();
     }
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
@@ -73,6 +65,10 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         run = null;
     }
 
+    public void Reset()
+    {
+        processor.PC = 0x00007dfc; // riscv_entry_point - it is always on this address
+    }
 
     public void MemoryWrite(uint address, byte[] data)
     {
@@ -84,12 +80,22 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         return processor.Memory.Read(address, count);
     }
 
-    public IIndexable<uint> Registers => registers;
+    public uint GetCSR(ushort index)
+    {
+        return processor.CSR.Get(index);
+    }
+
+    public void SetCSR(ushort index, uint value)
+    {
+        processor.CSR.Set(index, value);
+    }
+
+    public IRegisters Registers => registers;
 
     /// <summary>
     /// Aggregate all registers with PC register as the last one
     /// </summary>
-    private class RegistersWrapper : IIndexable<uint>
+    private class RegistersWrapper : IRegisters
     {
         private readonly Hazard3Processor processor;
 
@@ -98,7 +104,7 @@ public class RP2350Emulator : BackgroundService, IDebuggable
             this.processor = processor;
         }
 
-        public int Length => processor.Registers.Length + 1;
+        public uint Length => processor.Registers.Length + 1;
 
         public uint this[uint index]
         {

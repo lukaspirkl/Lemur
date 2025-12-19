@@ -269,7 +269,7 @@ public class GdbConnectionHandler : ConnectionHandler
         {
             try
             {
-                int registerCount = emulator.Registers.Length;
+                int registerCount = (int)emulator.Registers.Length;
                 int hexCharsPerReg = 8;
                 int totalLength = registerCount * hexCharsPerReg;
 

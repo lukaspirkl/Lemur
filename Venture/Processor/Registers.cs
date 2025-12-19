@@ -2,21 +2,19 @@ using Microsoft.Extensions.Logging;
 
 namespace Venture.Processor;
 
-public interface IIndexable<T>
+public interface IRegisters
 {
-    T this[uint index] { get; set; }
-    int Length { get; }
+    uint this[uint index] { get; set; }
+    uint Length { get; }
 }
 
 
-public class Registers : IIndexable<uint>
+public class Registers : IRegisters
 {
     private uint[] data = new uint[32];
     private readonly ILogger<Registers> logger;
 
-    public int Length => 32;
-
-    
+    public uint Length => 32;
 
     public Registers(ILogger<Registers> logger)
     {
@@ -25,7 +23,7 @@ public class Registers : IIndexable<uint>
 
     public uint this[uint index]
     {
-        get 
+        get
         {
             if (index == 0)
             {

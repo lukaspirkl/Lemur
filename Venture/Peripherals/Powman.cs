@@ -7,6 +7,10 @@ public class Powman : Peripheral32
 {
     private readonly ILogger<Powman> logger;
 
+    private readonly Dictionary<uint, uint> registers = new Dictionary<uint, uint>();
+
+    private readonly uint[] scratch = new uint[8];
+
     public Powman(ILogger<Powman> logger)
         : base(0x40100000)
     {
@@ -30,12 +34,16 @@ public class Powman : Peripheral32
             // Can also be 0x00000000
             return 0x00000100;
         }
-
-        return 0;
+        else
+        {
+            return registers.GetValueOrDefault(offset, 0u);
+        }
     }
 
     protected override void HandleWrite(uint offset, uint value)
     {
         logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
+
+        registers[offset] = value;
     }
 }

@@ -5,18 +5,20 @@ namespace Tests;
 
 public class MockEmulator : IDebuggable
 {
-    public class MockRegisters : IIndexable<uint>
+    public class MockRegisters : IRegisters
     {
         private readonly uint[] data = new uint[4];
 
         public uint this[uint index] { get => data[index]; set => data[index] = value; }
 
-        public int Length => data.Length;
+        public uint Length => (uint)data.Length;
     }
 
     private readonly MockRegisters registers = new MockRegisters();
 
-    public IIndexable<uint> Registers => registers;
+    private readonly Dictionary<ushort, uint> csr = new Dictionary<ushort, uint>();
+
+    public IRegisters Registers => registers;
 
     public byte[] Memory = new byte[32];
 
@@ -43,5 +45,24 @@ public class MockEmulator : IDebuggable
     public void Stop()
     {
         
+    }
+
+    public void Reset()
+    {
+
+    }
+
+    public void Dispose()
+    {
+    }
+
+    public uint GetCSR(ushort index)
+    {
+        return csr.GetValueOrDefault(index, (uint)0);
+    }
+
+    public void SetCSR(ushort index, uint value)
+    {
+        csr[index] = value;
     }
 }

@@ -4,21 +4,25 @@ using Venture.Processor;
 
 namespace Venture.Debug;
 
-public class RP2350GDB : IDebuggable, IDisposable
+public class RP2350GDB : IDebuggable
 {
     private readonly GdbClient gdbClient;
 
+    private static SemaphoreSlim semaphore = new SemaphoreSlim(1);
+
     public RP2350GDB(string host, int port)
     {
+        semaphore.Wait();
         gdbClient = new GdbClient(host, port);
         Registers = new GdbRegisters(gdbClient);
     }
 
-    public IIndexable<uint> Registers { get; }
+    public IRegisters Registers { get; }
 
     public void Dispose()
     {
         gdbClient.Dispose();
+        semaphore.Release();
     }
 
     public byte[] MemoryRead(uint address, int count)
@@ -46,8 +50,24 @@ public class RP2350GDB : IDebuggable, IDisposable
         throw new NotImplementedException();
     }
 
+    public void Reset()
+    {
+        gdbClient.Monitor("reset halt");
+    }
 
-    class GdbRegisters : IIndexable<uint>
+    public uint GetCSR(ushort index)
+    {
+        // 32 base registers, 32 float registers and PC register = 65
+        return gdbClient.ReadRegister((uint)(index + 65));
+    }
+
+    public void SetCSR(ushort index, uint value)
+    {
+        // 32 base registers, 32 float registers and PC register = 65
+        gdbClient.WriteRegister((uint)(index + 65), value);
+    }
+
+    class GdbRegisters : IRegisters
     {
         private readonly GdbClient gdbClient;
 
@@ -60,8 +80,7 @@ public class RP2350GDB : IDebuggable, IDisposable
         {
             get
             {
-                var regs = gdbClient.ReadRegisters();
-                return regs[index];
+                return gdbClient.ReadRegister(index);
             }
             set
             {
@@ -69,7 +88,7 @@ public class RP2350GDB : IDebuggable, IDisposable
             }
         }
 
-        public int Length => 33;
+        public uint Length => 33;
     }
 }
 
@@ -224,6 +243,12 @@ public class GdbClient : IDisposable
                 Console.WriteLine("[GDB] Checksum mismatch. Requesting retransmit.");
             }
         }
+    }
+
+    public uint ReadRegister(uint reg)
+    {
+        var response = SendCommand($"p{(reg).ToHex(prefix: false)}");
+        return ParseLittleEndianHex(response);
     }
 
     public uint[] ReadRegisters()

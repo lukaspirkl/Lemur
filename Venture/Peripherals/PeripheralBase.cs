@@ -16,11 +16,7 @@ public abstract class Peripheral32 : PeripheralBase
         }
 
         var result = new List<byte>();
-        for (int i = 0; i < count / 4; i++)
-        {
-            result.AddRange(BitConverter.GetBytes(HandleRead(offset)));
-
-        }
+        result.AddRange(BitConverter.GetBytes(HandleRead(offset)));
         return result.ToArray();
     }
 
@@ -33,10 +29,7 @@ public abstract class Peripheral32 : PeripheralBase
             throw new ArgumentException(nameof(data), $"Unaligned memory access in {GetType().Name} (address: {offset.ToHex()})");
         }
 
-        for (int i = 0; i < data.Length / 4; i++)
-        {
-            HandleWrite(offset, data[i * 4]);
-        }
+        HandleWrite(offset, BitConverter.ToUInt32(data));
     }
 
     protected abstract void HandleWrite(uint offset, uint data);
@@ -113,72 +106,3 @@ public abstract class PeripheralBase : IAddressableResource
         HandleWrite(offset, data);
     }
 }
-
-
-//public class PeripheralHost : IAddressableResource
-//{
-//    private readonly Peripheral peripheral;
-
-//    public uint StartAddress => peripheral.StartAddress;
-//    public uint Size => 0x4000;
-
-//    //byte[] memory = new byte[0x1000]; // = 4096 = 4kB
-
-//    public PeripheralHost(Peripheral peripheral)
-//    {
-//        this.peripheral = peripheral;
-//    }
-
-//    public byte[] Read(uint address, int count)
-//    {
-//        var adr = (address - StartAddress) % 0x1000;
-//        // TODO: check if address is propertly aligned (unit test)
-
-//        // TODO: This should be in loop because caunt can be more than 4
-//        return BitConverter.GetBytes(peripheral.Read(address));
-//    }
-
-//    public void Write(uint address, byte[] data)
-//    {
-//        var adr = (address - StartAddress) % 0x1000;
-//        var type = (address - StartAddress) / 0x1000;
-//        // TODO: implement narrow write
-//        // TODO: check if address is propertly aligned (unit test)
-//        switch (type)
-//        {
-//            case 0:
-//                // normal write
-//                ApplyAtomic(adr, data, (uint dst, uint mask) => mask);
-//                break;
-
-//            case 1:
-//                // Atomic XOR on write
-//                ApplyAtomic(adr, data, (uint dst, uint mask) => dst ^ mask);
-//                break;
-
-//            case 2:
-//                // Atomic bitmask SET (dst |= mask)
-//                ApplyAtomic(adr, data, (uint dst, uint mask) => dst | mask);
-//                break;
-
-//            case 3:
-//                // Atomic bitmask CLEAR (dst &= ~mask)
-//                ApplyAtomic(adr, data, (uint dst, uint mask) => dst & ~mask);
-//                break;
-
-//            default:
-//                throw new ArgumentOutOfRangeException(nameof(address), "Address out of range.");
-//        }
-//    }
-
-//    private void ApplyAtomic(uint adr, byte[] data, Func<uint, uint, uint> op)
-//    {
-//        for (uint i = 0; i < data.Count; i += 4)
-//        {
-//            uint mask = BitConverter.ToUInt32(data.Array!, (int)i);
-//            uint current = peripheral.Read(adr + i);
-//            current = op(current, mask);
-//            peripheral.Write(adr + i, current);
-//        }
-//    }
-//}

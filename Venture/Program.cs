@@ -41,6 +41,8 @@ internal class Program
             .WriteTo.Async(a => a.File(new CompactJsonFormatter(), logFile))
             .WriteTo.Console());
 
+        builder.Services.AddTransient(typeof(IEmuLogger<>), typeof(EmuLogger<>));
+
         builder.Services.AddRP2350Emulator();
 
         var app = builder.Build();

@@ -97,6 +97,9 @@ public class IFormatFactory : FormatFactoryBase
                             case 0x00100073:
                                 mnemonic = IFormat.ebreak;
                                 break;
+                            case 0x10500073:
+                                mnemonic = IFormat.wfi;
+                                break;
                         }
                         break;
                     case 0b001:
@@ -175,15 +178,23 @@ public class ICSRFormat : FormatBase
             case csrrw:
                 if (rd != 0)
                 {
-                    x[rd] = e.CSR.Get(csr);
+                    var value = e.CSR.Get(csr);
+                    e.CSR.Set(csr, x[rs1]);
+                    x[rd] = value;
                 }
-                e.CSR.Set(csr, x[rs1]);
+                else
+                {
+                    e.CSR.Set(csr, x[rs1]);
+                }
                 return;
 
             case csrrs:
                 {
                     uint value = e.CSR.Get(csr);
-                    e.CSR.Set(csr, value | x[rs1]);
+                    if (rs1 != 0)
+                    {
+                        e.CSR.Set(csr, value | x[rs1]);
+                    }
                     x[rd] = value;
                 }
                 return;
@@ -191,7 +202,10 @@ public class ICSRFormat : FormatBase
             case csrrc:
                 {
                     uint value = e.CSR.Get(csr);
-                    e.CSR.Set(csr, value & ~x[rs1]);
+                    if (rs1 != 0)
+                    {
+                        e.CSR.Set(csr, value & ~x[rs1]);
+                    }
                     x[rd] = value;
                 }
                 return;
@@ -248,6 +262,7 @@ public class IFormat : FormatBase
     public const string mret = "mret";
     public const string ecall = "ecall";
     public const string ebreak = "ebreak";
+    public const string wfi = "wfi";
 
     public const string fence = "fence";
     public const string fencei = "fence.i";
@@ -329,11 +344,21 @@ public class IFormat : FormatBase
                 return;
 
             case ecall:
-                e.RaiseECall(x[17], x[10]);
+                e.RaiseECall();
+                e.CSR.Set(0x341, e.PC); // MEPC
+                e.CSR.Set(0x342, 11); // MCAUSE (11 = Environment call from M-mode)
+                e.PC = e.CSR.Get(0x305); // MTVEC
                 return;
 
             case ebreak:
                 e.RaiseEBreak();
+                e.CSR.Set(0x341, e.PC); // MEPC
+                e.CSR.Set(0x342, 3); // MCAUSE (3 = Breakpoint)
+                e.PC = e.CSR.Get(0x305); // MTVEC
+                return;
+
+            case wfi:
+                // Wait for interrupt - nothing to do
                 return;
 
             case fence:

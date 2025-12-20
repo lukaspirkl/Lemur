@@ -1,13 +1,11 @@
-using Microsoft.Extensions.Logging;
-
 namespace Venture;
 
 public class BusFabric : IBusFabric
 {
     private readonly IEnumerable<IAddressableResource> resources;
-    private readonly ILogger<BusFabric> logger;
+    private readonly IEmuLogger<BusFabric> logger;
 
-    public BusFabric(IEnumerable<IAddressableResource> resources, ILogger<BusFabric> logger)
+    public BusFabric(IEnumerable<IAddressableResource> resources, IEmuLogger<BusFabric> logger)
     {
         if (!BitConverter.IsLittleEndian)
         {
@@ -25,7 +23,7 @@ public class BusFabric : IBusFabric
 
     public void Write(uint address, byte[] data)
     {
-        logger.LogDebug("Write to memory {address} value {data}", address.ToHex(), data.ToHex());
+        logger.LogMemoryWrite(address, data);
 
         var segment = resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
@@ -38,7 +36,7 @@ public class BusFabric : IBusFabric
 
     public byte[] Read(uint address, int count)
     {
-        logger.LogDebug("Reading from memory {address} (count: {count})", address.ToHex(), count);
+        logger.LogMemoryRead(address, count);
 
         var segment = resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)

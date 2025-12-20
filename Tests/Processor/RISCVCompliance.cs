@@ -58,7 +58,7 @@ public class RISCVCompliance
         var ram = new Memory("ram", 0x80000000, 1024 * 1024 * 5, false, new FakeLogger<Memory>());
         ram.LoadElf(path);
 
-        var m = new BusFabric([ram], new FakeLogger<BusFabric>());
+        var m = new BusFabric([ram], new ConsoleEmuLogger<BusFabric>());
 
         ram.OnWrite += (s, a) =>
         {
@@ -71,20 +71,27 @@ public class RISCVCompliance
             }
         };
 
-        var csr = new CSR(new FakeLogger<CSR>());
+        var csr = new CSR(new ConsoleEmuLogger<CSR>());
 
-        var r = new Registers(new FakeLogger<Registers>());
-        var e = new Hazard3Processor(m, new FakeLogger<Hazard3Processor>(), r, csr);
+        var r = new Registers(new ConsoleEmuLogger<Registers>());
+        var e = new Hazard3Processor(m, new ConsoleEmuLogger<Hazard3Processor>(), r, csr);
 
         // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.
         // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/csrs/mip.html#mip-MTIP-def
         e.CSR.Set(0x344, 0x00000080);
 
+        // MISA
+        //e.CSR.Set(0x301, 0x40141107);
+
+        // MSTATUS
+        //e.CSR.Set(0x300, 0x00001800);
+        
+
         e.PC = 0x80000000;
 
         e.EBreak += (s, a) =>
         {
-            isRunning = false;
+            e.CSR.Set(0x343, e.PC); // mtval - It is hardwired to zero for Hazard3 but ebreak test needs to have PC stored there
         };
 
         int i = 0;

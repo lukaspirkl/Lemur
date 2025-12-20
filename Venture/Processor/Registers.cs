@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Logging;
-
 namespace Venture.Processor;
 
 public interface IRegisters
@@ -12,11 +10,11 @@ public interface IRegisters
 public class Registers : IRegisters
 {
     private uint[] data = new uint[32];
-    private readonly ILogger<Registers> logger;
+    private readonly IEmuLogger<Registers> logger;
 
     public uint Length => 32;
 
-    public Registers(ILogger<Registers> logger)
+    public Registers(IEmuLogger<Registers> logger)
     {
         this.logger = logger;
     }
@@ -39,7 +37,7 @@ public class Registers : IRegisters
                 return;
             }
 
-            logger.LogDebug("x{index} {value}", index, value.ToHex());
+            logger.LogRegisterSet(index, value);
 
             data[index] = value;
         }

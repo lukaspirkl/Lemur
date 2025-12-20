@@ -36,7 +36,7 @@ public class BusTests
         sut.Registers[1] = 0x00000000;
         sut.Registers[2] = SCRATCH0 + 0x2;
 
-        sut.MemoryWrite(SRAM, BitConverter.GetBytes(lw(1, 2)));
+        sut.MemoryWrite(SRAM, InstructionBuilder.LW(1, 2));
         sut.Registers[32] = SRAM;
 
         sut.Step();
@@ -60,7 +60,7 @@ public class BusTests
         sut.Registers[1] = 0x00000000;
         sut.Registers[2] = SCRATCH0 + 0x1;
 
-        sut.MemoryWrite(SRAM, BitConverter.GetBytes(lh(1, 2)));
+        sut.MemoryWrite(SRAM, InstructionBuilder.LH(1, 2));
         sut.Registers[32] = SRAM;
 
         sut.Step();
@@ -84,7 +84,7 @@ public class BusTests
         sut.Registers[1] = 0x00000000;
         sut.Registers[2] = SCRATCH0 + 0x1;
 
-        sut.MemoryWrite(SRAM, BitConverter.GetBytes(lh(1, 2)));
+        sut.MemoryWrite(SRAM, InstructionBuilder.LH(1, 2));
         sut.Registers[32] = SRAM;
 
         sut.Step();
@@ -106,7 +106,7 @@ public class BusTests
         sut.Registers[1] = 0x00000000;
         sut.Registers[2] = SCRATCH0 + 0x3;
 
-        sut.MemoryWrite(SRAM, BitConverter.GetBytes(lb(1, 2)));
+        sut.MemoryWrite(SRAM, InstructionBuilder.LB(1, 2));
         sut.Registers[32] = SRAM;
 
         sut.Step();
@@ -132,7 +132,7 @@ public class BusTests
         sut.Registers[1] = 0x00000000;
         sut.Registers[2] = SCRATCH0 + addressOffset;
 
-        sut.MemoryWrite(SRAM, BitConverter.GetBytes(lw(1, 2)));
+        sut.MemoryWrite(SRAM, InstructionBuilder.LW(1, 2));
         sut.Registers[32] = SRAM;
 
         sut.Step();
@@ -160,7 +160,7 @@ public class BusTests
         sut.Registers[1] = 0x00000000;
         sut.Registers[2] = SCRATCH0 + addressOffset + 0x0;
 
-        sut.MemoryWrite(SRAM, BitConverter.GetBytes(lh(1, 2)));
+        sut.MemoryWrite(SRAM, InstructionBuilder.LH(1, 2));
         sut.Registers[32] = SRAM;
 
         sut.Step();
@@ -168,29 +168,7 @@ public class BusTests
         Assert.Equal(expectedValue, sut.Registers[1].ToHex());
     }
 
-    private uint lb(uint rd, uint rs1)
-    {
-        return 0b0000011
-         | rd.ExtractBits(0, 5) << 7
-         | 0b000 << 12
-         | rs1.ExtractBits(0, 5) << 15;
-    }
 
-    private uint lh(uint rd, uint rs1)
-    {
-        return 0b0000011
-         | rd.ExtractBits(0, 5) << 7
-         | 0b001 << 12
-         | rs1.ExtractBits(0, 5) << 15;
-    }
-
-    private uint lw(uint rd, uint rs1)
-    {
-        return 0b0000011
-         | rd.ExtractBits(0, 5) << 7
-         | 0b010 << 12
-         | rs1.ExtractBits(0, 5) << 15;
-    }
 
 
 
@@ -211,10 +189,10 @@ public class BusTests
         sut.MemoryWrite(SCRATCH0, BitConverter.GetBytes((uint)0x12345678));
         sut.MemoryWrite(SCRATCH1, BitConverter.GetBytes((uint)0xABCDEF00));
 
-        sut.Registers[1] = SCRATCH0 + addressOffset; 
+        sut.Registers[1] = SCRATCH0 + addressOffset;
         sut.Registers[2] = 0x76543210;
 
-        sut.MemoryWrite(SRAM, BitConverter.GetBytes(sb(1, 2)));
+        sut.MemoryWrite(SRAM, InstructionBuilder.SB(1, 2));
         sut.Registers[32] = SRAM;
 
         sut.Step();
@@ -235,7 +213,7 @@ public class BusTests
         sut.Registers[1] = SCRATCH0 + addressOffset;
         sut.Registers[2] = 0x0000000F;
 
-        sut.MemoryWrite(SRAM, BitConverter.GetBytes(sb(1, 2)));
+        sut.MemoryWrite(SRAM, InstructionBuilder.SB(1, 2));
         sut.Registers[32] = SRAM;
 
         sut.Step();
@@ -256,7 +234,7 @@ public class BusTests
         sut.Registers[1] = SCRATCH0 + addressOffset;
         sut.Registers[2] = 0x0F0F0F0F;
 
-        sut.MemoryWrite(SRAM, BitConverter.GetBytes(sw(1, 2)));
+        sut.MemoryWrite(SRAM, InstructionBuilder.SW(1, 2));
         sut.Registers[32] = SRAM;
 
         sut.Step();
@@ -264,28 +242,6 @@ public class BusTests
         Assert.Equal(expectedValue, sut.MemoryRead(SCRATCH0, 4).ToHex());
     }
 
-    private uint sb(uint rs1, uint rs2)
-    {
-        return 0b0100011
-         | 0b000 << 12
-         | rs1.ExtractBits(0, 5) << 15
-         | rs2.ExtractBits(0, 5) << 20;
-    }
 
-    private uint sh(uint rs1, uint rs2)
-    {
-        return 0b0100011
-         | 0b001 << 12
-         | rs1.ExtractBits(0, 5) << 15
-         | rs2.ExtractBits(0, 5) << 20;
-    }
-
-    private uint sw(uint rs1, uint rs2)
-    {
-        return 0b0100011
-         | 0b010 << 12
-         | rs1.ExtractBits(0, 5) << 15
-         | rs2.ExtractBits(0, 5) << 20;
-    }
 
 }

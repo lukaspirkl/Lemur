@@ -5,7 +5,7 @@ namespace Venture.Processor;
 public class Hazard3Processor
 {
     private readonly IDecoder decoder = new CDecoder(new Decoder());
-    private readonly ILogger<Hazard3Processor> logger;
+    private readonly IEmuLogger<Hazard3Processor> logger;
     private bool m_IsPCModified = false;
 
     public IBusFabric Memory { get; }
@@ -19,11 +19,11 @@ public class Hazard3Processor
         EBreak?.Invoke(this, EventArgs.Empty);
     }
 
-    public event EventHandler<ECallEventArgs>? ECall;
+    public event EventHandler? ECall;
 
-    public void RaiseECall(uint serviceNumber, uint argument)
+    public void RaiseECall()
     {
-        ECall?.Invoke(this, new ECallEventArgs(serviceNumber, argument));
+        ECall?.Invoke(this, EventArgs.Empty);
     }
 
     public uint PC
@@ -36,7 +36,7 @@ public class Hazard3Processor
         }
     }
 
-    public Hazard3Processor(IBusFabric memory, ILogger<Hazard3Processor> logger, Registers registers, CSR csr)
+    public Hazard3Processor(IBusFabric memory, IEmuLogger<Hazard3Processor> logger, Registers registers, CSR csr)
     {
         Memory = memory;
         this.logger = logger;
@@ -54,7 +54,7 @@ public class Hazard3Processor
 
             using (logger.BeginScope("Execute {instruction} {mnemonic}", instruction.ToHex(), format.Mnemonic))
             {
-                logger.LogInformation("Execute PC:{PC} instruction:{instruction} - {mnemonic}", PC.ToHex(), instruction.ToHex(), format.Mnemonic);
+                logger.LogInstructionExecute(PC, instruction, format.Mnemonic);
 
                 m_IsPCModified = false;
                 format.Execute(this);
@@ -64,17 +64,5 @@ public class Hazard3Processor
                 }
             }
         }
-    }
-}
-
-public class ECallEventArgs : EventArgs
-{
-    public uint ServiceNumber { get; }
-    public uint Argument { get; }
-
-    public ECallEventArgs(uint serviceNumber, uint argument)
-    {
-        ServiceNumber = serviceNumber;
-        Argument = argument;
     }
 }

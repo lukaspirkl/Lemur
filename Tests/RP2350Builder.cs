@@ -16,7 +16,8 @@ namespace Tests
         public static IDebuggable CreateEmulator()
         {
             var services = new ServiceCollection();
-            services.AddSingleton(typeof(ILogger<>), typeof(FakeLogger<>));
+            services.AddTransient(typeof(ILogger<>), typeof(FakeLogger<>));
+            services.AddTransient(typeof(IEmuLogger<>), typeof(ConsoleEmuLogger<>));
             services.AddRP2350Emulator();
             var sp = services.BuildServiceProvider();
             return sp.GetRequiredService<IDebuggable>();

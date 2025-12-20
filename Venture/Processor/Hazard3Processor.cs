@@ -48,20 +48,31 @@ public class Hazard3Processor
     {
         using (logger.BeginScope("PC: {PC}", PC.ToHex()))
         {
-            var instruction = Memory.ReadWord(PC);
-
-            var format = decoder.Decode(instruction);
-
-            using (logger.BeginScope("Execute {instruction} {mnemonic}", instruction.ToHex(), format.Mnemonic))
+            var currentPC = PC;
+            try
             {
-                logger.LogInstructionExecute(PC, instruction, format.Mnemonic);
+                var instruction = Memory.ReadInstruction(PC);
 
-                m_IsPCModified = false;
-                format.Execute(this);
-                if (!m_IsPCModified)
+                var format = decoder.Decode(instruction);
+
+                using (logger.BeginScope("Execute {instruction} {mnemonic}", instruction.ToHex(), format.Mnemonic))
                 {
-                    PC = PC + format.StepSize;
+                    logger.LogInstructionExecute(PC, instruction, format.Mnemonic);
+
+                    m_IsPCModified = false;
+                    format.Execute(this);
+                    if (!m_IsPCModified)
+                    {
+                        PC = PC + format.StepSize;
+                    }
                 }
+            }
+            catch (RiscVException e)
+            {
+                CSR.Set(0x341, currentPC); // MEPC
+                CSR.Set(0x342, (uint)e.Cause); // MCAUSE 
+                CSR.Set(0x343, e.TrapValue); // MTVAL // TODO: This is hardwired to zero on Hazard3 (it should be configurable)
+                PC = CSR.Get(0x305); // MTVEC
             }
         }
     }

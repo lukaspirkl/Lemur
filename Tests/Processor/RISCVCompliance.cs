@@ -85,14 +85,8 @@ public class RISCVCompliance
 
         // MSTATUS
         //e.CSR.Set(0x300, 0x00001800);
-        
 
         e.PC = 0x80000000;
-
-        e.EBreak += (s, a) =>
-        {
-            e.CSR.Set(0x343, e.PC); // mtval - It is hardwired to zero for Hazard3 but ebreak test needs to have PC stored there
-        };
 
         int i = 0;
         while (isRunning && i <= maxSteps)

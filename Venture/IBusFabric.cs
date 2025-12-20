@@ -4,6 +4,7 @@ public interface IBusFabric
 {
     void Write(uint address, byte[] data);
     byte[] Read(uint address, int count);
+    uint ReadInstruction(uint address);
 }
 
 public static class BusFabricExtensions

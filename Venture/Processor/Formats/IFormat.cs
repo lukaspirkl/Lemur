@@ -345,17 +345,11 @@ public class IFormat : FormatBase
 
             case ecall:
                 e.RaiseECall();
-                e.CSR.Set(0x341, e.PC); // MEPC
-                e.CSR.Set(0x342, 11); // MCAUSE (11 = Environment call from M-mode)
-                e.PC = e.CSR.Get(0x305); // MTVEC
-                return;
+                throw new RiscVException(ExceptionCause.EnvironmentCallFromMMode, e.PC, "ECALL instruction executed");
 
             case ebreak:
                 e.RaiseEBreak();
-                e.CSR.Set(0x341, e.PC); // MEPC
-                e.CSR.Set(0x342, 3); // MCAUSE (3 = Breakpoint)
-                e.PC = e.CSR.Get(0x305); // MTVEC
-                return;
+                throw new RiscVException(ExceptionCause.Breakpoint, e.PC, "EBREAK instruction executed");
 
             case wfi:
                 // Wait for interrupt - nothing to do

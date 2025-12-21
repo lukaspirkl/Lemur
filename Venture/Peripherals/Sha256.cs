@@ -30,9 +30,9 @@ public class Sha256 : PeripheralBase
         this.logger = logger;
     }
 
-    protected override byte[] HandleRead(uint offset, int count)
+    protected override uint HandleRead(uint offset)
     {
-        logger.LogInformation("READ offset: {offset} count: {count}", offset.ToHex(), count);
+        logger.LogInformation("READ offset: {offset}", offset.ToHex());
 
         if (offset == SCR)
         {
@@ -55,29 +55,29 @@ public class Sha256 : PeripheralBase
                 value |= (uint)1 << 12;
             }
 
-            return BitConverter.GetBytes(value);
+            return value;
         }
         else if (0x08 <= offset && offset <= 0x024) // SUM0-SUM7
         {
             var index = (offset - 0x08) / 4;
-            return BitConverter.GetBytes(H[index]);
+            return H[index];
         }
         else
         {
             logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
-            return new byte[count];
+            return 0;
         }
     }
 
-    protected override void HandleWrite(uint offset, byte[] data)
+
+    protected override void HandleWrite(uint offset, uint data)
     {
         logger.LogInformation("WRITE offset: {offset} data: {data}", offset.ToHex(), data.ToHex());
 
 
         if (offset == SCR)
         {
-            var value = BitConverter.ToUInt32(data);
-            if (value.ExtractBits(0, 1) == 1) // START
+            if (data.ExtractBits(0, 1) == 1) // START
             {
                 wdata.Clear();
                 wdata_rdy = false;
@@ -85,22 +85,22 @@ public class Sha256 : PeripheralBase
                 InitialH.CopyTo(H);
             }
 
-            if (value.ExtractBits(4, 1) == 1) // ERR_WDATA_NOT_RDY
+            if (data.ExtractBits(4, 1) == 1) // ERR_WDATA_NOT_RDY
             {
                 // Set when a write occurs whilst the SHA-256 core is not ready for data(WDATA_RDY is low).Write one to clear.
             }
 
-            dma_size = (DmaSize)value.ExtractBits(8, 2);
+            dma_size = (DmaSize)data.ExtractBits(8, 2);
             if (dma_size != DmaSize.bit32)
             {
                 throw new NotImplementedException("Anything other than 32bit is probably not working. It should be verified!");
             }
 
-            bswap = value.ExtractBits(12, 1) == 1;
+            bswap = data.ExtractBits(12, 1) == 1;
         }
         else if (offset == 0x04) // WDATA register
         {
-            wdata.AddRange(data);
+            wdata.AddRange(BitConverter.GetBytes(data));
             if (wdata.Count == 64)
             {
                 Digest();
@@ -110,8 +110,7 @@ public class Sha256 : PeripheralBase
         }
         else
         {
-            var value = BitConverter.ToUInt32(data);
-            logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
+            logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), data.ToHex());
         }
     }
 

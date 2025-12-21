@@ -2,7 +2,7 @@
 
 namespace Venture.Peripherals;
 
-public class PadsQSPI : Peripheral32
+public class PadsQSPI : PeripheralBase
 {
     private readonly ILogger<PadsQSPI> logger;
 

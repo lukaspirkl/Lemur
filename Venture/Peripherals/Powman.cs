@@ -1,15 +1,12 @@
 ﻿using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
 
 namespace Venture.Peripherals;
 
-public class Powman : Peripheral32
+public class Powman : PeripheralBase
 {
     private readonly ILogger<Powman> logger;
 
     private readonly Dictionary<uint, uint> registers = new Dictionary<uint, uint>();
-
-    private readonly uint[] scratch = new uint[8];
 
     public Powman(ILogger<Powman> logger)
         : base(0x40100000)

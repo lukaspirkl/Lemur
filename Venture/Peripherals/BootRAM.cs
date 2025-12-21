@@ -2,10 +2,11 @@
 
 namespace Venture.Peripherals;
 
-public class BootRAM : PeripheralBase
+public class BootRAM : BytePeripheralBase
 {
     private readonly ILogger<BootRAM> logger;
-    private byte[] ram = new byte[1024];
+
+    private byte[] ram = new byte[1024]; // 1kB
 
     public BootRAM(ILogger<BootRAM> logger)
         : base(0x400e0000)
@@ -14,26 +15,30 @@ public class BootRAM : PeripheralBase
     }
 
 
-    // TODO: There is also BOOTRAM_BASE register on 0x400e0800
-
-    protected override byte[] HandleRead(uint offset, int count)
+    protected override byte HandleRead(uint offset)
     {
-        if (offset + count <= ram.Length)
+        if (offset >= ram.Length)
         {
-            return ram.Skip((int)offset).Take(count).ToArray();
+            // TODO: There is also BOOTRAM_BASE register on 0x400e0800
+            logger.LogWarning("Reading from unhandled offset {offset} of BootRAM", offset.ToHex());
+            return 0;
         }
-
-        logger.LogWarning("Reading from unhandled offset {offset} (count:{count})", offset.ToHex(), count);
-        return new byte[count];
+        else
+        {
+            return ram[offset];
+        }
     }
 
-    protected override void HandleWrite(uint offset, byte[] data)
+    protected override void HandleWrite(uint offset, byte data)
     {
-        if (offset + data.Length <= ram.Length)
+        if (offset >= ram.Length)
         {
-            data.CopyTo(ram, offset);
+            // TODO: There is also BOOTRAM_BASE register on 0x400e0800
+            logger.LogWarning("Writing to unhandled offset {offset} of BootRAM (data: {data})", offset.ToHex(), ((uint)data).ToHex(2));
         }
-
-        logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), data.ToHex());
+        else
+        {
+            ram[offset] = data;
+        }
     }
 }

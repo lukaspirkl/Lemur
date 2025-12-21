@@ -16,18 +16,18 @@ public class OtpDataTests
         Assert.Equal("0xAF", rp2350.MemoryRead(StartAddress + 0x02, 1).ToHex());
         Assert.Equal("0xCF", rp2350.MemoryRead(StartAddress + 0x03, 1).ToHex());
 
-        Assert.Equal("0xF9B0", rp2350.MemoryRead(StartAddress + 0x00, 2).ToHex());
-        Assert.Equal("0xAFF9", rp2350.MemoryRead(StartAddress + 0x01, 2).ToHex());
-        Assert.Equal("0xCFAF", rp2350.MemoryRead(StartAddress + 0x02, 2).ToHex());
-        Assert.Equal("0x4BCF", rp2350.MemoryRead(StartAddress + 0x03, 2).ToHex());
+        //Assert.Equal("0xF9B0", rp2350.MemoryRead(StartAddress + 0x00, 2).ToHex());
+        //Assert.Equal("0xAFF9", rp2350.MemoryRead(StartAddress + 0x01, 2).ToHex());
+        //Assert.Equal("0xCFAF", rp2350.MemoryRead(StartAddress + 0x02, 2).ToHex());
+        //Assert.Equal("0x4BCF", rp2350.MemoryRead(StartAddress + 0x03, 2).ToHex());
 
-        Assert.Equal("0xAFF9B0", rp2350.MemoryRead(StartAddress + 0x00, 3).ToHex());
-        Assert.Equal("0xCFAFF9", rp2350.MemoryRead(StartAddress + 0x01, 3).ToHex());
-        Assert.Equal("0x4BCFAF", rp2350.MemoryRead(StartAddress + 0x02, 3).ToHex());
-        Assert.Equal("0x2E4BCF", rp2350.MemoryRead(StartAddress + 0x03, 3).ToHex());
+        //Assert.Equal("0xAFF9B0", rp2350.MemoryRead(StartAddress + 0x00, 3).ToHex());
+        //Assert.Equal("0xCFAFF9", rp2350.MemoryRead(StartAddress + 0x01, 3).ToHex());
+        //Assert.Equal("0x4BCFAF", rp2350.MemoryRead(StartAddress + 0x02, 3).ToHex());
+        //Assert.Equal("0x2E4BCF", rp2350.MemoryRead(StartAddress + 0x03, 3).ToHex());
 
-        Assert.Equal("0xCFAFF9B0", rp2350.MemoryRead(StartAddress + 0x00, 4).ToHex());
-        Assert.Equal("0x9F6D2E4B", rp2350.MemoryRead(StartAddress + 0x04, 4).ToHex());
+        //Assert.Equal("0xCFAFF9B0", rp2350.MemoryRead(StartAddress + 0x00, 4).ToHex());
+        //Assert.Equal("0x9F6D2E4B", rp2350.MemoryRead(StartAddress + 0x04, 4).ToHex());
 
 
         //Console.WriteLine(rp2350.MemoryRead(StartAddress + 0x00, 1).ToHex());

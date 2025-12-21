@@ -1,45 +1,79 @@
-﻿using Microsoft.Extensions.Logging;
+﻿namespace Venture.Peripherals;
 
-namespace Venture.Peripherals;
-
-public abstract class Peripheral32 : PeripheralBase
+public abstract class BytePeripheralBase : IAddressableResource
 {
-    protected Peripheral32(uint startAddress) : base(startAddress)
+    public uint StartAddress { get; }
+
+    public uint Size => 0x5000;
+
+    protected BytePeripheralBase(uint startAddress)
     {
+        StartAddress = startAddress;
     }
 
-    protected override byte[] HandleRead(uint offset, int count)
+    public byte[] Read(uint address, int count)
     {
-        if (count % 4 != 0)
-        {
-            throw new ArgumentException(nameof(count), $"Unaligned memory access in {GetType().Name} (offset: {offset.ToHex()})");
-        }
+        var offset = (address - StartAddress) % 0x1000;
 
         var result = new List<byte>();
-        result.AddRange(BitConverter.GetBytes(HandleRead(offset)));
+        for (uint i = 0; i < count; i++)
+        {
+            result.Add(HandleRead(offset + i));
+        }
         return result.ToArray();
     }
 
-    protected abstract uint HandleRead(uint offset);
+    protected abstract byte HandleRead(uint offset);
 
-    protected override void HandleWrite(uint offset, byte[] data)
+    public void Write(uint address, byte[] data)
     {
-        if (data.Length % 4 != 0)
-        {
-            throw new ArgumentException(nameof(data), $"Unaligned memory access in {GetType().Name} (address: {offset.ToHex()})");
-        }
+        var offset = (address - StartAddress) % 0x1000;
+        var type = (address - StartAddress) / 0x1000;
 
-        HandleWrite(offset, BitConverter.ToUInt32(data));
+        for (int i = 0; i < data.Length; i++)
+        {
+            
+            switch (type)
+            {
+                case 0:
+                    // normal write
+                    HandleWrite((uint)(offset + i), data[i]);
+                    break;
+
+                case 1:
+                    // Atomic XOR on write
+                    HandleWrite((uint)(offset + i), (byte)(HandleRead((uint)(offset + i)) ^ data[i]));
+                    break;
+
+                case 2:
+                    // Atomic bitmask SET (dst |= mask)
+                    HandleWrite((uint)(offset + i), (byte)(HandleRead((uint)(offset + i)) | data[i]));
+                    break;
+
+                case 3:
+                    // Atomic bitmask CLEAR (dst &= ~mask)
+                    HandleWrite((uint)(offset + i), (byte)(HandleRead((uint)(offset + i)) & ~data[i]));
+                    break;
+
+                case 4:
+                    // normal write
+                    HandleWrite((uint)(offset + i), data[i]);
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(address), "Address out of range.");
+            }
+        }
     }
 
-    protected abstract void HandleWrite(uint offset, uint data);
+    protected abstract void HandleWrite(uint offset, byte data);
 }
 
 public abstract class PeripheralBase : IAddressableResource
 {
     public uint StartAddress { get; }
 
-    public uint Size => 0x4000;
+    public uint Size => 0x5000;
 
     protected PeripheralBase(uint startAddress)
     {
@@ -48,42 +82,92 @@ public abstract class PeripheralBase : IAddressableResource
 
     public byte[] Read(uint address, int count)
     {
-        return HandleRead((address - StartAddress) % 0x1000, count);
+        var offset = (address - StartAddress) % 0x1000;
+        var type = (address - StartAddress) / 0x1000;
+
+        if (type == 0 || type == 4)
+        {
+            var misalignedDistance = offset % 4;
+            var alignedOffset = offset - misalignedDistance;
+
+            return BitConverter.GetBytes(HandleRead(alignedOffset)).Skip((int)misalignedDistance).Take(count).ToArray();
+        }
+        else
+        {
+            return new byte[count];
+        }
     }
 
-    protected abstract byte[] HandleRead(uint offset, int count);
+    protected abstract uint HandleRead(uint offset);
 
     public void Write(uint address, byte[] data)
     {
-        // TODO: Handle narrow write
-        // To disable this behaviour on RP2350, set bit 14 of the address by accessing the peripheral at an offset
-        // of +0x4000. This causes invalid byte lanes to be driven to zero, rather than being driven with replicated
-        // data.In some situations, such as DMA of 8 - bit values to the PWM peripheral, the default
-        // replication behaviour is not desirable.
-
         var offset = (address - StartAddress) % 0x1000;
         var type = (address - StartAddress) / 0x1000;
+
+        var misalignedDistance = offset % 4;
+        var alignedOffset = offset - misalignedDistance;
+
+        byte[] full = new byte[4];
+
+        if (type == 4)
+        {    
+            // Zeroes are used in invalid lanes
+            data.CopyTo(full, misalignedDistance);
+        }
+        else
+        {
+            // Duplicate values to invalid lanes
+            if (data.Length == 1)
+            {
+                full[0] = data[0];
+                full[1] = data[0];
+                full[2] = data[0];
+                full[3] = data[0];
+            }
+            else if (data.Length == 2)
+            {
+                full[0] = data[0];
+                full[1] = data[1];
+                full[2] = data[0];
+                full[3] = data[1];
+            }
+            else if (data.Length == 4)
+            {
+                full[0] = data[0];
+                full[1] = data[1];
+                full[2] = data[2];
+                full[3] = data[3];
+            }
+        }
+
+        var value = BitConverter.ToUInt32(full);
 
         switch (type)
         {
             case 0:
                 // normal write
-                HandleWrite(offset, data);
+                HandleWrite(alignedOffset, value);
                 break;
 
             case 1:
                 // Atomic XOR on write
-                ApplyAtomic(offset, data, (byte dst, byte mask) => (byte)(dst ^ mask));
+                HandleWrite(alignedOffset, HandleRead(alignedOffset) ^ value);
                 break;
 
             case 2:
                 // Atomic bitmask SET (dst |= mask)
-                ApplyAtomic(offset, data, (byte dst, byte mask) => (byte)(dst | mask));
+                HandleWrite(alignedOffset, HandleRead(alignedOffset) | value);
                 break;
 
             case 3:
                 // Atomic bitmask CLEAR (dst &= ~mask)
-                ApplyAtomic(offset, data, (byte dst, byte mask) => (byte)(dst & ~mask));
+                HandleWrite(alignedOffset, HandleRead(alignedOffset) & ~value);
+                break;
+
+            case 4:
+                // normal write (but with zeros instead replicated value)
+                HandleWrite(alignedOffset, value);
                 break;
 
             default:
@@ -91,18 +175,5 @@ public abstract class PeripheralBase : IAddressableResource
         }
     }
 
-    protected abstract void HandleWrite(uint offset, byte[] data);
-
-    private void ApplyAtomic(uint offset, byte[] data, Func<byte, byte, byte> op)
-    {
-        var newData = new byte[data.Length];
-        var current = HandleRead(offset, data.Length);
-        
-        for (uint i = 0; i < data.Length; i++)
-        {
-            newData[i] = op(current[i], data[i]);
-        }
-
-        HandleWrite(offset, data);
-    }
+    protected abstract void HandleWrite(uint offset, uint data);
 }

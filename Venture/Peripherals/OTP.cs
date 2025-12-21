@@ -2,7 +2,7 @@
 
 namespace Venture.Peripherals;
 
-public class OTP : Peripheral32
+public class OTP : PeripheralBase
 {
     private readonly ILogger<OTP> logger;
 

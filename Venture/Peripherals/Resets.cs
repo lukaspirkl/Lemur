@@ -2,7 +2,7 @@
 
 namespace Venture.Peripherals;
 
-public class Resets : Peripheral32
+public class Resets : PeripheralBase
 {
     private readonly ILogger<Resets> logger;
 

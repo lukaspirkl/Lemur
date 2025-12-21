@@ -85,11 +85,11 @@ class Program
                     Log.Information("AUTOMATIC REG REPLACEMENT (value from TRNG)");
                     gdbEmu.WriteRegister((uint)i, regsReal[i]);
                 }
-                else if (count <= 118364)
-                {
-                    Log.Information("AUTOMATIC REG REPLACEMENT (instruction count less then limit)");
-                    gdbEmu.WriteRegister((uint)i, regsReal[i]);
-                }
+                //else if (count <= 118364)
+                //{
+                //    Log.Information("AUTOMATIC REG REPLACEMENT (instruction count less then limit)");
+                //    gdbEmu.WriteRegister((uint)i, regsReal[i]);
+                //}
                 else
                 {
                     Console.Write("[S] set value to emulator and continue | [X] exit");

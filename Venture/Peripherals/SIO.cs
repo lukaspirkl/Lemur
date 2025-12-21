@@ -2,7 +2,7 @@
 
 namespace Venture.Peripherals;
 
-public class SIO : Peripheral32
+public class SIO : PeripheralBase
 {
     private readonly ILogger<SIO> logger;
 

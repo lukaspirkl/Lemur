@@ -2,7 +2,7 @@
 
 namespace Venture.Peripherals;
 
-public class XIPQMI : Peripheral32
+public class XIPQMI : PeripheralBase
 {
     private readonly ILogger<XIPQMI> logger;
 

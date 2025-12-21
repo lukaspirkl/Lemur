@@ -70,6 +70,7 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         processor.PC = 0x00007dfc; // riscv_entry_point - it is always on this address
 
         SetCSR(0x300, 0x00001808); //MSTATUS
+        SetCSR(0xBE5, 0x00008000); //meicontext
     }
 
     public void MemoryWrite(uint address, byte[] data)

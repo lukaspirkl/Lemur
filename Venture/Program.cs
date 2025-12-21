@@ -160,16 +160,16 @@ public static class RP2350ServiceCollectionExtensions
         // 0x40000000 - APB Peripherals
         services.AddUnimpelentedPeripheral(0x40000000, "SYSINFO_BASE");
         services.AddUnimpelentedPeripheral(0x40008000, "SYSCFG_BASE");
-        services.AddUnimpelentedPeripheral(0x40010000, "CLOCKS_BASE");
+        services.AddPeripheral<Clocks>(); //services.AddUnimpelentedPeripheral(0x40010000, "CLOCKS_BASE");
         services.AddUnimpelentedPeripheral(0x40018000, "PSM_BASE");
         services.AddPeripheral<Resets>(); //new UnimplementedPeripheral(0x40020000, "RESETS_BASE"),
         services.AddUnimpelentedPeripheral(0x40028000, "IO_BANK0_BASE");
         services.AddUnimpelentedPeripheral(0x40030000, "IO_QSPI_BASE");
         services.AddUnimpelentedPeripheral(0x40038000, "PADS_BANK0_BASE");
         services.AddPeripheral<PadsQSPI>(); // services.AddUnimpelentedPeripheral(0x40040000, "PADS_QSPI_BASE");
-        services.AddUnimpelentedPeripheral(0x40048000, "XOSC_BASE");
-        services.AddUnimpelentedPeripheral(0x40050000, "PLL_SYS_BASE");
-        services.AddUnimpelentedPeripheral(0x40058000, "PLL_USB_BASE");
+        services.AddPeripheral<XOSC>(); // services.AddUnimpelentedPeripheral(0x40048000, "XOSC_BASE");
+        services.AddPeripheral<PPLSYS>(); // services.AddUnimpelentedPeripheral(0x40050000, "PLL_SYS_BASE");
+        services.AddPeripheral<PPLUSB>(); // services.AddUnimpelentedPeripheral(0x40058000, "PLL_USB_BASE");
         services.AddUnimpelentedPeripheral(0x40060000, "ACCESSCTRL_BASE");
         services.AddUnimpelentedPeripheral(0x40068000, "BUSCTRL_BASE");
         services.AddUnimpelentedPeripheral(0x40070000, "UART0_BASE");
@@ -218,7 +218,7 @@ public static class RP2350ServiceCollectionExtensions
         //services.AddUnimpelentedPeripheral(0x50100000, "USBCTRL_DPRAM_BASE");
         services.AddMemory("USB DPRAM", 0x50100000, 1024 * 4); // 4kB
 
-        services.AddUnimpelentedPeripheral(0x50110000, "USBCTRL_REGS_BASE");
+        services.AddPeripheral<USBCtrlRegs>(); //services.AddUnimpelentedPeripheral(0x50110000, "USBCTRL_REGS_BASE");
         services.AddUnimpelentedPeripheral(0x50200000, "PIO0_BASE");
         services.AddUnimpelentedPeripheral(0x50300000, "PIO1_BASE");
         services.AddUnimpelentedPeripheral(0x50400000, "PIO2_BASE");

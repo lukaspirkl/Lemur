@@ -340,8 +340,13 @@ public class GdbConnectionHandler : ConnectionHandler
                 var address = Convert.ToUInt32(args[0], 16);
                 var length = Convert.ToUInt32(args[1], 16);
 
-                // TODO: Not sure if the endianness is correct
-                return string.Join("", emulator.MemoryRead(address, (int)length).Select(x => Convert.ToString(x, 16).PadLeft(2, '0')));
+                var sb = new StringBuilder();
+                for (uint i = 0; i < length; i++)
+                {
+                    sb.Append(Convert.ToString(emulator.MemoryRead(address + i, 1)[0], 16).PadLeft(2, '0'));
+                }
+
+                return sb.ToString();
             }
             catch (Exception e)
             {
@@ -361,13 +366,11 @@ public class GdbConnectionHandler : ConnectionHandler
                 var length = Convert.ToUInt32(args2[0], 16);
                 var hexData = args2[1];
 
-                var data = new byte[hexData.Length / 2];
-                for (int i = 0; i < data.Length; i++)
+                for (int i = 0; i < hexData.Length / 2; i++)
                 {
                     // TODO: Not sure if the endianness is correct
-                    data[i] = Convert.ToByte(hexData.Substring(i * 2, 2), 16);
+                    emulator.MemoryWrite(address + (uint)i, [Convert.ToByte(hexData.Substring(i * 2, 2), 16)]);
                 }
-                emulator.MemoryWrite(address, data);
 
                 return "OK";
             }

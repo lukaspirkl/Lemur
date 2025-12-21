@@ -10,6 +10,8 @@ public class Decoder : IDecoder
     {
         formatFactories =
         [
+            new Xh3powerExtensionFormatFactory(),
+            new Xh3bextmExtensionFormatFactory(),
             new UFormatFactory(),
             new JFormatFactory(),
             new BFormatFactory(),
@@ -19,7 +21,6 @@ public class Decoder : IDecoder
             new AExtensionFormatFactory(),
             new BExtensionFormatFactory(),
             new MExtensionFormatFactory(),
-            new Xh3bextmExtensionFormatFactory(),
         ];
     }
 

@@ -11,6 +11,10 @@ public class RP2350Emulator : BackgroundService, IDebuggable
     private bool running = false;
     private Task? run;
 
+    public HashSet<uint> Brakpoints { get; } = new HashSet<uint>();
+
+    public event EventHandler? Stopped;
+
     public RP2350Emulator(Hazard3Processor processor)
     {
         this.processor = processor;
@@ -49,7 +53,14 @@ public class RP2350Emulator : BackgroundService, IDebuggable
             while (running)
             {
                 processor.Step();
+                if (Brakpoints.Contains(processor.PC))
+                {
+                    break;
+                }
             }
+
+            run = null;
+            Stopped?.Invoke(this, EventArgs.Empty);
         });
     }
 

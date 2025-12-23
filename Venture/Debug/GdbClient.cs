@@ -10,6 +10,8 @@ public class RP2350GDB : IDebuggable
 
     private static SemaphoreSlim semaphore = new SemaphoreSlim(1);
 
+    public event EventHandler? Stopped;
+
     public RP2350GDB(string host, int port)
     {
         semaphore.Wait();
@@ -18,6 +20,8 @@ public class RP2350GDB : IDebuggable
     }
 
     public IRegisters Registers { get; }
+
+    public HashSet<uint> Brakpoints { get; } = new HashSet<uint>();
 
     public void Dispose()
     {

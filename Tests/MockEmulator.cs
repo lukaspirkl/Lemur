@@ -20,7 +20,11 @@ public class MockEmulator : IDebuggable
 
     public IRegisters Registers => registers;
 
+    public HashSet<uint> Brakpoints { get; } = new HashSet<uint>(); 
+
     public byte[] Memory = new byte[32];
+
+    public event EventHandler? Stopped;
 
     public byte[] MemoryRead(uint address, int count)
     {

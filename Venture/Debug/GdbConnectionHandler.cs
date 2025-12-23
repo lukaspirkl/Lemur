@@ -31,10 +31,17 @@ public class GdbConnectionHandler : ConnectionHandler
 
         _logger.LogInformation($"Debugger connected: {connection.RemoteEndPoint}");
 
+        var input = connection.Transport.Input;
+        var output = connection.Transport.Output;
+
+        EventHandler sendStopped = (s, a) =>
+        {
+            SendPacketAsync(output, "S05").Wait();
+        };
+
         try
         {
-            var input = connection.Transport.Input;
-            var output = connection.Transport.Output;
+            emulator.Stopped += sendStopped;
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -46,6 +53,7 @@ public class GdbConnectionHandler : ConnectionHandler
                     emulator.Stop();
                     await SendPacketAsync(output, "S05");
                 }
+
 
                 // We must track how much of the buffer we have used
                 SequencePosition consumed = buffer.Start;
@@ -106,6 +114,7 @@ public class GdbConnectionHandler : ConnectionHandler
         }
         finally
         {
+            emulator.Stopped -= sendStopped;
             _logger.LogInformation("Debugger disconnected.");
         }
     }
@@ -158,7 +167,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
         if (command.StartsWith("qSupported"))
         {
-            return "PacketSize=400;vContSupported+;multiprocess-";// ;qXfer:features:read+";
+            return "PacketSize=400;hwbreak-;hwbreak+;vContSupported+;multiprocess-";// ;qXfer:features:read+";
         }
 
         if (command == "vMustReplyEmpty")
@@ -261,8 +270,18 @@ public class GdbConnectionHandler : ConnectionHandler
             var str = Encoding.ASCII.GetString(HexStringToBytes(command.Substring(6)));
             if (str == "reset halt")
             {
-                // TODO: Reset
+                emulator.Reset();
+                return "OK";
             }
+
+            if (str == "reset init")
+            {
+                emulator.Reset();
+                return "OK";
+            }
+
+            _logger.LogWarning("Unknown qRcmd: {cmd}", str);
+            return "";
         }
 
         if (command == "g")
@@ -379,6 +398,36 @@ public class GdbConnectionHandler : ConnectionHandler
                 _logger.LogError(e, "Unexpected exception while writing memory");
                 return "E01";
             }
+        }
+
+        // Add breakpoint
+        if (command.StartsWith("Z"))
+        {
+            var args = command.Split(',');
+            //if (args[0] == "Z0")
+            //{
+            //    // Software breakpoint is not supported
+            //    return "E0E";
+            //}
+
+            var address = Convert.ToUInt32(args[1], 16);
+            emulator.Brakpoints.Add(address);
+            return "OK";
+        }
+
+        // Remove breakpoint
+        if (command.StartsWith("z"))
+        {
+            var args = command.Split(',');
+            //if (args[0] == "z0")
+            //{
+            //    // Software breakpoint is not supported
+            //    return "E0E";
+            //}
+
+            var address = Convert.ToUInt32(args[1], 16);
+            emulator.Brakpoints.Remove(address);
+            return "OK";
         }
 
         if (command.StartsWith("qXfer:"))

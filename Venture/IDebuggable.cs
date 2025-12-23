@@ -6,6 +6,10 @@ namespace Venture
     {
         IRegisters Registers { get; }
 
+        HashSet<uint> Brakpoints { get; }
+
+        event EventHandler? Stopped;
+
         byte[] MemoryRead(uint address, int count);
         void MemoryWrite(uint address, byte[] data);
         void Run();

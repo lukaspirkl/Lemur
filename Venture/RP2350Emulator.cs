@@ -86,12 +86,68 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 
     public void MemoryWrite(uint address, byte[] data)
     {
-        processor.Memory.Write(address, data);
+        var misalignement = address % 4;
+        if (misalignement == 1 && data.Length == 1)
+        {
+            processor.Memory.Write(address, data);
+            return;
+        }
+
+        uint offset = 0;
+
+        if (misalignement == 1)
+        {
+            offset = 1;
+            processor.Memory.Write(address + offset, data.Skip((int)offset).Take(2).ToArray());
+            offset += 2;
+        }
+
+        if (misalignement == 2)
+        {
+            processor.Memory.Write(address + offset, data.Take(2).ToArray());
+            offset += 2;
+        }
+
+        if (misalignement == 3)
+        {
+            processor.Memory.Write(address + offset, data.Take(1).ToArray());
+            offset += 1;
+        }
+
+        while (offset < data.Length)
+        {
+            if (data.Length - offset == 3)
+            {
+                processor.Memory.Write(address + offset, data.Skip((int)offset + 2).ToArray());
+            }
+            else
+            {
+                processor.Memory.Write(address + offset, data.Skip((int)offset).Take(4).ToArray());
+            }
+            offset += 4;
+        }
+
     }
 
     public byte[] MemoryRead(uint address, int count)
     {
-        return processor.Memory.Read(address, count);
+        var endAddress = address + count;
+        var result = new List<byte>();
+
+        var misalignement = address % 4;
+        if (misalignement != 0)
+        {
+            result.AddRange(processor.Memory.Read(address - misalignement, 4).Skip((int)misalignement));
+            address += misalignement;
+        }
+
+        while (address < endAddress)
+        {
+            result.AddRange(processor.Memory.Read(address, 4));
+            address += 4;
+        }
+
+        return result.Take(count).ToArray();
     }
 
     public uint GetCSR(ushort index)

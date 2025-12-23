@@ -73,4 +73,28 @@ public static class InstructionBuilder
             | rs2.ExtractBits(0, 5) << 20
         );
     }
+
+    public static byte[] H3bextm(uint rd, uint rs1, uint rs2, uint size)
+    {
+        return BitConverter.GetBytes(
+            0b0001011
+            | rd.ExtractBits(0, 5) << 7
+            | 0b000 << 12 // funct3
+            | rs1.ExtractBits(0, 5) << 15
+            | rs2.ExtractBits(0, 5) << 20
+            | size.ExtractBits(0, 3) << 26
+        );
+    }
+
+    public static byte[] H3bextmi(uint rd, uint rs1, uint shamt, uint size)
+    {
+        return BitConverter.GetBytes(
+            0b0001011
+            | rd.ExtractBits(0, 5) << 7
+            | 0b100 << 12 // funct3
+            | rs1.ExtractBits(0, 5) << 15
+            | shamt.ExtractBits(0, 5) << 20
+            | size.ExtractBits(0, 3) << 26
+        );
+    }
 }

@@ -167,7 +167,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
         if (command.StartsWith("qSupported"))
         {
-            return "PacketSize=400;hwbreak-;hwbreak+;vContSupported+;multiprocess-";// ;qXfer:features:read+";
+            return "PacketSize=400;hwbreak+;hwbreak+;vContSupported+;multiprocess-";// ;qXfer:features:read+";
         }
 
         if (command == "vMustReplyEmpty")

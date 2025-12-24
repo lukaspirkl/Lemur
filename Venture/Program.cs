@@ -36,7 +36,9 @@ internal class Program
 
 
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
-            .MinimumLevel.Is(LogEventLevel.Debug)
+            //.MinimumLevel.Is(LogEventLevel.Debug)
+            .MinimumLevel.Is(LogEventLevel.Fatal)
+            .MinimumLevel.Override("Venture.Debug.GdbConnectionHandler", LogEventLevel.Verbose)
             .Enrich.FromLogContext()
             .WriteTo.Async(a => a.File(new CompactJsonFormatter(), logFile))
             .WriteTo.Console());
@@ -48,48 +50,6 @@ internal class Program
         var app = builder.Build();
 
         await app.RunAsync();
-    }
-}
-
-public class XIP : IAddressableResource
-{
-    private readonly Memory memory;
-    private readonly ILogger<XIP> logger;
-
-    public uint StartAddress => 0x10000000;
-
-    public uint Size => 0x10000000;
-
-    public XIP(Memory memory, ILogger<XIP> logger)
-    {
-        this.memory = memory;
-        this.logger = logger;
-    }
-
-    public byte[] Read(uint address, int count)
-    {
-        var offset = (address - StartAddress) % 0x0400_0000;
-        
-        var type = (address - StartAddress) / 0x0400_0000;
-        if (type != 1)
-        {
-            logger.LogWarning("Reading from XIP address: {address} offset: {offset} type: {type}", address, offset, type);
-        }
-
-        return memory.Read(StartAddress + offset, count);
-    }
-
-    public void Write(uint address, byte[] data)
-    {
-        var offset = (address - StartAddress) % 0x0400_0000;
-
-        var type = (address - StartAddress) / 0x0400_0000;
-        if (type != 1)
-        {
-            logger.LogWarning("Writing to XIP address: {address} offset: {offset} type: {type}", address, offset, type);
-        }
-
-        memory.Write(StartAddress + offset, data);
     }
 }
 
@@ -124,7 +84,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddSingleton<IAddressableResource>(sp =>
         {
             // This is not really read only but I want to catch possible issues
-            var memory = sp.GetRequiredService<MemoryFactory>().Create("XIP", 0x10000000, size, isReadonly: true);
+            var memory = sp.GetRequiredService<MemoryFactory>().Create("XIP", 0x10000000, size, isReadonly: false);
             init?.Invoke(memory);
             return new XIP(memory, sp.GetRequiredService<ILogger<XIP>>());
         });

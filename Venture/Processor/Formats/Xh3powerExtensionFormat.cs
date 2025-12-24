@@ -40,11 +40,11 @@ public class Xh3powerExtensionFormat : FormatBase
 
         switch (Mnemonic)
         {
-            //case h3_block:
-            //    return;
+            case h3_block:
+                return;
 
-            //case h3_unblock:
-            //    return;
+            case h3_unblock:
+                return;
 
             default:
                 throw new NotImplementedException($"Unimplemented mnemonic {Mnemonic} in Xh3powerExtensionFormat.");

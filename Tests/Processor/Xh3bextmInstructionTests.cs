@@ -9,7 +9,7 @@ public class Xh3bextmInstructionTests
     [Fact]
     public void h3_bextm()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         var x = rp2350.Registers;
 
@@ -29,7 +29,7 @@ public class Xh3bextmInstructionTests
     [Fact]
     public void h3_bextmi()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         var x = rp2350.Registers;
 

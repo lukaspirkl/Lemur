@@ -38,7 +38,8 @@ internal class Program
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
             //.MinimumLevel.Is(LogEventLevel.Debug)
             .MinimumLevel.Is(LogEventLevel.Fatal)
-            .MinimumLevel.Override("Venture.Debug.GdbConnectionHandler", LogEventLevel.Verbose)
+            //.MinimumLevel.Override("Venture.Debug.GdbConnectionHandler", LogEventLevel.Verbose)
+            .MinimumLevel.Override("Venture.Peripherals.Timer", LogEventLevel.Verbose)
             .Enrich.FromLogContext()
             .WriteTo.Async(a => a.File(new CompactJsonFormatter(), logFile))
             .WriteTo.Console());
@@ -64,6 +65,12 @@ public static class RP2350ServiceCollectionExtensions
     private static IServiceCollection AddPeripheral<T>(this IServiceCollection services) where T: class, IAddressableResource
     {
         services.AddSingleton<IAddressableResource, T>();
+        return services;
+    }
+
+    private static IServiceCollection AddPeripheral<T>(this IServiceCollection services, uint baseAddress) where T : class, IAddressableResource
+    {
+        services.AddSingleton<IAddressableResource, T>(provider => ActivatorUtilities.CreateInstance<T>(provider, [baseAddress]));
         return services;
     }
 
@@ -140,7 +147,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddUnimpelentedPeripheral(0x40098000, "I2C1_BASE");
         services.AddUnimpelentedPeripheral(0x400a0000, "ADC_BASE");
         services.AddUnimpelentedPeripheral(0x400a8000, "PWM_BASE");
-        services.AddUnimpelentedPeripheral(0x400b0000, "TIMER0_BASE");
+        services.AddPeripheral<Peripherals.Timer>(0x400b0000); // services.AddUnimpelentedPeripheral(0x400b0000, "TIMER0_BASE");
         services.AddUnimpelentedPeripheral(0x400b8000, "TIMER1_BASE");
         services.AddUnimpelentedPeripheral(0x400c0000, "HSTX_CTRL_BASE");
         services.AddUnimpelentedPeripheral(0x400c8000, "XIP_CTRL_BASE");

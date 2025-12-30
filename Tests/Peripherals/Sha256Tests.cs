@@ -5,7 +5,7 @@ public class Sha256Tests
     [Fact]
     public void WhenUsedFromBootROM()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         uint StartAddress = 0x400f8000;
 

@@ -71,6 +71,8 @@ public abstract class BytePeripheralBase : IAddressableResource
 
 public abstract class PeripheralBase : IAddressableResource
 {
+    private readonly Dictionary<uint, Register32> registers = new();
+
     public uint StartAddress { get; }
 
     public uint Size => 0x5000;
@@ -78,6 +80,13 @@ public abstract class PeripheralBase : IAddressableResource
     protected PeripheralBase(uint startAddress)
     {
         StartAddress = startAddress;
+    }
+
+    protected Register32 AddRegister(uint offset, uint resetValue = 0)
+    {
+        var reg = new Register32(resetValue);
+        registers[offset] = reg;
+        return reg;
     }
 
     public byte[] Read(uint address, int count)
@@ -98,7 +107,17 @@ public abstract class PeripheralBase : IAddressableResource
         }
     }
 
-    protected abstract uint HandleRead(uint offset);
+    protected virtual uint HandleRead(uint offset)
+    {
+        if (registers.TryGetValue(offset, out var r))
+        {
+            return r.Read();
+        }
+        else
+        {
+            return 0;
+        }
+    }
 
     public void Write(uint address, byte[] data)
     {
@@ -175,5 +194,11 @@ public abstract class PeripheralBase : IAddressableResource
         }
     }
 
-    protected abstract void HandleWrite(uint offset, uint data);
+    protected virtual void HandleWrite(uint offset, uint data)
+    {
+        if (registers.TryGetValue(offset, out var r))
+        {
+            r.Write(data);
+        }
+    }
 }

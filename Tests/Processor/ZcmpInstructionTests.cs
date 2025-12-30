@@ -7,7 +7,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_mvsa01()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                                                          funct3     r1s    r2s
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_011_000_01_001_10));
@@ -27,7 +27,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_mva01s()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                                                          funct3     r1s    r2s
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_011_000_11_001_10));
@@ -47,7 +47,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_push_0110_00()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                        cm.push {ra, s0, s1}, -16         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11000_0110_00_10));
@@ -95,7 +95,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_push_0111_00()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                    cm.push {ra, s0, s1, s2}, -16         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11000_0111_00_10));
@@ -144,7 +144,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_push_1111_00()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                    cm.push {ra, s0, s1, s2}, -16         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11000_1111_00_10));
@@ -213,7 +213,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_push_0111_01()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                    cm.push {ra, s0, s1, s2}, -32         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11000_0111_01_10));
@@ -262,7 +262,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_pop_0110_00()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                         cm.pop {ra, s0, s1}, -16         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11010_0110_00_10));
@@ -296,7 +296,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_pop_0111_00()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                     cm.pop {ra, s0, s1, s2}, -16         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11010_0111_00_10));
@@ -332,7 +332,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_pop_1111_00()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                     cm.pop {ra, s0, s1, s2}, -16         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11010_1111_00_10));
@@ -401,7 +401,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_pop_0111_01()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                   cm.pop {ra, s0, s1, s2}, -32         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11010_0111_01_10));
@@ -437,7 +437,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_popret_0110_00()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                      cm.popret {ra, s0, s1}, -16         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11110_0110_00_10));
@@ -471,7 +471,7 @@ public class ZcmpInstructionTests
     [Fact]
     public void cm_popretz_0110_00()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         //                      cm.popret {ra, s0, s1}, -16         funct3      rlist spimm
         rp2350.MemoryWrite(0x20000000, BitConverter.GetBytes((ushort)0b101_11100_0110_00_10));

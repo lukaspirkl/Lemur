@@ -5,7 +5,7 @@ public class SIOTests
     [Fact]
     public void ValuesFromHardware()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         uint StartAddress = 0xd0000000;
 

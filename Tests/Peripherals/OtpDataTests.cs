@@ -7,7 +7,7 @@ public class OtpDataTests
     [Fact]
     public void HardcodedRandomValues()
     {
-        var rp2350 = RP2350Builder.Create();
+        using var rp2350 = RP2350Builder.Create();
 
         uint StartAddress = 0x40130000;
 

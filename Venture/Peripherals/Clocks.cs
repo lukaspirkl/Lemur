@@ -1,13 +1,7 @@
-﻿using Microsoft.Extensions.Logging;
-
-namespace Venture.Peripherals;
+﻿namespace Venture.Peripherals;
 
 public class Clocks : PeripheralBase
 {
-    private readonly ILogger<Clocks> logger;
-
-
-
     private const uint CLK_REF_CTRL = 0x30;
     private const uint CLK_REF_DIV = 0x34;
     private const uint CLK_REF_SELECTED = 0x38;
@@ -22,6 +16,15 @@ public class Clocks : PeripheralBase
 
     private RefSource refSource = RefSource.ROSC_CLKSRC_PH;
 
+    enum RefAuxSource
+    {
+        CLKSRC_PLL_USB = 0x0,
+        CLKSRC_GPIN0 = 0x1,
+        CLKSRC_GPIN1 = 0x2,
+        CLKSRC_PLL_USB_PRIMARY_REF_OPCG = 0x3
+    }
+
+    private RefAuxSource refAuxSource = RefAuxSource.CLKSRC_PLL_USB;
 
 
 
@@ -39,74 +42,35 @@ public class Clocks : PeripheralBase
 
 
 
-    public Clocks(ILogger<Clocks> logger) 
-        : base(0x40010000)
+    public Clocks() : base(0x40010000)
     {
-        this.logger = logger;
-    }
+        AddRegister(CLK_REF_CTRL)
+            .Field(5, 2, () => refAuxSource, v => refAuxSource = v)
+            .Field(0, 2, () => refSource, v => refSource = v);
 
-    protected override uint HandleRead(uint offset)
-    {
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+        AddRegister(CLK_REF_DIV, 0x00010000);
 
-        if (offset == CLK_REF_DIV)
-        {
-            logger.LogWarning("Reading CLK_REF_DIV register from Clocks");
-            return 0x00010000;
-        }
-        else if (offset == CLK_REF_SELECTED)
-        {
-            logger.LogWarning("Reading CLK_REF_SELECTED register from Clocks");
-            return (uint)(1 << (int)refSource);
-        }
+        AddRegister(CLK_REF_SELECTED)
+            .OnRead(() => 1u << (int)refSource);
 
-        else if (offset == CLK_SYS_DIV)
-        {
-            logger.LogWarning("Reading  CLK_SYS_DIV register from Clocks");
-            return 0x00010000;
-        }
-        else if (offset == CLK_SYS_SELECTED)
-        {
-            logger.LogWarning("Reading CLK_SYS_SELECTED register from Clocks");
-            return (uint)(1 << (int)sysSource);
-        }
-        
-        else if (offset == 0x4c) // CLK_PERI_DIV Register
-        {
-            logger.LogWarning("Reading CLK_PERI_DIV register from Clocks");
-            return 0x00010000;
-        }
-        else if (offset == 0x58) // CLK_HSTX_DIV Register
-        {
-            logger.LogWarning("Reading CLK_HSTX_DIV register from Clocks");
-            return 0x00010000;
-        }
-        else if (offset == 0x64) // CLK_USB_DIV Register
-        {
-            logger.LogWarning("Reading CLK_USB_DIV register from Clocks");
-            return 0x00010000;
-        }
-        else if (offset == 0x70) // CLK_ADC_DIV Register
-        {
-            logger.LogWarning("Reading CLK_ADC_DIV register from Clocks");
-            return 0x00010000;
-        }
+        AddRegister(CLK_SYS_CTRL)
+            .Field(0, 1, () => sysSource, v => sysSource = v);
 
-        return 0;
-    }
+        AddRegister(CLK_SYS_DIV, 0x00010000);
 
-    protected override void HandleWrite(uint offset, uint value)
-    {
-        logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
+        AddRegister(CLK_SYS_SELECTED)
+            .OnRead(() => 1u << (int)sysSource);
 
-        if (offset == CLK_REF_CTRL)
-        {
-            refSource = (RefSource)value.ExtractBits(0, 2);
-        }
+        // CLK_PERI_DIV Register
+        AddRegister(0x4c, 0x00010000);
 
-        else if (offset == CLK_SYS_CTRL)
-        {
-            sysSource = (SysSource)value.ExtractBits(0, 1);
-        }
+        // CLK_HSTX_DIV Register
+        AddRegister(0x58, 0x00010000);
+
+        // CLK_USB_DIV Register
+        AddRegister(0x64, 0x00010000);
+
+        // CLK_ADC_DIV Register
+        AddRegister(0x70, 0x00010000);
     }
 }

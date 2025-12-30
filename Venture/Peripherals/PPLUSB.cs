@@ -4,12 +4,8 @@ namespace Venture.Peripherals;
 
 public class PPLUSB : PeripheralBase
 {
-    private readonly ILogger<PPLUSB> logger;
-
-    public PPLUSB(ILogger<PPLUSB> logger) 
-        : base(0x40058000)
+    public PPLUSB(uint baseAddress, string name, ILogger<PPLUSB> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)

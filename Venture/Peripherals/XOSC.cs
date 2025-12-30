@@ -4,12 +4,8 @@ namespace Venture.Peripherals;
 
 public class XOSC : PeripheralBase
 {
-    private readonly ILogger<XOSC> logger;
-
-    public XOSC(ILogger<XOSC> logger) 
-        : base(0x40048000)
+    public XOSC(uint baseAddress, string name, ILogger<XOSC> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)

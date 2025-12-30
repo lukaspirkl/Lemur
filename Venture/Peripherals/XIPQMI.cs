@@ -4,12 +4,8 @@ namespace Venture.Peripherals;
 
 public class XIPQMI : PeripheralBase
 {
-    private readonly ILogger<XIPQMI> logger;
-
-    public XIPQMI(ILogger<XIPQMI> logger)
-        : base(0x400d0000)
+    public XIPQMI(uint baseAddress, string name, ILogger<XIPQMI> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)

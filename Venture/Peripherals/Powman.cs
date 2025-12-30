@@ -4,14 +4,10 @@ namespace Venture.Peripherals;
 
 public class Powman : PeripheralBase
 {
-    private readonly ILogger<Powman> logger;
-
     private readonly Dictionary<uint, uint> registers = new Dictionary<uint, uint>();
 
-    public Powman(ILogger<Powman> logger)
-        : base(0x40100000)
+    public Powman(uint baseAddress, string name, ILogger<Powman> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)

@@ -4,12 +4,8 @@ namespace Venture.Peripherals;
 
 public class USBCtrlRegs : PeripheralBase
 {
-    private readonly ILogger<USBCtrlRegs> logger;
-
-    public USBCtrlRegs(ILogger<USBCtrlRegs> logger) 
-        : base(0x50110000)
+    public USBCtrlRegs(uint baseAddress, string name, ILogger<USBCtrlRegs> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)

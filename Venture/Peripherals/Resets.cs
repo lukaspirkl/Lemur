@@ -4,12 +4,8 @@ namespace Venture.Peripherals;
 
 public class Resets : PeripheralBase
 {
-    private readonly ILogger<Resets> logger;
-
-    public Resets(ILogger<Resets> logger) 
-        : base(0x40020000)
+    public Resets(uint baseAddress, string name, ILogger<Resets> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)

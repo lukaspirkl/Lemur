@@ -4,12 +4,8 @@ namespace Venture.Peripherals;
 
 public class PPLSYS : PeripheralBase
 {
-    private readonly ILogger<PPLSYS> logger;
-
-    public PPLSYS(ILogger<PPLSYS> logger) 
-        : base(0x40050000)
+    public PPLSYS(uint baseAddress, string name, ILogger<PPLSYS> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)

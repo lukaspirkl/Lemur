@@ -22,13 +22,13 @@ public class UnimplementedPeripheral : IAddressableResource
     private readonly string name;
     private readonly ILogger<UnimplementedPeripheral> logger;
 
-    public uint StartAddress { get; }
+    public uint BaseAddress { get; }
 
     public uint Size { get; }
 
     public UnimplementedPeripheral(uint startAddress, uint size, string name, ILogger<UnimplementedPeripheral> logger)
     {
-        StartAddress = startAddress;
+        BaseAddress = startAddress;
         Size = size;
         this.name = name;
         this.logger = logger;

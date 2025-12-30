@@ -4,14 +4,10 @@ namespace Venture.Peripherals;
 
 public class BootRAM : BytePeripheralBase
 {
-    private readonly ILogger<BootRAM> logger;
-
     private byte[] ram = new byte[1024]; // 1kB
 
-    public BootRAM(ILogger<BootRAM> logger)
-        : base(0x400e0000)
+    public BootRAM(uint baseAddress, string name, ILogger<BootRAM> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
 

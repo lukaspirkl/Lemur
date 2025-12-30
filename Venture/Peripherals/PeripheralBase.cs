@@ -1,19 +1,24 @@
-﻿namespace Venture.Peripherals;
+﻿using Microsoft.Extensions.Logging;
+
+namespace Venture.Peripherals;
 
 public abstract class BytePeripheralBase : IAddressableResource
 {
-    public uint StartAddress { get; }
+    protected readonly ILogger logger;
+
+    public uint BaseAddress { get; }
 
     public uint Size => 0x5000;
 
-    protected BytePeripheralBase(uint startAddress)
+    protected BytePeripheralBase(uint baseAddress, string name, ILogger logger)
     {
-        StartAddress = startAddress;
+        BaseAddress = baseAddress;
+        this.logger = logger;
     }
 
     public byte[] Read(uint address, int count)
     {
-        var offset = (address - StartAddress) % 0x1000;
+        var offset = (address - BaseAddress) % 0x1000;
 
         var result = new List<byte>();
         for (uint i = 0; i < count; i++)
@@ -27,8 +32,8 @@ public abstract class BytePeripheralBase : IAddressableResource
 
     public void Write(uint address, byte[] data)
     {
-        var offset = (address - StartAddress) % 0x1000;
-        var type = (address - StartAddress) / 0x1000;
+        var offset = (address - BaseAddress) % 0x1000;
+        var type = (address - BaseAddress) / 0x1000;
 
         for (int i = 0; i < data.Length; i++)
         {
@@ -72,27 +77,31 @@ public abstract class BytePeripheralBase : IAddressableResource
 public abstract class PeripheralBase : IAddressableResource
 {
     private readonly Dictionary<uint, Register32> registers = new();
+    protected readonly string name;
+    protected readonly ILogger logger;
 
-    public uint StartAddress { get; }
+    public uint BaseAddress { get; }
 
     public uint Size => 0x5000;
 
-    protected PeripheralBase(uint startAddress)
+    protected PeripheralBase(uint baseAddress, string name, ILogger logger)
     {
-        StartAddress = startAddress;
+        BaseAddress = baseAddress;
+        this.name = name;
+        this.logger = logger;
     }
 
-    protected Register32 AddRegister(uint offset, uint resetValue = 0)
+    protected Register32 AddRegister(uint offset, string registerName, uint resetValue = 0)
     {
-        var reg = new Register32(resetValue);
+        var reg = new Register32(logger, name, registerName, resetValue);
         registers[offset] = reg;
         return reg;
     }
 
     public byte[] Read(uint address, int count)
     {
-        var offset = (address - StartAddress) % 0x1000;
-        var type = (address - StartAddress) / 0x1000;
+        var offset = (address - BaseAddress) % 0x1000;
+        var type = (address - BaseAddress) / 0x1000;
 
         if (type == 0 || type == 4)
         {
@@ -121,8 +130,8 @@ public abstract class PeripheralBase : IAddressableResource
 
     public void Write(uint address, byte[] data)
     {
-        var offset = (address - StartAddress) % 0x1000;
-        var type = (address - StartAddress) / 0x1000;
+        var offset = (address - BaseAddress) % 0x1000;
+        var type = (address - BaseAddress) / 0x1000;
 
         var misalignedDistance = offset % 4;
         var alignedOffset = offset - misalignedDistance;

@@ -1,7 +1,11 @@
-﻿namespace Venture;
+﻿using Microsoft.Extensions.Logging;
+
+namespace Venture;
 
 public sealed class Register32
 {
+    private readonly ILogger logger;
+
     private uint resetValue;
     private uint value;
 
@@ -10,8 +14,14 @@ public sealed class Register32
     private Action<uint>? writeSideEffect;
     private Func<uint>? readOverride;
 
-    public Register32(uint resetValue = 0)
+    public string PeripheralName { get; }
+    public string RegisterName { get; }
+
+    public Register32(ILogger logger, string peripheralName, string registerName, uint resetValue = 0)
     {
+        this.logger = logger;
+        PeripheralName = peripheralName;
+        RegisterName = registerName;
         this.resetValue = resetValue;
         value = resetValue;
     }
@@ -51,19 +61,31 @@ public sealed class Register32
 
     public uint Read()
     {
+        logger.LogTrace("Reading from {peripheral} register {register}", PeripheralName, RegisterName);
+
         if (readOverride != null)
+        {
             return readOverride();
+        }
 
         uint result = value;
+
         foreach (var f in fields)
+        {
             result = f.Encode(result);
+        }
+
         return result;
     }
 
     public void Write(uint data)
     {
+        logger.LogTrace("Writing to {peripheral} register {register} {data}", PeripheralName, RegisterName, data.ToHex());
+
         foreach (var f in fields)
+        {
             f.Decode(data);
+        }
 
         writeSideEffect?.Invoke(data);
         value = data;
@@ -80,7 +102,7 @@ interface IField
 
 sealed class UIntField : IField
 {
-    private readonly int lsb, width;
+    private readonly int lsb;
     private readonly uint mask;
     private readonly Func<uint> getter;
     private readonly Action<uint>? setter;
@@ -88,7 +110,6 @@ sealed class UIntField : IField
     public UIntField(int lsb, int width, Func<uint> getter, Action<uint>? setter)
     {
         this.lsb = lsb;
-        this.width = width;
         this.getter = getter;
         this.setter = setter;
         mask = ((1u << width) - 1u) << lsb;

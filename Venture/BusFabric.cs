@@ -18,7 +18,7 @@ public class BusFabric : IBusFabric
 
     private bool CanHandle(IAddressableResource resource, uint address)
     {
-        return address - resource.StartAddress >= 0 && address - resource.StartAddress < resource.Size; ;
+        return address - resource.BaseAddress >= 0 && address - resource.BaseAddress < resource.Size; ;
     }
 
     public void Write(uint address, byte[] data)

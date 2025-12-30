@@ -29,7 +29,7 @@ public class Memory : IAddressableResource
     private readonly ILogger<Memory> logger;
     private readonly byte[] memory;
 
-    public uint StartAddress { get; }
+    public uint BaseAddress { get; }
     public uint Size { get; }
 
     public event EventHandler<MemoryWriteArgs>? OnWrite;
@@ -42,7 +42,7 @@ public class Memory : IAddressableResource
         memory = new byte[size];
         Array.Fill<byte>(memory, 0xFF);
 
-        StartAddress = startAddress;
+        BaseAddress = startAddress;
         Size = size;
         this.isReadonly = isReadonly;
         this.logger = logger;
@@ -60,12 +60,12 @@ public class Memory : IAddressableResource
 
         OnWrite?.Invoke(this, new MemoryWriteArgs(address, data));
 
-        data.CopyTo(memory, (int)(address - StartAddress));
+        data.CopyTo(memory, (int)(address - BaseAddress));
     }
 
     public byte[] Read(uint address, int count)
     {
-        return memory.Skip((int)(address - StartAddress)).Take(count).ToArray();
+        return memory.Skip((int)(address - BaseAddress)).Take(count).ToArray();
     }
 
     public void LoadElf(string path)
@@ -81,7 +81,7 @@ public class Memory : IAddressableResource
         {
             logger.LogInformation("Processing segment at {address}...", segment.Address.ToHex());
 
-            long flashOffset = segment.Address - StartAddress;
+            long flashOffset = segment.Address - BaseAddress;
             if (flashOffset >= 0 && (flashOffset + segment.Size) <= memory.Length)
             {
                 logger.LogInformation("Segment is written to {name}", name);

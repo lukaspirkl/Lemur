@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Configuration;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
 using System.Net;
@@ -36,10 +37,9 @@ internal class Program
 
 
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
-            //.MinimumLevel.Is(LogEventLevel.Debug)
             .MinimumLevel.Is(LogEventLevel.Fatal)
-            //.MinimumLevel.Override("Venture.Debug.GdbConnectionHandler", LogEventLevel.Verbose)
-            .MinimumLevel.Override("Venture.Peripherals.Timer", LogEventLevel.Verbose)
+            //.MinimumLevel.Override<GdbConnectionHandler>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<Peripherals.Timer>(LogEventLevel.Verbose)
             .Enrich.FromLogContext()
             .WriteTo.Async(a => a.File(new CompactJsonFormatter(), logFile))
             .WriteTo.Console());
@@ -54,24 +54,45 @@ internal class Program
     }
 }
 
+public static class SerilogExtensions
+{
+    public static LoggerConfiguration Override<T>(this LoggerMinimumLevelConfiguration conf, LogEventLevel minimumLevel)
+    {
+        return conf.Override(typeof(T).FullName!, minimumLevel);
+    }
+}
+
+public class PeripheralRegistration
+{
+    private readonly IServiceCollection services;
+    private readonly uint baseAddress;
+    private readonly string name;
+
+    public PeripheralRegistration(IServiceCollection services, uint baseAddress, string name)
+    {
+        this.services = services;
+        this.baseAddress = baseAddress;
+        this.name = name;
+    }
+
+    public IServiceCollection Implementation<T>() where T : class, IAddressableResource
+    {
+        services.AddSingleton<IAddressableResource, T>(provider => ActivatorUtilities.CreateInstance<T>(provider, [baseAddress, name]));
+        return services;
+    }
+
+    public IServiceCollection Unimplemented(uint? size = null)
+    {
+        services.AddSingleton<IAddressableResource>(sp => sp.GetRequiredService<UnimplementedPeripheralFactory>().Create(baseAddress, name, size));
+        return services;
+    }
+}
+
 public static class RP2350ServiceCollectionExtensions
 {
-    private static IServiceCollection AddUnimpelentedPeripheral(this IServiceCollection services, uint address, string name, uint? size = null)
+    private static PeripheralRegistration AddPeripheral(this IServiceCollection services, uint baseAddress, string name)
     {
-        services.AddSingleton<IAddressableResource>(sp => sp.GetRequiredService<UnimplementedPeripheralFactory>().Create(address, name, size));
-        return services;
-    }
-
-    private static IServiceCollection AddPeripheral<T>(this IServiceCollection services) where T: class, IAddressableResource
-    {
-        services.AddSingleton<IAddressableResource, T>();
-        return services;
-    }
-
-    private static IServiceCollection AddPeripheral<T>(this IServiceCollection services, uint baseAddress) where T : class, IAddressableResource
-    {
-        services.AddSingleton<IAddressableResource, T>(provider => ActivatorUtilities.CreateInstance<T>(provider, [baseAddress]));
-        return services;
+        return new PeripheralRegistration(services, baseAddress, name);
     }
 
     private static IServiceCollection AddMemory(this IServiceCollection services, string name, uint address, uint size, Action<Memory>? init = null, bool isReadonly = false)
@@ -118,85 +139,85 @@ public static class RP2350ServiceCollectionExtensions
 
         // 0x10000000 - XIP
         services.AddXIP(1024 * 1024 * 2, m => m.LoadBin(@"Blink\KeySquareBlink.bin")); // 2MB
-        
+
 
         // 0x20000000 - SRAM
         services.AddMemory("SRAM", 0x20000000, 1024 * 520); // 520kB
 
-        
+
         // 0x40000000 - APB Peripherals
-        services.AddUnimpelentedPeripheral(0x40000000, "SYSINFO_BASE");
-        services.AddUnimpelentedPeripheral(0x40008000, "SYSCFG_BASE");
-        services.AddPeripheral<Clocks>(); //services.AddUnimpelentedPeripheral(0x40010000, "CLOCKS_BASE");
-        services.AddUnimpelentedPeripheral(0x40018000, "PSM_BASE");
-        services.AddPeripheral<Resets>(); //new UnimplementedPeripheral(0x40020000, "RESETS_BASE"),
-        services.AddUnimpelentedPeripheral(0x40028000, "IO_BANK0_BASE");
-        services.AddUnimpelentedPeripheral(0x40030000, "IO_QSPI_BASE");
-        services.AddUnimpelentedPeripheral(0x40038000, "PADS_BANK0_BASE");
-        services.AddPeripheral<PadsQSPI>(); // services.AddUnimpelentedPeripheral(0x40040000, "PADS_QSPI_BASE");
-        services.AddPeripheral<XOSC>(); // services.AddUnimpelentedPeripheral(0x40048000, "XOSC_BASE");
-        services.AddPeripheral<PPLSYS>(); // services.AddUnimpelentedPeripheral(0x40050000, "PLL_SYS_BASE");
-        services.AddPeripheral<PPLUSB>(); // services.AddUnimpelentedPeripheral(0x40058000, "PLL_USB_BASE");
-        services.AddUnimpelentedPeripheral(0x40060000, "ACCESSCTRL_BASE");
-        services.AddUnimpelentedPeripheral(0x40068000, "BUSCTRL_BASE");
-        services.AddUnimpelentedPeripheral(0x40070000, "UART0_BASE");
-        services.AddUnimpelentedPeripheral(0x40078000, "UART1_BASE");
-        services.AddUnimpelentedPeripheral(0x40080000, "SPI0_BASE");
-        services.AddUnimpelentedPeripheral(0x40088000, "SPI1_BASE");
-        services.AddUnimpelentedPeripheral(0x40090000, "I2C0_BASE");
-        services.AddUnimpelentedPeripheral(0x40098000, "I2C1_BASE");
-        services.AddUnimpelentedPeripheral(0x400a0000, "ADC_BASE");
-        services.AddUnimpelentedPeripheral(0x400a8000, "PWM_BASE");
-        services.AddPeripheral<Peripherals.Timer>(0x400b0000); // services.AddUnimpelentedPeripheral(0x400b0000, "TIMER0_BASE");
-        services.AddUnimpelentedPeripheral(0x400b8000, "TIMER1_BASE");
-        services.AddUnimpelentedPeripheral(0x400c0000, "HSTX_CTRL_BASE");
-        services.AddUnimpelentedPeripheral(0x400c8000, "XIP_CTRL_BASE");
-        services.AddPeripheral<XIPQMI>(); // services.AddUnimpelentedPeripheral(0x400d0000, "XIP_QMI_BASE");
-        services.AddUnimpelentedPeripheral(0x400d8000, "WATCHDOG_BASE");
-        services.AddPeripheral<BootRAM>(); //services.AddMemory("bootRAM", 0x400e0000, 1024); // 1kB + BOOTRAM_BASE register
-        services.AddUnimpelentedPeripheral(0x400e8000, "ROSC_BASE");
-        services.AddUnimpelentedPeripheral(0x400f0000, "TRNG_BASE");
-        services.AddPeripheral<Sha256>(); //new UnimplementedPeripheral(0x400f8000, "SHA256_BASE"),
-        services.AddPeripheral<Powman>(); //new UnimplementedPeripheral(0x40100000, "POWMAN_BASE"),
-        services.AddUnimpelentedPeripheral(0x40108000, "TICKS_BASE");
-        services.AddPeripheral<OTP>(); // services.AddUnimpelentedPeripheral(0x40120000, "OTP_BASE");
-        services.AddPeripheral<OTPData>(); //services.AddUnimpelentedPeripheral(0x40130000, "OTP_DATA_BASE");
-        services.AddUnimpelentedPeripheral(0x40134000, "OTP_DATA_RAW_BASE");
-        services.AddUnimpelentedPeripheral(0x40138000, "OTP_DATA_GUARDED_BASE");
-        services.AddUnimpelentedPeripheral(0x4013c000, "OTP_DATA_RAW_GUARDED_BASE");
-        services.AddUnimpelentedPeripheral(0x40140000, "CORESIGHT_PERIPH_BASE");
-        services.AddUnimpelentedPeripheral(0x40140000, "CORESIGHT_ROMTABLE_BASE");
-        services.AddUnimpelentedPeripheral(0x40142000, "CORESIGHT_AHB_AP_CORE0_BASE");
-        services.AddUnimpelentedPeripheral(0x40144000, "CORESIGHT_AHB_AP_CORE1_BASE");
-        services.AddUnimpelentedPeripheral(0x40146000, "CORESIGHT_TIMESTAMP_GEN_BASE");
-        services.AddUnimpelentedPeripheral(0x40147000, "CORESIGHT_ATB_FUNNEL_BASE");
-        services.AddUnimpelentedPeripheral(0x40148000, "CORESIGHT_TPIU_BASE");
-        services.AddUnimpelentedPeripheral(0x40149000, "CORESIGHT_CTI_BASE");
-        services.AddUnimpelentedPeripheral(0x4014a000, "CORESIGHT_APB_AP_RISCV_BASE");
-        services.AddUnimpelentedPeripheral(0x40150000, "DFT_BASE");
-        services.AddUnimpelentedPeripheral(0x40158000, "GLITCH_DETECTOR_BASE");
-        services.AddUnimpelentedPeripheral(0x40160000, "TBMAN_BASE");
+        services.AddPeripheral(0x40000000, "SYSINFO_BASE").Unimplemented();
+        services.AddPeripheral(0x40008000, "SYSCFG_BASE").Unimplemented();
+        services.AddPeripheral(0x40010000, "CLOCKS_BASE").Implementation<Clocks>();
+        services.AddPeripheral(0x40018000, "PSM_BASE").Unimplemented();
+        services.AddPeripheral(0x40020000, "RESETS_BASE").Implementation<Resets>();
+        services.AddPeripheral(0x40028000, "IO_BANK0_BASE").Unimplemented();
+        services.AddPeripheral(0x40030000, "IO_QSPI_BASE").Unimplemented();
+        services.AddPeripheral(0x40038000, "PADS_BANK0_BASE").Unimplemented();
+        services.AddPeripheral(0x40040000, "PADS_QSPI_BASE").Implementation<PadsQSPI>();
+        services.AddPeripheral(0x40048000, "XOSC_BASE").Implementation<XOSC>();
+        services.AddPeripheral(0x40050000, "PLL_SYS_BASE").Implementation<PPLSYS>();
+        services.AddPeripheral(0x40058000, "PLL_USB_BASE").Implementation<PPLUSB>();
+        services.AddPeripheral(0x40060000, "ACCESSCTRL_BASE").Unimplemented();
+        services.AddPeripheral(0x40068000, "BUSCTRL_BASE").Unimplemented();
+        services.AddPeripheral(0x40070000, "UART0_BASE").Unimplemented();
+        services.AddPeripheral(0x40078000, "UART1_BASE").Unimplemented();
+        services.AddPeripheral(0x40080000, "SPI0_BASE").Unimplemented();
+        services.AddPeripheral(0x40088000, "SPI1_BASE").Unimplemented();
+        services.AddPeripheral(0x40090000, "I2C0_BASE").Unimplemented();
+        services.AddPeripheral(0x40098000, "I2C1_BASE").Unimplemented();
+        services.AddPeripheral(0x400a0000, "ADC_BASE").Unimplemented();
+        services.AddPeripheral(0x400a8000, "PWM_BASE").Unimplemented();
+        services.AddPeripheral(0x400b0000, "TIMER0_BASE").Implementation<Peripherals.Timer>();
+        services.AddPeripheral(0x400b8000, "TIMER1_BASE").Implementation<Peripherals.Timer>();
+        services.AddPeripheral(0x400c0000, "HSTX_CTRL_BASE").Unimplemented();
+        services.AddPeripheral(0x400c8000, "XIP_CTRL_BASE").Unimplemented();
+        services.AddPeripheral(0x400d0000, "XIP_QMI_BASE").Implementation<XIPQMI>();
+        services.AddPeripheral(0x400d8000, "WATCHDOG_BASE").Unimplemented();
+        services.AddPeripheral(0x400e0000, "BOOTRAM_BASE").Implementation<BootRAM>();
+        services.AddPeripheral(0x400e8000, "ROSC_BASE").Unimplemented();
+        services.AddPeripheral(0x400f0000, "TRNG_BASE").Unimplemented();
+        services.AddPeripheral(0x400f8000, "SHA256_BASE").Implementation<Sha256>();
+        services.AddPeripheral(0x40100000, "POWMAN_BASE").Implementation<Powman>();
+        services.AddPeripheral(0x40108000, "TICKS_BASE").Unimplemented();
+        services.AddPeripheral(0x40120000, "OTP_BASE").Implementation<OTP>();
+        services.AddPeripheral(0x40130000, "OTP_DATA_BASE").Implementation<OTPData>();
+        services.AddPeripheral(0x40134000, "OTP_DATA_RAW_BASE").Unimplemented();
+        services.AddPeripheral(0x40138000, "OTP_DATA_GUARDED_BASE").Unimplemented();
+        services.AddPeripheral(0x4013c000, "OTP_DATA_RAW_GUARDED_BASE").Unimplemented();
+        services.AddPeripheral(0x40140000, "CORESIGHT_PERIPH_BASE").Unimplemented();
+        services.AddPeripheral(0x40140000, "CORESIGHT_ROMTABLE_BASE").Unimplemented();
+        services.AddPeripheral(0x40142000, "CORESIGHT_AHB_AP_CORE0_BASE").Unimplemented();
+        services.AddPeripheral(0x40144000, "CORESIGHT_AHB_AP_CORE1_BASE").Unimplemented();
+        services.AddPeripheral(0x40146000, "CORESIGHT_TIMESTAMP_GEN_BASE").Unimplemented();
+        services.AddPeripheral(0x40147000, "CORESIGHT_ATB_FUNNEL_BASE").Unimplemented();
+        services.AddPeripheral(0x40148000, "CORESIGHT_TPIU_BASE").Unimplemented();
+        services.AddPeripheral(0x40149000, "CORESIGHT_CTI_BASE").Unimplemented();
+        services.AddPeripheral(0x4014a000, "CORESIGHT_APB_AP_RISCV_BASE").Unimplemented();
+        services.AddPeripheral(0x40150000, "DFT_BASE").Unimplemented();
+        services.AddPeripheral(0x40158000, "GLITCH_DETECTOR_BASE").Unimplemented();
+        services.AddPeripheral(0x40160000, "TBMAN_BASE").Unimplemented();
 
         
         // 0x50000000 - AHB Peripherals
-        services.AddUnimpelentedPeripheral(0x50000000, "DMA_BASE");
+        services.AddPeripheral(0x50000000, "DMA_BASE").Unimplemented();
 
-        //services.AddUnimpelentedPeripheral(0x50100000, "USBCTRL_BASE");
-        //services.AddUnimpelentedPeripheral(0x50100000, "USBCTRL_DPRAM_BASE");
+        //services.AddPeripheral(0x50100000, "USBCTRL_BASE").Unimplemented();
+        //services.AddPeripheral(0x50100000, "USBCTRL_DPRAM_BASE").Unimplemented();
         services.AddMemory("USB DPRAM", 0x50100000, 1024 * 4); // 4kB
 
-        services.AddPeripheral<USBCtrlRegs>(); //services.AddUnimpelentedPeripheral(0x50110000, "USBCTRL_REGS_BASE");
-        services.AddUnimpelentedPeripheral(0x50200000, "PIO0_BASE");
-        services.AddUnimpelentedPeripheral(0x50300000, "PIO1_BASE");
-        services.AddUnimpelentedPeripheral(0x50400000, "PIO2_BASE");
-        services.AddUnimpelentedPeripheral(0x50500000, "XIP_AUX_BASE");
-        services.AddUnimpelentedPeripheral(0x50600000, "HSTX_FIFO_BASE");
-        services.AddUnimpelentedPeripheral(0x50700000, "CORESIGHT_TRACE_BASE");
+        services.AddPeripheral(0x50110000, "USBCTRL_REGS_BASE").Implementation<USBCtrlRegs>();
+        services.AddPeripheral(0x50200000, "PIO0_BASE").Unimplemented();
+        services.AddPeripheral(0x50300000, "PIO1_BASE").Unimplemented();
+        services.AddPeripheral(0x50400000, "PIO2_BASE").Unimplemented();
+        services.AddPeripheral(0x50500000, "XIP_AUX_BASE").Unimplemented();
+        services.AddPeripheral(0x50600000, "HSTX_FIFO_BASE").Unimplemented();
+        services.AddPeripheral(0x50700000, "CORESIGHT_TRACE_BASE").Unimplemented();
 
 
         // 0xd0000000 - SIO
-        services.AddPeripheral<SIO>(); //new UnimplementedPeripheral(0xd0000000, "SIO_BASE"),
-        services.AddUnimpelentedPeripheral(0xd0020000, "SIO_NONSEC_BASE");
+        services.AddPeripheral(0xd0000000, "SIO_BASE").Implementation<SIO>();
+        services.AddPeripheral(0xd0020000, "SIO_NONSEC_BASE").Unimplemented();
 
 
         // 0xe0000000 - Cortex-M33 private registers
@@ -204,6 +225,3 @@ public static class RP2350ServiceCollectionExtensions
         return services;
     }
 }
-
-
-// https://github.com/andrewlock/blog-comments/discussions/229#discussioncomment-10187328

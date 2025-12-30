@@ -4,12 +4,8 @@ namespace Venture.Peripherals;
 
 public class SIO : PeripheralBase
 {
-    private readonly ILogger<SIO> logger;
-
-    public SIO(ILogger<SIO> logger) 
-        : base(0xd0000000)
+    public SIO(uint baseAddress, string name, ILogger<SIO> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)

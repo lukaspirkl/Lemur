@@ -4,21 +4,22 @@ namespace Venture.Peripherals;
 
 public class OTPData : PeripheralBase
 {
-    private readonly ILogger<OTPData> logger;
-
-    public OTPData(ILogger<OTPData> logger)
-        : base(0x40120000)
+    public OTPData(uint baseAddress, string name, ILogger<OTPData> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)
     {
         logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
 
-        if (offset == 0x15C)
+        // TODO: Read other values from hardware
+        if (offset == 0x0)
         {
-            return 0x00000003;
+            return 0xCFAFF9B0;
+        }
+        else if (offset == 0x4)
+        {
+            return 0x9F6D2E4B;
         }
         else
         {

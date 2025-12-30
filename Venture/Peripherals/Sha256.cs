@@ -24,10 +24,8 @@ public class Sha256 : PeripheralBase
         bit32 = 0x2,
     }
 
-    public Sha256(ILogger<Sha256> logger) 
-        : base(0x400f8000)
+    public Sha256(uint baseAddress, string name, ILogger<Sha256> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)
@@ -195,7 +193,6 @@ public class Sha256 : PeripheralBase
         0x19A4C116, 0x1E376C08, 0x2748774C, 0x34B0BCB5, 0x391C0CB3, 0x4ED8AA4A, 0x5B9CCA4F, 0x682E6FF3,
         0x748F82EE, 0x78A5636F, 0x84C87814, 0x8CC70208, 0x90BEFFFA, 0xA4506CEB, 0xBEF9A3F7, 0xC67178F2
     };
-    private readonly ILogger<Sha256> logger;
 
     private static UInt32 ROTL(UInt32 x, byte n)
     {

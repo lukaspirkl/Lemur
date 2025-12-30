@@ -4,12 +4,8 @@ namespace Venture.Peripherals;
 
 public class PadsQSPI : PeripheralBase
 {
-    private readonly ILogger<PadsQSPI> logger;
-
-    public PadsQSPI(ILogger<PadsQSPI> logger)
-        : base(0x40040000)
+    public PadsQSPI(uint baseAddress, string name, ILogger<PadsQSPI> logger) : base(baseAddress, name, logger)
     {
-        this.logger = logger;
     }
 
     protected override uint HandleRead(uint offset)

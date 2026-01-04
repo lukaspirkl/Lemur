@@ -3,6 +3,21 @@ using System.Diagnostics;
 
 namespace Venture.Peripherals;
 
+public class Timer0 : Timer
+{
+    public Timer0(uint baseAddress, string name, ILogger<Timer0> logger) : base(baseAddress, name, logger)
+    {
+    }
+}
+
+public class Timer1 : Timer
+{
+    public Timer1(uint baseAddress, string name, ILogger<Timer1> logger) : base(baseAddress, name, logger)
+    {
+    }
+}
+
+
 public class Timer : PeripheralBase
 {
     private Stopwatch timer;

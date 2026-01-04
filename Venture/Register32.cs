@@ -26,24 +26,21 @@ public sealed class Register32
         value = resetValue;
     }
 
-    public Register32 Field<T>(
-        int lsb,
-        int width,
-        Func<T> getter,
-        Action<T>? setter = null)
-        where T : unmanaged, Enum
+    public Register32 Field<T>(int lsb, int width, Func<T> getter, Action<T>? setter = null) where T : unmanaged, Enum
     {
         fields.Add(new EnumField<T>(lsb, width, getter, setter));
         return this;
     }
 
-    public Register32 Field(
-        int lsb,
-        int width,
-        Func<uint> getter,
-        Action<uint>? setter = null)
+    public Register32 Field(int lsb, int width, Func<uint> getter, Action<uint>? setter = null)
     {
         fields.Add(new UIntField(lsb, width, getter, setter));
+        return this;
+    }
+
+    public Register32 Field(int lsb, Func<bool> getter, Action<bool>? setter = null)
+    {
+        fields.Add(new BitField(lsb, getter, setter));
         return this;
     }
 
@@ -98,6 +95,36 @@ interface IField
 {
     uint Encode(uint regValue);
     void Decode(uint regValue);
+}
+
+sealed class BitField : IField
+{
+    private readonly uint mask;
+    private readonly Func<bool> getter;
+    private readonly Action<bool>? setter;
+
+    public BitField(int bit, Func<bool> getter, Action<bool>? setter)
+    {
+        this.getter = getter;
+        this.setter = setter;
+        mask = 1u << bit;
+    }
+
+    public uint Encode(uint reg)
+    {
+        reg &= ~mask;
+        if (getter())
+        {
+            reg |= mask;
+        }
+        return reg;
+    }
+
+    public void Decode(uint reg)
+    {
+        if (setter == null) return;
+        setter((reg & mask) != 0);
+    }
 }
 
 sealed class UIntField : IField

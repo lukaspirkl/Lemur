@@ -33,3 +33,50 @@ public static class DebuggableExtensions
         debuggable.MemoryWrite(address, BitConverter.GetBytes(value));
     }
 }
+
+public class NullDebuggable : IDebuggable
+{
+    public IRegisters Registers { get; } = new Registers(new NullEmuLogger<Registers>());
+
+    public HashSet<uint> Brakpoints { get; } = new HashSet<uint>();
+
+    public event EventHandler? Stopped;
+
+    public void Dispose()
+    {
+    }
+
+    public uint GetCSR(ushort index)
+    {
+        return 0;
+    }
+
+    public byte[] MemoryRead(uint address, int count)
+    {
+        return new byte[count];
+    }
+
+    public void MemoryWrite(uint address, byte[] data)
+    {
+    }
+
+    public void Reset()
+    {
+    }
+
+    public void Run()
+    {
+    }
+
+    public void SetCSR(ushort index, uint value)
+    {
+    }
+
+    public void Step()
+    {
+    }
+
+    public void Stop()
+    {
+    }
+}

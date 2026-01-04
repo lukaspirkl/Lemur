@@ -198,6 +198,5 @@ public class RP2350Emulator : BackgroundService, IDebuggable
                 processor.Registers[index] = value;
             }
         }
-
     }
 }

@@ -65,3 +65,51 @@ public class EmuLogger<TCategoryName> : IEmuLogger<TCategoryName>
         logger.LogDebug("x{index} {value}", index, value.ToHex());
     }
 }
+
+public class NullEmuLogger<T> : IEmuLogger<T>
+{
+    private class Disposable : IDisposable
+    {
+        public void Dispose()
+        {
+        }
+    }
+
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
+    {
+        return new Disposable();
+    }
+
+    public bool IsEnabled(LogLevel logLevel)
+    {
+        return false;
+    }
+
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
+    {
+    }
+
+    public void LogCSRGet(ushort key, uint value)
+    {
+    }
+
+    public void LogCSRSet(ushort key, uint value)
+    {
+    }
+
+    public void LogInstructionExecute(uint pc, uint instruction, string mnemonic)
+    {
+    }
+
+    public void LogMemoryRead(uint address, int count)
+    {
+    }
+
+    public void LogMemoryWrite(uint address, byte[] data)
+    {
+    }
+
+    public void LogRegisterSet(uint index, uint value)
+    {
+    }
+}

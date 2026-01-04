@@ -16,22 +16,22 @@ public class BFormatFactory : FormatFactoryBase
         switch (funct3)
         {
             case 0b000:
-                mnemonic = BFormat.beq;
+                mnemonic = BFormat.BEQ;
                 break;
             case 0b001:
-                mnemonic = BFormat.bne;
+                mnemonic = BFormat.BNE;
                 break;
             case 0b100:
-                mnemonic = BFormat.blt;
+                mnemonic = BFormat.BLT;
                 break;
             case 0b101:
-                mnemonic = BFormat.bge;
+                mnemonic = BFormat.BGE;
                 break;
             case 0b110:
-                mnemonic = BFormat.bltu;
+                mnemonic = BFormat.BLTU;
                 break;
             case 0b111:
-                mnemonic = BFormat.bgeu;
+                mnemonic = BFormat.BGEU;
                 break;
         }
 
@@ -93,12 +93,12 @@ public class BFormatFactory : FormatFactoryBase
 
 public class BFormat : FormatBase
 {
-    public const string beq = "beq";
-    public const string bne = "bne";
-    public const string blt = "blt";
-    public const string bge = "bge";
-    public const string bltu = "bltu";
-    public const string bgeu = "bgeu";
+    public const string BEQ = "beq";
+    public const string BNE = "bne";
+    public const string BLT = "blt";
+    public const string BGE = "bge";
+    public const string BLTU = "bltu";
+    public const string BGEU = "bgeu";
 
     public required uint rs1 { get; init; }
     public required uint rs2 { get; init; }
@@ -110,42 +110,42 @@ public class BFormat : FormatBase
 
         switch (Mnemonic)
         {
-            case beq:
+            case BEQ:
                 if (x[rs1] == x[rs2])
                 {
                     e.PC = (uint)((int)e.PC + imm_b);
                 }
                 return;
 
-            case bne:
+            case BNE:
                 if (x[rs1] != x[rs2])
                 {
                     e.PC = (uint)((int)e.PC + imm_b);
                 }
                 return;
 
-            case blt:
+            case BLT:
                 if ((int)x[rs1] < (int)x[rs2])
                 {
                     e.PC = (uint)((int)e.PC + imm_b);
                 }
                 return;
 
-            case bge:
+            case BGE:
                 if ((int)x[rs1] >= (int)x[rs2])
                 {
                     e.PC = (uint)((int)e.PC + imm_b);
                 }
                 return;
 
-            case bltu:
+            case BLTU:
                 if (x[rs1] < x[rs2])
                 {
                     e.PC = (uint)((int)e.PC + imm_b);
                 }
                 return;
 
-            case bgeu:
+            case BGEU:
                 if (x[rs1] >= x[rs2])
                 {
                     e.PC = (uint)((int)e.PC + imm_b);

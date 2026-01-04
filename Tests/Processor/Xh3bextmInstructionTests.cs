@@ -2,9 +2,9 @@
 
 public class Xh3bextmInstructionTests
 {
-    const uint rd = 8;
-    const uint rs1 = 9;
-    const uint rs2 = 10;
+    const uint RD = 8;
+    const uint RS1 = 9;
+    const uint RS2 = 10;
 
     [Fact]
     public void h3_bextm()
@@ -13,17 +13,17 @@ public class Xh3bextmInstructionTests
 
         var x = rp2350.Registers;
 
-        rp2350.MemoryWrite(0x20000000, InstructionBuilder.H3bextm(rd, rs1, rs2, size: 7));
+        rp2350.MemoryWrite(0x20000000, InstructionBuilder.H3bextm(RD, RS1, RS2, size: 7));
 
-        x[rd] = 0x00000000;
-        x[rs1] = 0x1234ABCD;
-        x[rs2] = 0x00000008;
+        x[RD] = 0x00000000;
+        x[RS1] = 0x1234ABCD;
+        x[RS2] = 0x00000008;
 
         rp2350.PC = 0x20000000;
 
         rp2350.Step();
 
-        Assert.Equal((uint)0x000000AB, x[rd]);
+        Assert.Equal((uint)0x000000AB, x[RD]);
     }
 
     [Fact]
@@ -33,15 +33,15 @@ public class Xh3bextmInstructionTests
 
         var x = rp2350.Registers;
 
-        rp2350.MemoryWrite(0x20000000, InstructionBuilder.H3bextmi(rd, rs1, 8, size: 7));
+        rp2350.MemoryWrite(0x20000000, InstructionBuilder.H3bextmi(RD, RS1, 8, size: 7));
 
-        x[rd] = 0x00000000;
-        x[rs1] = 0x1234ABCD;
+        x[RD] = 0x00000000;
+        x[RS1] = 0x1234ABCD;
 
         rp2350.PC = 0x20000000;
 
         rp2350.Step();
 
-        Assert.Equal((uint)0x000000AB, x[rd]);
+        Assert.Equal((uint)0x000000AB, x[RD]);
     }
 }

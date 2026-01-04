@@ -15,26 +15,26 @@ public class IFormatFactory : FormatFactoryBase
         switch (opcode)
         {
             case 0b1100111:
-                mnemonic = IFormat.jalr;
+                mnemonic = IFormat.JALR;
                 break;
 
             case 0b0000011:
                 switch (funct3)
                 {
                     case 0b000:
-                        mnemonic = IFormat.lb;
+                        mnemonic = IFormat.LB;
                         break;
                     case 0b001:
-                        mnemonic = IFormat.lh;
+                        mnemonic = IFormat.LH;
                         break;
                     case 0b010:
-                        mnemonic = IFormat.lw;
+                        mnemonic = IFormat.LW;
                         break;
                     case 0b100:
-                        mnemonic = IFormat.lbu;
+                        mnemonic = IFormat.LBU;
                         break;
                     case 0b101:
-                        mnemonic = IFormat.lhu;
+                        mnemonic = IFormat.LHU;
                         break;
                 }
                 break;
@@ -43,41 +43,41 @@ public class IFormatFactory : FormatFactoryBase
                 switch (funct3)
                 {
                     case 0b000:
-                        mnemonic = IFormat.addi;
+                        mnemonic = IFormat.ADDI;
                         break;
                     case 0b001:
                         switch (funct7)
                         {
                             case 0b0000000:
-                                mnemonic = IFormat.slli;
+                                mnemonic = IFormat.SLLI;
                                 break;
                         }
                         break;
                     case 0b010:
-                        mnemonic = IFormat.slti;
+                        mnemonic = IFormat.SLTI;
                         break;
                     case 0b011:
-                        mnemonic = IFormat.sltiu;
+                        mnemonic = IFormat.SLTIU;
                         break;
                     case 0b100:
-                        mnemonic = IFormat.xori;
+                        mnemonic = IFormat.XORI;
                         break;
                     case 0b101:
                         switch(funct7)
                         {
                             case 0b0000000:
-                                mnemonic = IFormat.srli;
+                                mnemonic = IFormat.SRLI;
                                 break;
                             case 0b0100000:
-                                mnemonic = IFormat.srai;
+                                mnemonic = IFormat.SRAI;
                                 break;
                         }
                         break;
                     case 0b110:
-                        mnemonic = IFormat.ori;
+                        mnemonic = IFormat.ORI;
                         break;
                     case 0b111:
-                        mnemonic = IFormat.andi;
+                        mnemonic = IFormat.ANDI;
                         break;
                 }
                 break;
@@ -89,31 +89,31 @@ public class IFormatFactory : FormatFactoryBase
                         switch (instruction)
                         {
                             case 0x30200073:
-                                mnemonic = IFormat.mret;
+                                mnemonic = IFormat.MRET;
                                 break;
                             case 0x00000073:
-                                mnemonic = IFormat.ecall;
+                                mnemonic = IFormat.ECALL;
                                 break;
                             case 0x00100073:
-                                mnemonic = IFormat.ebreak;
+                                mnemonic = IFormat.EBREAK;
                                 break;
                             case 0x10500073:
-                                mnemonic = IFormat.wfi;
+                                mnemonic = IFormat.WFI;
                                 break;
                         }
                         break;
                     case 0b001:
-                        return CreateCSR(ICSRFormat.csrrw, instruction);
+                        return CreateCSR(ICSRFormat.CSRRW, instruction);
                     case 0b010:
-                        return CreateCSR(ICSRFormat.csrrs, instruction);
+                        return CreateCSR(ICSRFormat.CSRRS, instruction);
                     case 0b011:
-                        return CreateCSR(ICSRFormat.csrrc, instruction);
+                        return CreateCSR(ICSRFormat.CSRRC, instruction);
                     case 0b101:
-                        return CreateCSR(ICSRFormat.csrrwi, instruction);
+                        return CreateCSR(ICSRFormat.CSRRWI, instruction);
                     case 0b110:
-                        return CreateCSR(ICSRFormat.csrrsi, instruction);
+                        return CreateCSR(ICSRFormat.CSRRSI, instruction);
                     case 0b111:
-                        return CreateCSR(ICSRFormat.csrrci, instruction);
+                        return CreateCSR(ICSRFormat.CSRRCI, instruction);
                 }
                 break;
 
@@ -121,10 +121,10 @@ public class IFormatFactory : FormatFactoryBase
                 switch (funct3)
                 {
                     case 0x000:
-                        mnemonic = IFormat.fence;
+                        mnemonic = IFormat.FENCE;
                         break;
                     case 0x001:
-                        mnemonic = IFormat.fencei;
+                        mnemonic = IFormat.FENCEI;
                         break;
                 }
                 break;
@@ -158,12 +158,12 @@ public class IFormatFactory : FormatFactoryBase
 
 public class ICSRFormat : FormatBase
 {
-    public const string csrrw = "csrrw";
-    public const string csrrs = "csrrs";
-    public const string csrrc = "csrrc";
-    public const string csrrwi = "csrrwi";
-    public const string csrrsi = "csrrsi";
-    public const string csrrci = "csrrci";
+    public const string CSRRW = "csrrw";
+    public const string CSRRS = "csrrs";
+    public const string CSRRC = "csrrc";
+    public const string CSRRWI = "csrrwi";
+    public const string CSRRSI = "csrrsi";
+    public const string CSRRCI = "csrrci";
 
     public required uint rd { get; init; }
     public required uint rs1 { get; init; }
@@ -175,7 +175,7 @@ public class ICSRFormat : FormatBase
 
         switch (Mnemonic)
         {
-            case csrrw:
+            case CSRRW:
                 if (rd != 0)
                 {
                     var value = e.CSR.Get(csr);
@@ -188,7 +188,7 @@ public class ICSRFormat : FormatBase
                 }
                 return;
 
-            case csrrs:
+            case CSRRS:
                 {
                     uint value = e.CSR.Get(csr);
                     if (rs1 != 0)
@@ -199,7 +199,7 @@ public class ICSRFormat : FormatBase
                 }
                 return;
 
-            case csrrc:
+            case CSRRC:
                 {
                     uint value = e.CSR.Get(csr);
                     if (rs1 != 0)
@@ -210,7 +210,7 @@ public class ICSRFormat : FormatBase
                 }
                 return;
 
-            case csrrwi:
+            case CSRRWI:
                 if (rd != 0)
                 {
                     x[rd] = e.CSR.Get(csr);
@@ -218,7 +218,7 @@ public class ICSRFormat : FormatBase
                 e.CSR.Set(csr, rs1);
                 return;
 
-            case csrrsi:
+            case CSRRSI:
                 {
                     uint value = e.CSR.Get(csr);
                     e.CSR.Set(csr, value | rs1);
@@ -226,7 +226,7 @@ public class ICSRFormat : FormatBase
                 }
                 return;
 
-            case csrrci:
+            case CSRRCI:
                 {
                     uint value = e.CSR.Get(csr);
                     e.CSR.Set(csr, value & ~rs1);
@@ -242,30 +242,30 @@ public class ICSRFormat : FormatBase
 
 public class IFormat : FormatBase
 {
-    public const string jalr = "jalr";
-    public const string lb = "lb";
-    public const string lh = "lh";
-    public const string lw = "lw";
-    public const string lbu = "lbu";
-    public const string lhu = "lhu";
+    public const string JALR = "jalr";
+    public const string LB = "lb";
+    public const string LH = "lh";
+    public const string LW = "lw";
+    public const string LBU = "lbu";
+    public const string LHU = "lhu";
 
-    public const string addi = "addi";
-    public const string slli = "slli";
-    public const string slti = "slti";
-    public const string sltiu = "sltiu";
-    public const string xori = "xori";
-    public const string srli = "srli";
-    public const string srai = "srai";
-    public const string ori = "ori";
-    public const string andi = "andi";
+    public const string ADDI = "addi";
+    public const string SLLI = "slli";
+    public const string SLTI = "slti";
+    public const string SLTIU = "sltiu";
+    public const string XORI = "xori";
+    public const string SRLI = "srli";
+    public const string SRAI = "srai";
+    public const string ORI = "ori";
+    public const string ANDI = "andi";
 
-    public const string mret = "mret";
-    public const string ecall = "ecall";
-    public const string ebreak = "ebreak";
-    public const string wfi = "wfi";
+    public const string MRET = "mret";
+    public const string ECALL = "ecall";
+    public const string EBREAK = "ebreak";
+    public const string WFI = "wfi";
 
-    public const string fence = "fence";
-    public const string fencei = "fence.i";
+    public const string FENCE = "fence";
+    public const string FENCEI = "fence.i";
 
     public required uint rd { get; init; }
     public required uint rs1 { get; init; }
@@ -277,88 +277,88 @@ public class IFormat : FormatBase
 
         switch (Mnemonic)
         {
-            case jalr:
+            case JALR:
                 uint targetAddress = (uint)((int)x[rs1] + imm);
                 x[rd] = e.PC + StepSize;
                 e.PC = targetAddress & 0b11111111_11111111_11111111_11111110;
                 return;
 
-            case lb:
+            case LB:
                 x[rd] = (uint)(sbyte)e.Memory.ReadByte((uint)(x[rs1] + imm));
                 return;
 
-            case lh:
+            case LH:
                 x[rd] = (uint)(short)e.Memory.ReadHalfWord((uint)(x[rs1] + imm));
                 return;
 
-            case lw:
+            case LW:
                 x[rd] = (uint)(int)e.Memory.ReadWord((uint)(x[rs1] + imm));
                 return;
 
-            case lbu:
+            case LBU:
                 x[rd] = e.Memory.ReadByte((uint)(x[rs1] + imm));
                 return;
 
-            case lhu:
+            case LHU:
                 x[rd] = e.Memory.ReadHalfWord((uint)(x[rs1] + imm));
                 return;
 
-            case addi:
+            case ADDI:
                 x[rd] = (uint)((int)x[rs1] + imm);
                 return;
 
-            case slli:
+            case SLLI:
                 x[rd] = x[rs1] << imm;
                 return;
 
-            case slti:
+            case SLTI:
                 x[rd] = (int)x[rs1] < imm ? (uint)1 : 0;
                 return;
 
-            case sltiu:
+            case SLTIU:
                 x[rd] = x[rs1] < (uint)imm ? (uint)1 : 0;
                 return;
 
-            case xori:
+            case XORI:
                 x[rd] = x[rs1] ^ (uint)imm;
                 return;
 
-            case srli:
+            case SRLI:
                 x[rd] = x[rs1] >> imm;
                 return;
 
-            case srai:
+            case SRAI:
                 x[rd] = (uint)((int)x[rs1] >> imm);
                 return;
 
-            case ori:
+            case ORI:
                 x[rd] = x[rs1] | (uint)imm;
                 return;
 
-            case andi:
+            case ANDI:
                 x[rd] = x[rs1] & (uint)imm;
                 return;
 
-            case mret:
+            case MRET:
                 e.PC = e.CSR.Get(0x341);
                 return;
 
-            case ecall:
+            case ECALL:
                 e.RaiseECall();
                 throw new RiscVException(ExceptionCause.EnvironmentCallFromMMode, e.PC, "ECALL instruction executed");
 
-            case ebreak:
+            case EBREAK:
                 e.RaiseEBreak();
                 throw new RiscVException(ExceptionCause.Breakpoint, e.PC, "EBREAK instruction executed");
 
-            case wfi:
+            case WFI:
                 // Wait for interrupt - nothing to do
                 return;
 
-            case fence:
+            case FENCE:
                 return;
 
-            case fencei:
+            case FENCEI:
                 return;
 
             default:

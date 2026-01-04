@@ -31,7 +31,7 @@ public class BExtensionFormatFactory : FormatFactoryBase
                                 switch (rs2)
                                 {
                                     case 0b01111:
-                                        mnemonic = BExtensionFormat.zip;
+                                        mnemonic = BExtensionFormat.ZIP;
                                         break;
                                 }
                                 break;
@@ -39,7 +39,7 @@ public class BExtensionFormatFactory : FormatFactoryBase
                                 switch(rs2)
                                 {
                                     case 0b01111:
-                                        mnemonic = BExtensionFormat.unzip;
+                                        mnemonic = BExtensionFormat.UNZIP;
                                         break;
                                 }
                                 break;
@@ -49,13 +49,13 @@ public class BExtensionFormatFactory : FormatFactoryBase
                         switch(funct3)
                         {
                             case 0b001:
-                                mnemonic = BExtensionFormat.bseti;
+                                mnemonic = BExtensionFormat.BSETI;
                                 break;
                             case 0b101:
                                 switch(rs2)
                                 {
                                     case 0b00111:
-                                        mnemonic = BExtensionFormat.orc_b;
+                                        mnemonic = BExtensionFormat.ORC_B;
                                         break;
                                 }
                                 break;
@@ -70,10 +70,10 @@ public class BExtensionFormatFactory : FormatFactoryBase
                                 //{
                                 //    throw new NotImplementedException("reserved");
                                 //}
-                                mnemonic = BExtensionFormat.bclri;
+                                mnemonic = BExtensionFormat.BCLRI;
                                 break;
                             case 0b101:
-                                mnemonic = BExtensionFormat.bexti;
+                                mnemonic = BExtensionFormat.BEXTI;
                                 break;
                         }
                         break;
@@ -84,24 +84,24 @@ public class BExtensionFormatFactory : FormatFactoryBase
                                 switch(rs2)
                                 {
                                     case 0b00000:
-                                        mnemonic = BExtensionFormat.clz;
+                                        mnemonic = BExtensionFormat.CLZ;
                                         break;
                                     case 0b00001:
-                                        mnemonic = BExtensionFormat.ctz;
+                                        mnemonic = BExtensionFormat.CTZ;
                                         break;
                                     case 0b00010:
-                                        mnemonic = BExtensionFormat.cpop;
+                                        mnemonic = BExtensionFormat.CPOP;
                                         break;
                                     case 0b00100:
-                                        mnemonic = BExtensionFormat.sext_b;
+                                        mnemonic = BExtensionFormat.SEXT_B;
                                         break;
                                     case 0b00101:
-                                        mnemonic = BExtensionFormat.sext_h;
+                                        mnemonic = BExtensionFormat.SEXT_H;
                                         break;
                                 }
                                 break;
                             case 0b101:
-                                mnemonic = BExtensionFormat.rori;
+                                mnemonic = BExtensionFormat.RORI;
                                 break;
                         }
                         break;
@@ -114,16 +114,16 @@ public class BExtensionFormatFactory : FormatFactoryBase
                                 //{
                                 //    throw new NotImplementedException("reserved");
                                 //}
-                                mnemonic = BExtensionFormat.binvi;
+                                mnemonic = BExtensionFormat.BINVI;
                                 break;
                             case 0b101:
                                 switch(rs2)
                                 {
                                     case 0b00111:
-                                        mnemonic = BExtensionFormat.brev8;
+                                        mnemonic = BExtensionFormat.BREV8;
                                         break;
                                     case 0b11000:
-                                        mnemonic = BExtensionFormat.rev8;
+                                        mnemonic = BExtensionFormat.REV8;
                                         break;
                                 }
                                 break;
@@ -138,10 +138,10 @@ public class BExtensionFormatFactory : FormatFactoryBase
                         switch(funct3)
                         {
                             case 0b100:
-                                mnemonic = BExtensionFormat.pack; // also covers zext.h
+                                mnemonic = BExtensionFormat.PACK; // also covers zext.h
                                 break;
                             case 0b111:
-                                mnemonic = BExtensionFormat.packh;
+                                mnemonic = BExtensionFormat.PACKH;
                                 break;
                         }
                         break;
@@ -149,25 +149,25 @@ public class BExtensionFormatFactory : FormatFactoryBase
                         switch (funct3)
                         {
                             case 0b001:
-                                mnemonic = BExtensionFormat.clmul;
+                                mnemonic = BExtensionFormat.CLMUL;
                                 break;
                             case 0b010:
-                                mnemonic = BExtensionFormat.clmulr;
+                                mnemonic = BExtensionFormat.CLMULR;
                                 break;
                             case 0b011:
-                                mnemonic = BExtensionFormat.clmulh;
+                                mnemonic = BExtensionFormat.CLMULH;
                                 break;
                             case 0b100:
-                                mnemonic = BExtensionFormat.min;
+                                mnemonic = BExtensionFormat.MIN;
                                 break;
                             case 0b101:
-                                mnemonic = BExtensionFormat.minu;
+                                mnemonic = BExtensionFormat.MINU;
                                 break;
                             case 0b110:
-                                mnemonic = BExtensionFormat.max;
+                                mnemonic = BExtensionFormat.MAX;
                                 break;
                             case 0b111:
-                                mnemonic = BExtensionFormat.maxu;
+                                mnemonic = BExtensionFormat.MAXU;
                                 break;
                         }
                         break;
@@ -175,13 +175,13 @@ public class BExtensionFormatFactory : FormatFactoryBase
                         switch (funct3)
                         {
                             case 0b001:
-                                mnemonic = BExtensionFormat.bset;
+                                mnemonic = BExtensionFormat.BSET;
                                 break;
                             case 0b010:
-                                mnemonic = BExtensionFormat.xperm4;
+                                mnemonic = BExtensionFormat.XPERM4;
                                 break;
                             case 0b100:
-                                mnemonic = BExtensionFormat.xperm8;
+                                mnemonic = BExtensionFormat.XPERM8;
                                 break;
                         }
                         break;
@@ -189,13 +189,13 @@ public class BExtensionFormatFactory : FormatFactoryBase
                         switch (funct3)
                         {
                             case 0b010:
-                                mnemonic = BExtensionFormat.sh1add;
+                                mnemonic = BExtensionFormat.SH1ADD;
                                 break;
                             case 0b100:
-                                mnemonic = BExtensionFormat.sh2add;
+                                mnemonic = BExtensionFormat.SH2ADD;
                                 break;
                             case 0b110:
-                                mnemonic = BExtensionFormat.sh3add;
+                                mnemonic = BExtensionFormat.SH3ADD;
                                 break;
                         }
                         break;
@@ -203,13 +203,13 @@ public class BExtensionFormatFactory : FormatFactoryBase
                         switch (funct3)
                         {
                             case 0b100:
-                                mnemonic = BExtensionFormat.xnor;
+                                mnemonic = BExtensionFormat.XNOR;
                                 break;
                             case 0b110:
-                                mnemonic = BExtensionFormat.orn;
+                                mnemonic = BExtensionFormat.ORN;
                                 break;
                             case 0b111:
-                                mnemonic = BExtensionFormat.andn;
+                                mnemonic = BExtensionFormat.ANDN;
                                 break;
                         }
                         break;
@@ -217,10 +217,10 @@ public class BExtensionFormatFactory : FormatFactoryBase
                         switch (funct3)
                         {
                             case 0b001:
-                                mnemonic = BExtensionFormat.bclr;
+                                mnemonic = BExtensionFormat.BCLR;
                                 break;
                             case 0b101:
-                                mnemonic = BExtensionFormat.bext;
+                                mnemonic = BExtensionFormat.BEXT;
                                 break;
                         }
                         break;
@@ -228,10 +228,10 @@ public class BExtensionFormatFactory : FormatFactoryBase
                         switch (funct3)
                         {
                             case 0b001:
-                                mnemonic = BExtensionFormat.rol;
+                                mnemonic = BExtensionFormat.ROL;
                                 break;
                             case 0b101:
-                                mnemonic = BExtensionFormat.ror;
+                                mnemonic = BExtensionFormat.ROR;
                                 break;
                         }
                         break;
@@ -239,7 +239,7 @@ public class BExtensionFormatFactory : FormatFactoryBase
                         switch (funct3)
                         {
                             case 0b001:
-                                mnemonic = BExtensionFormat.binv;
+                                mnemonic = BExtensionFormat.BINV;
                                 break;
                         }
                         break;
@@ -261,9 +261,9 @@ public class BExtensionFormatFactory : FormatFactoryBase
         };
     }
 
-    protected readonly IFormat nop = new IFormat
+    protected static readonly IFormat m_Nop = new IFormat
     {
-        Mnemonic = IFormat.addi,
+        Mnemonic = IFormat.ADDI,
         imm = 0,
         rd = 0,
         rs1 = 0,
@@ -273,44 +273,44 @@ public class BExtensionFormatFactory : FormatFactoryBase
 
 public class BExtensionFormat : FormatBase
 {
-    public const string andn = "andn";
-    public const string bclr = "bclr";
-    public const string bclri = "bclri";
-    public const string bext = "bext";
-    public const string bexti = "bexti";
-    public const string binv = "binv";
-    public const string binvi = "binvi";
-    public const string bset = "bset";
-    public const string bseti = "bseti";
-    public const string clmul = "clmul";
-    public const string clmulh = "clmulh";
-    public const string clmulr = "clmulr";
-    public const string clz = "clz";
-    public const string cpop = "cpop";
-    public const string ctz = "ctz";
-    public const string max = "max";
-    public const string maxu = "maxu"; 
-    public const string min = "min";
-    public const string minu = "minu";
-    public const string orc_b = "orc.b";
-    public const string orn = "orn";
-    public const string pack = "pack";
-    public const string packh = "packh";
-    public const string rev8 = "rev8";
-    public const string brev8 = "brev8";
-    public const string rol = "rol";
-    public const string ror = "ror";
-    public const string rori = "rori";
-    public const string sext_b = "sext.b";
-    public const string sext_h = "sext.h";
-    public const string sh1add = "sh1add";
-    public const string sh2add = "sh2add";
-    public const string sh3add = "sh3add";
-    public const string unzip = "unzip";
-    public const string xnor = "xnor";
-    public const string xperm8 = "xperm8";
-    public const string xperm4 = "xperm4";
-    public const string zip = "zip";
+    public const string ANDN = "andn";
+    public const string BCLR = "bclr";
+    public const string BCLRI = "bclri";
+    public const string BEXT = "bext";
+    public const string BEXTI = "bexti";
+    public const string BINV = "binv";
+    public const string BINVI = "binvi";
+    public const string BSET = "bset";
+    public const string BSETI = "bseti";
+    public const string CLMUL = "clmul";
+    public const string CLMULH = "clmulh";
+    public const string CLMULR = "clmulr";
+    public const string CLZ = "clz";
+    public const string CPOP = "cpop";
+    public const string CTZ = "ctz";
+    public const string MAX = "max";
+    public const string MAXU = "maxu"; 
+    public const string MIN = "min";
+    public const string MINU = "minu";
+    public const string ORC_B = "orc.b";
+    public const string ORN = "orn";
+    public const string PACK = "pack";
+    public const string PACKH = "packh";
+    public const string REV8 = "rev8";
+    public const string BREV8 = "brev8";
+    public const string ROL = "rol";
+    public const string ROR = "ror";
+    public const string RORI = "rori";
+    public const string SEXT_B = "sext.b";
+    public const string SEXT_H = "sext.h";
+    public const string SH1ADD = "sh1add";
+    public const string SH2ADD = "sh2add";
+    public const string SH3ADD = "sh3add";
+    public const string UNZIP = "unzip";
+    public const string XNOR = "xnor";
+    public const string XPERM8 = "xperm8";
+    public const string XPERM4 = "xperm4";
+    public const string ZIP = "zip";
 
     public required uint rd { get; init; }
     public required uint rs1 { get; init; }
@@ -322,43 +322,43 @@ public class BExtensionFormat : FormatBase
 
         switch (Mnemonic)
         {
-            case andn:
+            case ANDN:
                 x[rd] = x[rs1] & ~x[rs2];
                 return;
 
-            case bclr:
+            case BCLR:
                 x[rd] = x[rs1] & ~((uint)1 << (int)x[rs2]);
                 return;
 
-            case bclri:
+            case BCLRI:
                 x[rd] = x[rs1] & ~((uint)1 << (int)rs2);
                 return;
 
-            case bext:
+            case BEXT:
                 x[rd] = x[rs1].ExtractBits((int)x[rs2], 1);
                 return;
 
-            case bexti:
+            case BEXTI:
                 x[rd] = x[rs1].ExtractBits((int)rs2, 1);
                 return;
 
-            case binv:
+            case BINV:
                 x[rd] = x[rs1] ^ ((uint)1 << (int)x[rs2]);
                 return;
 
-            case binvi:
+            case BINVI:
                 x[rd] = x[rs1] ^ ((uint)1 << (int)rs2);
                 return;
 
-            case bset:
+            case BSET:
                 x[rd] = x[rs1] | ((uint)1 << (int)x[rs2]);
                 return;
 
-            case bseti:
+            case BSETI:
                 x[rd] = x[rs1] | ((uint)1 << (int)rs2);
                 return;
 
-            case clmul:
+            case CLMUL:
                 {
                     uint rs1_val = x[rs1];
                     uint rs2_val = x[rs2];
@@ -383,7 +383,7 @@ public class BExtensionFormat : FormatBase
                     return;
                 }
 
-            case clmulh:
+            case CLMULH:
                 {
                     uint rs1_val = x[rs1];
                     uint rs2_val = x[rs2];
@@ -410,7 +410,7 @@ public class BExtensionFormat : FormatBase
                     return;
                 }
 
-            case clmulr:
+            case CLMULR:
                 {
                     uint rs1_val = x[rs1];
                     uint rs2_val = x[rs2];
@@ -436,35 +436,35 @@ public class BExtensionFormat : FormatBase
                     return;
                 }
 
-            case clz:
+            case CLZ:
                 x[rd] = (uint)BitOperations.LeadingZeroCount(x[rs1]);
                 return;
                 
-            case cpop:
+            case CPOP:
                 x[rd] = (uint)BitOperations.PopCount(x[rs1]);
                 return;
 
-            case ctz:
+            case CTZ:
                 x[rd] = (uint)BitOperations.TrailingZeroCount(x[rs1]);
                 return;
 
-            case max:
+            case MAX:
                 x[rd] = (uint)Math.Max((int)x[rs1], (int)x[rs2]);
                 return;
 
-            case maxu:
+            case MAXU:
                 x[rd] = Math.Max(x[rs1], x[rs2]);
                 return;
 
-            case min:
+            case MIN:
                 x[rd] = (uint)Math.Min((int)x[rs1], (int)x[rs2]);
                 return;
 
-            case minu:
+            case MINU:
                 x[rd] = Math.Min(x[rs1], x[rs2]);
                 return;
 
-            case orc_b:
+            case ORC_B:
                 {
                     uint value = x[rs1];
 
@@ -492,11 +492,11 @@ public class BExtensionFormat : FormatBase
                     return;
                 }
 
-            case orn:
+            case ORN:
                 x[rd] = x[rs1] | ~x[rs2];
                 return;
 
-            case pack:
+            case PACK:
                 // 1. Mask rs1 to isolate the lower 16 bits: (rs1 & 0xFFFF)
                 // 2. Shift rs2 left by 16 positions. 
                 //    This moves the lower 16 bits of rs2 to the upper half positions.
@@ -506,7 +506,7 @@ public class BExtensionFormat : FormatBase
                 x[rd] = (x[rs1] & 0xFFFF) | (x[rs2] << 16);
                 return;
 
-            case packh:
+            case PACKH:
                 // 1. Mask rs1 to isolate the lower 8 bits (lo_half).
                 // 2. Mask rs2 to isolate the lower 8 bits, then shift left by 8 (hi_half).
                 // 3. Combine utilizing bitwise OR.
@@ -514,11 +514,11 @@ public class BExtensionFormat : FormatBase
                 x[rd] = (x[rs1] & 0xFF) | ((x[rs2] & 0xFF) << 8);
                 return;
 
-            case rev8:
+            case REV8:
                 x[rd] = BinaryPrimitives.ReverseEndianness(x[rs1]);
                 return;
 
-            case brev8:
+            case BREV8:
                 {
                     uint value = x[rs1];
 
@@ -541,19 +541,19 @@ public class BExtensionFormat : FormatBase
                     return;
                 }
 
-            case rol:
+            case ROL:
                 x[rd] = BitOperations.RotateLeft(x[rs1], (int)x[rs2]);
                 return;
 
-            case ror:
+            case ROR:
                 x[rd] = BitOperations.RotateRight(x[rs1], (int)x[rs2]);
                 return;
 
-            case rori:
+            case RORI:
                 x[rd] = BitOperations.RotateRight(x[rs1], (int)rs2);
                 return;
 
-            case sext_b:
+            case SEXT_B:
                 // 1. (byte)rs      : Truncates to the lowest 8 bits.
                 // 2. (sbyte)...    : Reinterprets those 8 bits as a signed value (-128 to 127).
                 // 3. (int)...      : Sign-extends the 8-bit value to 32-bit (e.g., 0x80 -> 0xFFFFFF80).
@@ -561,26 +561,26 @@ public class BExtensionFormat : FormatBase
                 x[rd] = (uint)(int)(sbyte)x[rs1];
                 return;
 
-            case sext_h:
+            case SEXT_H:
                 // 1. (short)rs     : Truncates to lower 16 bits, interprets as signed.
                 // 2. (int)...      : Sign-extends 16-bit value to 32-bit (e.g. 0x8000 -> 0xFFFF8000).
                 // 3. (uint)...     : Casts back to register type.
                 x[rd] = (uint)(int)(short)x[rs1];
                 return;
 
-            case sh1add:
+            case SH1ADD:
                 x[rd] = x[rs2] + (x[rs1] << 1);
                 return;
 
-            case sh2add:
+            case SH2ADD:
                 x[rd] = x[rs2] + (x[rs1] << 2);
                 return;
 
-            case sh3add:
+            case SH3ADD:
                 x[rd] = x[rs2] + (x[rs1] << 3);
                 return;
 
-            case unzip:
+            case UNZIP:
                 {
                     // 1. Process Even Bits (0, 2, 4...) -> Output[15:0]
                     //    Mask evens, then "gather" them to the right.
@@ -603,11 +603,11 @@ public class BExtensionFormat : FormatBase
                     return;
                 }
 
-            case xnor:
+            case XNOR:
                 x[rd] = ~(x[rs1] ^ x[rs2]);
                 return;
 
-            case xperm8:
+            case XPERM8:
                 {
                     uint result = 0;
 
@@ -633,7 +633,7 @@ public class BExtensionFormat : FormatBase
                     return;
                 }
 
-            case xperm4:
+            case XPERM4:
                 {
                     uint result = 0;
 
@@ -658,7 +658,7 @@ public class BExtensionFormat : FormatBase
                     return;
                 }
 
-            case zip:
+            case ZIP:
                 {
                     // 1. Extract the two halves
                     uint lo = x[rs1] & 0x0000FFFF;

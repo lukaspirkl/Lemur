@@ -4,11 +4,11 @@ namespace Venture.Processor;
 
 public class Decoder : IDecoder
 {
-    private readonly FormatFactoryBase[] formatFactories;
+    private readonly FormatFactoryBase[] m_FormatFactories;
 
     public Decoder()
     {
-        formatFactories =
+        m_FormatFactories =
         [
             new Xh3powerExtensionFormatFactory(),
             new Xh3bextmExtensionFormatFactory(),
@@ -28,7 +28,7 @@ public class Decoder : IDecoder
     {
 
         var opcode = instruction.ExtractBits(0, 7);
-        foreach (var factory in formatFactories)
+        foreach (var factory in m_FormatFactories)
         {
             if (factory.ForOpcodes.Contains(opcode))
             {

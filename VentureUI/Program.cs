@@ -21,7 +21,7 @@ namespace VentureUI;
 
 internal class Program
 {
-    private static readonly string logFile = "Venture.clef";
+    private static readonly string m_LogFile = "Venture.clef";
 
     [STAThread]
     [SupportedOSPlatform("windows")]
@@ -52,7 +52,7 @@ internal class Program
             .MinimumLevel.Override<UserBankIO>(LogEventLevel.Verbose)
             .MinimumLevel.Override<UserBankPadControl>(LogEventLevel.Verbose)
             .Enrich.FromLogContext()
-            .WriteTo.Async(a => a.File(new CompactJsonFormatter(), logFile))
+            .WriteTo.Async(a => a.File(new CompactJsonFormatter(), m_LogFile))
             .WriteTo.Console());
 
         builder.Services.AddTransient(typeof(IEmuLogger<>), typeof(EmuLogger<>));

@@ -115,28 +115,28 @@ public static class RP2350ServiceCollectionExtensions
 
     private class PeripheralRegistration
     {
-        private readonly IServiceCollection services;
-        private readonly uint baseAddress;
-        private readonly string name;
+        private readonly IServiceCollection m_Services;
+        private readonly uint m_BaseAddress;
+        private readonly string m_Name;
 
         public PeripheralRegistration(IServiceCollection services, uint baseAddress, string name)
         {
-            this.services = services;
-            this.baseAddress = baseAddress;
-            this.name = name;
+            m_Services = services;
+            m_BaseAddress = baseAddress;
+            m_Name = name;
         }
 
         public IServiceCollection Implementation<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] T>() where T : class, IAddressableResource
         {
-            services.AddSingleton<T>(provider => ActivatorUtilities.CreateInstance<T>(provider, [baseAddress, name]));
-            services.AddSingleton<IAddressableResource, T>(provider => provider.GetRequiredService<T>());
-            return services;
+            m_Services.AddSingleton<T>(provider => ActivatorUtilities.CreateInstance<T>(provider, [m_BaseAddress, m_Name]));
+            m_Services.AddSingleton<IAddressableResource, T>(provider => provider.GetRequiredService<T>());
+            return m_Services;
         }
 
         public IServiceCollection Unimplemented(uint? size = null)
         {
-            services.AddSingleton<IAddressableResource>(sp => sp.GetRequiredService<UnimplementedPeripheralFactory>().Create(baseAddress, name, size));
-            return services;
+            m_Services.AddSingleton<IAddressableResource>(sp => sp.GetRequiredService<UnimplementedPeripheralFactory>().Create(m_BaseAddress, m_Name, size));
+            return m_Services;
         }
     }
 

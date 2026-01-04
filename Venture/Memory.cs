@@ -9,25 +9,25 @@ public record MemoryWriteArgs(uint Address, byte[] Data);
 
 public class MemoryFactory
 {
-    private readonly ILogger<Memory> logger;
+    private readonly ILogger<Memory> m_Logger;
 
     public MemoryFactory(ILogger<Memory> logger)
     {
-        this.logger = logger;
+        m_Logger = logger;
     }
 
     public Memory Create(string name, uint startAddress, uint size, bool isReadonly = false)
     {
-        return new Memory(name, startAddress, size, isReadonly, logger);
+        return new Memory(name, startAddress, size, isReadonly, m_Logger);
     }
 }
 
 public class Memory : IAddressableResource
 {
-    private readonly string name;
-    private readonly bool isReadonly;
-    private readonly ILogger<Memory> logger;
-    private readonly byte[] memory;
+    private readonly string m_Name;
+    private readonly bool m_IsReadonly;
+    private readonly ILogger<Memory> m_Logger;
+    private readonly byte[] m_Memory;
 
     public uint BaseAddress { get; }
     public uint Size { get; }
@@ -38,39 +38,39 @@ public class Memory : IAddressableResource
 
     public Memory(string name, uint startAddress, uint size, bool isReadonly, ILogger<Memory> logger)
     {
-        this.name = name;
-        memory = new byte[size];
-        Array.Fill<byte>(memory, 0xFF);
+        m_Name = name;
+        m_Memory = new byte[size];
+        Array.Fill<byte>(m_Memory, 0xFF);
 
         BaseAddress = startAddress;
         Size = size;
-        this.isReadonly = isReadonly;
-        this.logger = logger;
+        m_IsReadonly = isReadonly;
+        m_Logger = logger;
     }
 
     public void Write(uint address, byte[] data)
     {
-        if (isReadonly)
+        if (m_IsReadonly)
         {
-            logger.LogError("Writing to read only memory {name} address {address} value {value}", name, address.ToHex(), data.ToHex());
+            m_Logger.LogError("Writing to read only memory {name} address {address} value {value}", m_Name, address.ToHex(), data.ToHex());
             return;
         }
 
-        logger.LogInformation("mem[{address}] <- {data}", address.ToHex(), data.ToHex());
+        m_Logger.LogInformation("mem[{address}] <- {data}", address.ToHex(), data.ToHex());
 
         OnWrite?.Invoke(this, new MemoryWriteArgs(address, data));
 
-        data.CopyTo(memory, (int)(address - BaseAddress));
+        data.CopyTo(m_Memory, (int)(address - BaseAddress));
     }
 
     public byte[] Read(uint address, int count)
     {
-        return memory.Skip((int)(address - BaseAddress)).Take(count).ToArray();
+        return m_Memory.Skip((int)(address - BaseAddress)).Take(count).ToArray();
     }
 
     public void LoadElf(string path)
     {
-        logger.LogInformation("Loading {path}", path);
+        m_Logger.LogInformation("Loading {path}", path);
 
         var elf = ELFReader.Load(path);
 
@@ -79,24 +79,24 @@ public class Memory : IAddressableResource
         var loadableSegments = elf.Segments.OfType<Segment<UInt32>>().Where(x => x.Type == SegmentType.Load);
         foreach (var segment in loadableSegments)
         {
-            logger.LogInformation("Processing segment at {address}...", segment.Address.ToHex());
+            m_Logger.LogInformation("Processing segment at {address}...", segment.Address.ToHex());
 
             long flashOffset = segment.Address - BaseAddress;
-            if (flashOffset >= 0 && (flashOffset + segment.Size) <= memory.Length)
+            if (flashOffset >= 0 && (flashOffset + segment.Size) <= m_Memory.Length)
             {
-                logger.LogInformation("Segment is written to {name}", name);
+                m_Logger.LogInformation("Segment is written to {name}", m_Name);
                 byte[] segmentData = segment.GetMemoryContents();
-                Array.Copy(segmentData, 0, memory, flashOffset, segmentData.Length);
+                Array.Copy(segmentData, 0, m_Memory, flashOffset, segmentData.Length);
                 continue;
             }
 
-            logger.LogWarning("Segment at {addres} (size {size}) is outside the defined flash memory range. Skipping.", segment.Address.ToHex(), segment.Size.ToHex());
+            m_Logger.LogWarning("Segment at {addres} (size {size}) is outside the defined flash memory range. Skipping.", segment.Address.ToHex(), segment.Size.ToHex());
         }
     }
 
     public void LoadBin(string path)
     {
         var loaded = File.ReadAllBytes(path);
-        loaded.CopyTo(memory, 0);
+        loaded.CopyTo(m_Memory, 0);
     }
 }

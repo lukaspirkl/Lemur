@@ -4,7 +4,7 @@ namespace Venture.Peripherals;
 
 public class Powman : PeripheralBase
 {
-    private readonly Dictionary<uint, uint> registers = new Dictionary<uint, uint>();
+    private readonly Dictionary<uint, uint> m_Registers = new Dictionary<uint, uint>();
 
     public Powman(uint baseAddress, string name, ILogger<Powman> logger) : base(baseAddress, name, logger)
     {
@@ -12,7 +12,7 @@ public class Powman : PeripheralBase
 
     protected override uint HandleRead(uint offset)
     {
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+        m_Logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
 
         if (offset == 0x02c) // CHIP_RESET Register
         {
@@ -29,14 +29,14 @@ public class Powman : PeripheralBase
         }
         else
         {
-            return registers.GetValueOrDefault(offset, 0u);
+            return m_Registers.GetValueOrDefault(offset, 0u);
         }
     }
 
     protected override void HandleWrite(uint offset, uint value)
     {
-        logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
+        m_Logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
 
-        registers[offset] = value;
+        m_Registers[offset] = value;
     }
 }

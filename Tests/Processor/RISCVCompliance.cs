@@ -26,18 +26,18 @@ public class RISCVCompliance
 
         public string? SkipWhen { get; set; }
 
-        private string path;
+        private string m_Path;
 
         public ComplianceTestRow(string path)
         {
             var parts = path.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
             TestDisplayName = $"{parts[^5]} {parts[^3].Substring(0, parts[^3].Length - 2)} ";
-            this.path = path;
+            m_Path = path;
         }
 
         public object?[] GetData()
         {
-            return [path];
+            return [m_Path];
         }
     }
 

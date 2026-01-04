@@ -4,70 +4,70 @@ namespace Venture;
 
 public sealed class Register32
 {
-    private readonly ILogger logger;
+    private readonly ILogger m_Logger;
 
-    private uint resetValue;
-    private uint value;
+    private uint m_ResetValue;
+    private uint m_Value;
 
-    private readonly List<IField> fields = new();
+    private readonly List<IField> m_Fields = new();
 
-    private Action<uint>? writeSideEffect;
-    private Func<uint>? readOverride;
+    private Action<uint>? m_WriteSideEffect;
+    private Func<uint>? m_ReadOverride;
 
     public string PeripheralName { get; }
     public string RegisterName { get; }
 
     public Register32(ILogger logger, string peripheralName, string registerName, uint resetValue = 0)
     {
-        this.logger = logger;
         PeripheralName = peripheralName;
         RegisterName = registerName;
-        this.resetValue = resetValue;
-        value = resetValue;
+        m_ResetValue = resetValue;
+        m_Value = resetValue;
+        m_Logger = logger;
     }
 
     public Register32 Field<T>(int lsb, int width, Func<T> getter, Action<T>? setter = null) where T : unmanaged, Enum
     {
-        fields.Add(new EnumField<T>(lsb, width, getter, setter));
+        m_Fields.Add(new EnumField<T>(lsb, width, getter, setter));
         return this;
     }
 
     public Register32 Field(int lsb, int width, Func<uint> getter, Action<uint>? setter = null)
     {
-        fields.Add(new UIntField(lsb, width, getter, setter));
+        m_Fields.Add(new UIntField(lsb, width, getter, setter));
         return this;
     }
 
     public Register32 Field(int lsb, Func<bool> getter, Action<bool>? setter = null)
     {
-        fields.Add(new BitField(lsb, getter, setter));
+        m_Fields.Add(new BitField(lsb, getter, setter));
         return this;
     }
 
     public Register32 OnWrite(Action<uint> action)
     {
-        writeSideEffect = action;
+        m_WriteSideEffect = action;
         return this;
     }
 
     public Register32 OnRead(Func<uint> action)
     {
-        readOverride = action;
+        m_ReadOverride = action;
         return this;
     }
 
     public uint Read()
     {
-        logger.LogTrace("Reading from {peripheral} register {register}", PeripheralName, RegisterName);
+        m_Logger.LogTrace("Reading from {peripheral} register {register}", PeripheralName, RegisterName);
 
-        if (readOverride != null)
+        if (m_ReadOverride != null)
         {
-            return readOverride();
+            return m_ReadOverride();
         }
 
-        uint result = value;
+        uint result = m_Value;
 
-        foreach (var f in fields)
+        foreach (var f in m_Fields)
         {
             result = f.Encode(result);
         }
@@ -77,18 +77,18 @@ public sealed class Register32
 
     public void Write(uint data)
     {
-        logger.LogTrace("Writing to {peripheral} register {register} {data}", PeripheralName, RegisterName, data.ToHex());
+        m_Logger.LogTrace("Writing to {peripheral} register {register} {data}", PeripheralName, RegisterName, data.ToHex());
 
-        foreach (var f in fields)
+        foreach (var f in m_Fields)
         {
             f.Decode(data);
         }
 
-        writeSideEffect?.Invoke(data);
-        value = data;
+        m_WriteSideEffect?.Invoke(data);
+        m_Value = data;
     }
 
-    public void Reset() => value = resetValue;
+    public void Reset() => m_Value = m_ResetValue;
 }
 
 interface IField
@@ -99,70 +99,70 @@ interface IField
 
 sealed class BitField : IField
 {
-    private readonly uint mask;
-    private readonly Func<bool> getter;
-    private readonly Action<bool>? setter;
+    private readonly uint m_Mask;
+    private readonly Func<bool> m_Getter;
+    private readonly Action<bool>? m_Setter;
 
     public BitField(int bit, Func<bool> getter, Action<bool>? setter)
     {
-        this.getter = getter;
-        this.setter = setter;
-        mask = 1u << bit;
+        m_Getter = getter;
+        m_Setter = setter;
+        m_Mask = 1u << bit;
     }
 
     public uint Encode(uint reg)
     {
-        reg &= ~mask;
-        if (getter())
+        reg &= ~m_Mask;
+        if (m_Getter())
         {
-            reg |= mask;
+            reg |= m_Mask;
         }
         return reg;
     }
 
     public void Decode(uint reg)
     {
-        if (setter == null) return;
-        setter((reg & mask) != 0);
+        if (m_Setter == null) return;
+        m_Setter((reg & m_Mask) != 0);
     }
 }
 
 sealed class UIntField : IField
 {
-    private readonly int lsb;
-    private readonly uint mask;
-    private readonly Func<uint> getter;
-    private readonly Action<uint>? setter;
+    private readonly int m_Lsb;
+    private readonly uint m_Mask;
+    private readonly Func<uint> m_Getter;
+    private readonly Action<uint>? m_Setter;
 
     public UIntField(int lsb, int width, Func<uint> getter, Action<uint>? setter)
     {
-        this.lsb = lsb;
-        this.getter = getter;
-        this.setter = setter;
-        mask = ((1u << width) - 1u) << lsb;
+        m_Lsb = lsb;
+        m_Getter = getter;
+        m_Setter = setter;
+        m_Mask = ((1u << width) - 1u) << lsb;
     }
 
     public uint Encode(uint reg)
     {
-        reg &= ~mask;
-        reg |= (getter() << lsb) & mask;
+        reg &= ~m_Mask;
+        reg |= (m_Getter() << m_Lsb) & m_Mask;
         return reg;
     }
 
     public void Decode(uint reg)
     {
-        if (setter == null) return;
-        setter((reg & mask) >> lsb);
+        if (m_Setter == null) return;
+        m_Setter((reg & m_Mask) >> m_Lsb);
     }
 }
 
 sealed class EnumField<T> : IField where T : unmanaged, Enum
 {
-    private readonly UIntField inner;
+    private readonly UIntField m_Inner;
 
     public EnumField(int lsb, int width, Func<T> getter, Action<T>? setter)
     {
-        inner = new UIntField(
+        m_Inner = new UIntField(
             lsb,
             width,
             () => Convert.ToUInt32(getter()),
@@ -170,6 +170,6 @@ sealed class EnumField<T> : IField where T : unmanaged, Enum
         );
     }
 
-    public uint Encode(uint reg) => inner.Encode(reg);
-    public void Decode(uint reg) => inner.Decode(reg);
+    public uint Encode(uint reg) => m_Inner.Encode(reg);
+    public void Decode(uint reg) => m_Inner.Decode(reg);
 }

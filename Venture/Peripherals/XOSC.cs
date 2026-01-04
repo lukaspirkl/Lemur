@@ -10,11 +10,11 @@ public class XOSC : PeripheralBase
 
     protected override uint HandleRead(uint offset)
     {
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+        m_Logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
 
         if (offset == 0x4) // STATUS Register
         {
-            logger.LogWarning("Reading STATUS register from XOSC");
+            m_Logger.LogWarning("Reading STATUS register from XOSC");
             return 0x81001000;
         }
 
@@ -23,6 +23,6 @@ public class XOSC : PeripheralBase
 
     protected override void HandleWrite(uint offset, uint value)
     {
-        logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
+        m_Logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
     }
 }

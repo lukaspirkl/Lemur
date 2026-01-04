@@ -23,14 +23,14 @@ namespace VentureUI;
 public sealed class AvaloniauiApplicationLifetime<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.All)] TApplication> : IHostLifetime
     where TApplication : Application
 {
-    private readonly IHostApplicationLifetime _applicationLifetime;
-    private readonly TaskCompletionSource<object?> _applicationExited = new();
-    private TApplication _application;
+    private readonly IHostApplicationLifetime m_ApplicationLifetime;
+    private readonly TaskCompletionSource<object?> m_ApplicationExited = new();
+    private TApplication m_Application;
 
     public AvaloniauiApplicationLifetime(IHostApplicationLifetime applicationLifetime, TApplication application)
     {
-        _application = application;
-        _applicationLifetime = applicationLifetime;
+        m_Application = application;
+        m_ApplicationLifetime = applicationLifetime;
     }
 
     /// <inheritdoc />
@@ -39,13 +39,13 @@ public sealed class AvaloniauiApplicationLifetime<[DynamicallyAccessedMembers(Dy
         var ready = new TaskCompletionSource<object?>();
         using var registration = cancellationToken.Register(() => ready.TrySetCanceled(cancellationToken));
 
-        if (_application.ApplicationLifetime is IControlledApplicationLifetime desktopLifetime)
+        if (m_Application.ApplicationLifetime is IControlledApplicationLifetime desktopLifetime)
         {
             desktopLifetime.Startup += (_, _) => ready.TrySetResult(null);
             desktopLifetime.Exit += (_, _) =>
             {
-                _applicationExited.TrySetResult(null);
-                _applicationLifetime.StopApplication();
+                m_ApplicationExited.TrySetResult(null);
+                m_ApplicationLifetime.StopApplication();
             };
         }
         else
@@ -58,11 +58,11 @@ public sealed class AvaloniauiApplicationLifetime<[DynamicallyAccessedMembers(Dy
     /// <inheritdoc />
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        if (!_applicationExited.Task.IsCompleted)
+        if (!m_ApplicationExited.Task.IsCompleted)
         {
             cancellationToken.ThrowIfCancellationRequested();
             Dispatcher.UIThread.BeginInvokeShutdown(DispatcherPriority.Normal);
         }
-        return _applicationExited.Task;
+        return m_ApplicationExited.Task;
     }
 }

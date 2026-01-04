@@ -23,37 +23,37 @@ public class AExtensionFormatFactory : FormatFactoryBase
                 {
                     return null;
                 }
-                mnemonic = AExtensionFormat.lr_w;
+                mnemonic = AExtensionFormat.LR_W;
                 break;
             case 0b00011:
-                mnemonic = AExtensionFormat.sc_w;
+                mnemonic = AExtensionFormat.SC_W;
                 break;
             case 0b00001:
-                mnemonic = AExtensionFormat.amoswap_w;
+                mnemonic = AExtensionFormat.AMOSWAP_W;
                 break;
             case 0b00000:
-                mnemonic = AExtensionFormat.amoadd_w;
+                mnemonic = AExtensionFormat.AMOADD_W;
                 break;
             case 0b00100:
-                mnemonic = AExtensionFormat.amoxor_w;
+                mnemonic = AExtensionFormat.AMOXOR_W;
                 break;
             case 0b01100:
-                mnemonic = AExtensionFormat.amoand_w;
+                mnemonic = AExtensionFormat.AMOAND_W;
                 break;
             case 0b01000:
-                mnemonic = AExtensionFormat.amoor_w;
+                mnemonic = AExtensionFormat.AMOOR_W;
                 break;
             case 0b10000:
-                mnemonic = AExtensionFormat.amomin_w;
+                mnemonic = AExtensionFormat.AMOMIN_W;
                 break;
             case 0b10100:
-                mnemonic = AExtensionFormat.amomax_w;
+                mnemonic = AExtensionFormat.AMOMAX_W;
                 break;
             case 0b11000:
-                mnemonic = AExtensionFormat.amominu_w;
+                mnemonic = AExtensionFormat.AMOMINU_W;
                 break;
             case 0b11100:
-                mnemonic = AExtensionFormat.amomaxu_w;
+                mnemonic = AExtensionFormat.AMOMAXU_W;
                 break;
             default:
                 return null;
@@ -74,17 +74,17 @@ public class AExtensionFormatFactory : FormatFactoryBase
 
 public class AExtensionFormat : FormatBase
 {
-    public const string lr_w = "lr.w";
-    public const string sc_w = "sc.w";
-    public const string amoswap_w = "amoswap.w";
-    public const string amoadd_w = "amoadd.w";
-    public const string amoxor_w = "amoxor.w";
-    public const string amoand_w = "amoand.w";
-    public const string amoor_w = "amoor.w";
-    public const string amomin_w = "amomin.w";
-    public const string amomax_w = "amomax.w";
-    public const string amominu_w = "amominu.w";
-    public const string amomaxu_w = "amomaxu.w";
+    public const string LR_W = "lr.w";
+    public const string SC_W = "sc.w";
+    public const string AMOSWAP_W = "amoswap.w";
+    public const string AMOADD_W = "amoadd.w";
+    public const string AMOXOR_W = "amoxor.w";
+    public const string AMOAND_W = "amoand.w";
+    public const string AMOOR_W = "amoor.w";
+    public const string AMOMIN_W = "amomin.w";
+    public const string AMOMAX_W = "amomax.w";
+    public const string AMOMINU_W = "amominu.w";
+    public const string AMOMAXU_W = "amomaxu.w";
 
     public required uint rd { get; init; }
     public required uint rs1 { get; init; }
@@ -101,7 +101,7 @@ public class AExtensionFormat : FormatBase
         {
             // TODO: Implement lr.w and sc.w
 
-            case amoswap_w:
+            case AMOSWAP_W:
                 {
                     var addr = x[rs1];
                     var old = e.Memory.ReadWord(addr);
@@ -109,7 +109,7 @@ public class AExtensionFormat : FormatBase
                     x[rd] = old;
                 }
                 break;
-            case amoadd_w:
+            case AMOADD_W:
                 {
                     var addr = x[rs1];
                     var old = e.Memory.ReadWord(addr);
@@ -117,7 +117,7 @@ public class AExtensionFormat : FormatBase
                     x[rd] = old;
                 }
                 break;
-            case amoxor_w:
+            case AMOXOR_W:
                 {
                     var addr = x[rs1];
                     var old = e.Memory.ReadWord(addr);
@@ -125,7 +125,7 @@ public class AExtensionFormat : FormatBase
                     x[rd] = old;
                 }
                 break;
-            case amoand_w:
+            case AMOAND_W:
                 {
                     var addr = x[rs1];
                     var old = e.Memory.ReadWord(addr);
@@ -133,7 +133,7 @@ public class AExtensionFormat : FormatBase
                     x[rd] = old;
                 }
                 break;
-            case amoor_w:
+            case AMOOR_W:
                 {
                     var addr = x[rs1];
                     var old = e.Memory.ReadWord(addr);
@@ -141,7 +141,7 @@ public class AExtensionFormat : FormatBase
                     x[rd] = old;
                 }
                 break;
-            case amomin_w:
+            case AMOMIN_W:
                 {
                     var addr = x[rs1];
                     var old = e.Memory.ReadWord(addr);
@@ -150,7 +150,7 @@ public class AExtensionFormat : FormatBase
                 }
                 break;
 
-            case amominu_w:
+            case AMOMINU_W:
                 {
                     var addr = x[rs1];
                     var old = e.Memory.ReadWord(addr);
@@ -158,7 +158,7 @@ public class AExtensionFormat : FormatBase
                     x[rd] = old;
                 }
                 break;
-            case amomax_w:
+            case AMOMAX_W:
                 {
                     var addr = x[rs1];
                     var old = e.Memory.ReadWord(addr);
@@ -167,7 +167,7 @@ public class AExtensionFormat : FormatBase
                 }
                 break;
 
-            case amomaxu_w:
+            case AMOMAXU_W:
                 {
                     var addr = x[rs1];
                     var old = e.Memory.ReadWord(addr);

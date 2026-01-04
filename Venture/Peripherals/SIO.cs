@@ -4,14 +4,14 @@ namespace Venture.Peripherals;
 
 public class SIO : PeripheralBase, IGpioSource
 {
-    private readonly GpioLine[] gpioLines = Enumerable.Range(0, 48).Select(x => new GpioLine()).ToArray();
+    private readonly GpioLine[] m_GpioLines = Enumerable.Range(0, 48).Select(x => new GpioLine()).ToArray();
 
-    private readonly bool[] gpioValues = new bool[48];
-    private readonly bool[] gpioEnable = new bool[48];
+    private readonly bool[] m_GpioValues = new bool[48];
+    private readonly bool[] m_GpioEnable = new bool[48];
 
     public IGpioLine GetGpioLine(int index)
     {
-        return gpioLines[index];
+        return m_GpioLines[index];
     }
 
     public SIO(uint baseAddress, string name, ILogger<SIO> logger) : base(baseAddress, name, logger)
@@ -24,21 +24,21 @@ public class SIO : PeripheralBase, IGpioSource
 
         GpioOutFields(AddRegister(0x010, "GPIO_OUT"), (i, value) => value);
         GpioHiOutFields(AddRegister(0x014, "GPIO_HI_OUT"), (i, value) => value);
-        GpioOutFields(AddRegister(0x018, "GPIO_OUT_SET").OnRead(() => 0), (i, value) => value ? true : gpioValues[i]);
-        GpioHiOutFields(AddRegister(0x01c, "GPIO_HI_OUT_SET").OnRead(() => 0), (i, value) => value ? true : gpioValues[i]);
-        GpioOutFields(AddRegister(0x020, "GPIO_OUT_CLR").OnRead(() => 0), (i, value) => value ? false : gpioValues[i]);
-        GpioHiOutFields(AddRegister(0x024, "GPIO_HI_OUT_CLR").OnRead(() => 0), (i, value) => value ? false : gpioValues[i]);
-        GpioOutFields(AddRegister(0x028, "GPIO_OUT_XOR").OnRead(() => 0), (i, value) => gpioValues[i] ^ value);
-        GpioHiOutFields(AddRegister(0x02c, "GPIO_HI_OUT_XOR").OnRead(() => 0), (i, value) => gpioValues[i] ^ value);
+        GpioOutFields(AddRegister(0x018, "GPIO_OUT_SET").OnRead(() => 0), (i, value) => value ? true : m_GpioValues[i]);
+        GpioHiOutFields(AddRegister(0x01c, "GPIO_HI_OUT_SET").OnRead(() => 0), (i, value) => value ? true : m_GpioValues[i]);
+        GpioOutFields(AddRegister(0x020, "GPIO_OUT_CLR").OnRead(() => 0), (i, value) => value ? false : m_GpioValues[i]);
+        GpioHiOutFields(AddRegister(0x024, "GPIO_HI_OUT_CLR").OnRead(() => 0), (i, value) => value ? false : m_GpioValues[i]);
+        GpioOutFields(AddRegister(0x028, "GPIO_OUT_XOR").OnRead(() => 0), (i, value) => m_GpioValues[i] ^ value);
+        GpioHiOutFields(AddRegister(0x02c, "GPIO_HI_OUT_XOR").OnRead(() => 0), (i, value) => m_GpioValues[i] ^ value);
 
         GpioOeFields(AddRegister(0x030, "GPIO_OE"), (i, value) => value);
         GpioHiOeFields(AddRegister(0x034, "GPIO_HI_OE"), (i, value) => value);
-        GpioOeFields(AddRegister(0x038, "GPIO_OE_SET").OnRead(() => 0), (i, value) => value ? true : gpioEnable[i]);
-        GpioHiOeFields(AddRegister(0x03c, "GPIO_HI_OE_SET").OnRead(() => 0), (i, value) => value ? true : gpioEnable[i]);
-        GpioOeFields(AddRegister(0x040, "GPIO_OE_CLR").OnRead(() => 0), (i, value) => value ? false : gpioEnable[i]);
-        GpioHiOeFields(AddRegister(0x044, "GPIO_HI_OE_CLR").OnRead(() => 0), (i, value) => value ? false : gpioEnable[i]);
-        GpioOeFields(AddRegister(0x048, "GPIO_OE_XOR").OnRead(() => 0), (i, value) => gpioEnable[i] ^ value);
-        GpioHiOeFields(AddRegister(0x04c, "GPIO_HI_OE_XOR").OnRead(() => 0), (i, value) => gpioEnable[i] ^ value);
+        GpioOeFields(AddRegister(0x038, "GPIO_OE_SET").OnRead(() => 0), (i, value) => value ? true : m_GpioEnable[i]);
+        GpioHiOeFields(AddRegister(0x03c, "GPIO_HI_OE_SET").OnRead(() => 0), (i, value) => value ? true : m_GpioEnable[i]);
+        GpioOeFields(AddRegister(0x040, "GPIO_OE_CLR").OnRead(() => 0), (i, value) => value ? false : m_GpioEnable[i]);
+        GpioHiOeFields(AddRegister(0x044, "GPIO_HI_OE_CLR").OnRead(() => 0), (i, value) => value ? false : m_GpioEnable[i]);
+        GpioOeFields(AddRegister(0x048, "GPIO_OE_XOR").OnRead(() => 0), (i, value) => m_GpioEnable[i] ^ value);
+        GpioHiOeFields(AddRegister(0x04c, "GPIO_HI_OE_XOR").OnRead(() => 0), (i, value) => m_GpioEnable[i] ^ value);
 
         AddRegister(0x050, "FIFO_ST");
         AddRegister(0x054, "FIFO_WR");
@@ -123,12 +123,12 @@ public class SIO : PeripheralBase, IGpioSource
 
     private void GpioOutField(int field, int i, Register32 reg, Func<int, bool, bool> computeNewValue)
     {
-        reg.Field(field, () => gpioValues[i], value =>
+        reg.Field(field, () => m_GpioValues[i], value =>
         {
-            gpioValues[i] = computeNewValue(i, value);
-            if (gpioEnable[i])
+            m_GpioValues[i] = computeNewValue(i, value);
+            if (m_GpioEnable[i])
             {
-                gpioLines[i].Value = gpioValues[i] ? GpioValue.High : GpioValue.Low;
+                m_GpioLines[i].Value = m_GpioValues[i] ? GpioValue.High : GpioValue.Low;
             }
         });
     }
@@ -151,10 +151,10 @@ public class SIO : PeripheralBase, IGpioSource
 
     private void GpioOeField(int field, int i, Register32 reg, Func<int, bool, bool> computeNewValue)
     {
-        reg.Field(field, () => gpioEnable[i], value =>
+        reg.Field(field, () => m_GpioEnable[i], value =>
         {
-            gpioEnable[i] = computeNewValue(i, value);
-            gpioLines[i].Value = gpioEnable[i] ? (gpioValues[i] ? GpioValue.High : GpioValue.Low) : GpioValue.HiZ;
+            m_GpioEnable[i] = computeNewValue(i, value);
+            m_GpioLines[i].Value = m_GpioEnable[i] ? (m_GpioValues[i] ? GpioValue.High : GpioValue.Low) : GpioValue.HiZ;
         });
     }
 }

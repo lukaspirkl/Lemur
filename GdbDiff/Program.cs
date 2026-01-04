@@ -7,19 +7,19 @@ namespace GdbDiff;
 
 class Program
 {
-    private static readonly string logFile = "GdbDiff.clef";
+    private static readonly string m_LogFile = "GdbDiff.clef";
 
     static void Main(string[] args)
     {
-        if (File.Exists(logFile))
+        if (File.Exists(m_LogFile))
         {
-            File.Delete(logFile);
+            File.Delete(m_LogFile);
         }
 
         Log.Logger = new LoggerConfiguration()
             .MinimumLevel.Is(LogEventLevel.Debug)
             .Enrich.FromLogContext()
-            .WriteTo.Async(a => a.File(new CompactJsonFormatter(), logFile, restrictedToMinimumLevel: LogEventLevel.Debug))
+            .WriteTo.Async(a => a.File(new CompactJsonFormatter(), m_LogFile, restrictedToMinimumLevel: LogEventLevel.Debug))
             .WriteTo.Console(restrictedToMinimumLevel: LogEventLevel.Information)
             .CreateLogger();
 

@@ -40,7 +40,7 @@ public class CBFormatFactory : CFormatFactoryBase
                         // C.SRLI -> srli rd′, rd′, shamt
                         return new IFormat
                         {
-                            Mnemonic = IFormat.srli,
+                            Mnemonic = IFormat.SRLI,
                             rd = rd,
                             rs1 = rd,
                             imm = (int)uimm,
@@ -51,7 +51,7 @@ public class CBFormatFactory : CFormatFactoryBase
                         // C.SRAI ->  srai rd′, rd′, shamt
                         return new IFormat
                         {
-                            Mnemonic = IFormat.srai,
+                            Mnemonic = IFormat.SRAI,
                             rd = rd,
                             rs1 = rd,
                             imm = (int)uimm,
@@ -62,7 +62,7 @@ public class CBFormatFactory : CFormatFactoryBase
                         // C.ANDI -> andi rd′, rd′, imm
                         return new IFormat
                         {
-                            Mnemonic = IFormat.andi,
+                            Mnemonic = IFormat.ANDI,
                             rd = rd,
                             rs1 = rd,
                             imm = ((int)uimm).SignExtend(6),
@@ -76,7 +76,7 @@ public class CBFormatFactory : CFormatFactoryBase
                 // C.BEQZ -> beq rs1′, x0, offset
                 return new BFormat
                 {
-                    Mnemonic = BFormat.beq,
+                    Mnemonic = BFormat.BEQ,
                     rs1 = rs1,
                     rs2 = 0,
                     imm_b = offset,
@@ -87,7 +87,7 @@ public class CBFormatFactory : CFormatFactoryBase
                 // C.BNEZ -> bne rs1′, x0, offset
                 return new BFormat
                 {
-                    Mnemonic = BFormat.bne,
+                    Mnemonic = BFormat.BNE,
                     rs1 = rs1,
                     rs2 = 0,
                     imm_b = offset,

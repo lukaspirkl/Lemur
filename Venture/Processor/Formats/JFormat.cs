@@ -26,7 +26,7 @@ public class JFormatFactory : FormatFactoryBase
 
         return new JFormat
         {
-            Mnemonic = JFormat.jal,
+            Mnemonic = JFormat.JAL,
             imm = imm_j,
             rd = instruction.ExtractBits(7, 5),
         };
@@ -35,7 +35,7 @@ public class JFormatFactory : FormatFactoryBase
 
 public class JFormat : FormatBase
 {
-    public const string jal = "jal";
+    public const string JAL = "jal";
 
     public required uint rd { get; init; }
     public required int imm { get; init; }

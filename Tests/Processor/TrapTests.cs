@@ -11,7 +11,7 @@ public class TrapTests
     private const ushort MEPC = 0x341;
     private const ushort MCAUSE = 0x342;
 
-    private const uint TRAP_HANDlER = SRAM + 0x100;
+    private const uint TRAP_HANDLER = SRAM + 0x100;
 
     
     [Fact(Skip = "For manual experiments")]
@@ -24,8 +24,8 @@ public class TrapTests
         Console.WriteLine($"MEPC: {sut.GetCSR(MEPC).ToHex()}");
         Console.WriteLine($"MTVEC: {sut.GetCSR(MTVEC).ToHex()}");
 
-        sut.SetCSR(MTVEC, TRAP_HANDlER);
-        sut.MemoryWrite(TRAP_HANDlER, InstructionBuilder.MRET());
+        sut.SetCSR(MTVEC, TRAP_HANDLER);
+        sut.MemoryWrite(TRAP_HANDLER, InstructionBuilder.MRET());
 
         sut.Registers[1] = 0x00000000;
         sut.Registers[2] = SRAM + 0x2;
@@ -57,8 +57,8 @@ public class TrapTests
     {
         using var sut = RP2350Builder.Create();
 
-        sut.SetCSR(MTVEC, TRAP_HANDlER);
-        sut.MemoryWrite(TRAP_HANDlER, InstructionBuilder.MRET());
+        sut.SetCSR(MTVEC, TRAP_HANDLER);
+        sut.MemoryWrite(TRAP_HANDLER, InstructionBuilder.MRET());
 
         sut.Registers[1] = 0x00000000;
         sut.Registers[2] = SRAM + 0x2;

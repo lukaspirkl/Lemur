@@ -38,7 +38,7 @@ public class PinsViewModel : ObservableObject, IPeripheralTab
 public partial class GpioSourceViewModel : ObservableObject
 {
     [ObservableProperty]
-    private string name;
+    private string m_Name;
 
     public ObservableCollection<GpioLineViewModel> GpioLines { get; } = new();
 
@@ -55,17 +55,17 @@ public partial class GpioSourceViewModel : ObservableObject
 
 public partial class GpioLineViewModel : ObservableObject
 {
-    private readonly IGpioLine line;
+    private readonly IGpioLine m_Line;
 
     [ObservableProperty]
-    private string name;
+    private string m_Name;
 
     [ObservableProperty]
-    private GpioValue value;
+    private GpioValue m_Value;
 
     public GpioLineViewModel(int index, IGpioLine line)
     {
-        this.line = line;
+        m_Line = line;
         Name = $"GPIO{index}";
         Value = line.Value;
         line.Changed += x => Value = x;

@@ -9,9 +9,9 @@ public abstract class CFormatFactoryBase
 
     public abstract FormatBase? Decode(uint funct3, uint instruction);
 
-    protected readonly IFormat nop = new IFormat
+    protected static readonly IFormat m_Nop = new IFormat
     {
-        Mnemonic = IFormat.addi,
+        Mnemonic = IFormat.ADDI,
         imm = 0,
         rd = 0,
         rs1 = 0,

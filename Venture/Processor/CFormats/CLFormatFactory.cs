@@ -28,7 +28,7 @@ public class CLFormatFactory : CFormatFactoryBase
 
                 return new IFormat
                 {
-                    Mnemonic = IFormat.lw,
+                    Mnemonic = IFormat.LW,
                     imm = (int)offset,
                     rd = rd,
                     rs1 = rs1,

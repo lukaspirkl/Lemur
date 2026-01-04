@@ -4,8 +4,8 @@ namespace Venture.Processor;
 
 public class Hazard3Processor
 {
-    private readonly IDecoder decoder = new CDecoder(new Decoder());
-    private readonly IEmuLogger<Hazard3Processor> logger;
+    private readonly IDecoder m_Decoder = new CDecoder(new Decoder());
+    private readonly IEmuLogger<Hazard3Processor> m_Logger;
     private bool m_IsPCModified = false;
 
     public IBusFabric Memory { get; }
@@ -39,25 +39,25 @@ public class Hazard3Processor
     public Hazard3Processor(IBusFabric memory, IEmuLogger<Hazard3Processor> logger, Registers registers, CSR csr)
     {
         Memory = memory;
-        this.logger = logger;
+        this.m_Logger = logger;
         Registers = registers;
         CSR = csr;
     }
 
     public void Step()
     {
-        using (logger.BeginScope("PC: {PC}", PC.ToHex()))
+        using (m_Logger.BeginScope("PC: {PC}", PC.ToHex()))
         {
             var currentPC = PC;
             try
             {
                 var instruction = Memory.ReadInstruction(PC);
 
-                var format = decoder.Decode(instruction);
+                var format = m_Decoder.Decode(instruction);
 
-                using (logger.BeginScope("Execute {instruction} {mnemonic}", instruction.ToHex(), format.Mnemonic))
+                using (m_Logger.BeginScope("Execute {instruction} {mnemonic}", instruction.ToHex(), format.Mnemonic))
                 {
-                    logger.LogInstructionExecute(PC, instruction, format.Mnemonic);
+                    m_Logger.LogInstructionExecute(PC, instruction, format.Mnemonic);
 
                     m_IsPCModified = false;
                     format.Execute(this);

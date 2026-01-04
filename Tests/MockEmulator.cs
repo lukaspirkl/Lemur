@@ -7,18 +7,18 @@ public class MockEmulator : IDebuggable
 {
     public class MockRegisters : IRegisters
     {
-        private readonly uint[] data = new uint[4];
+        private readonly uint[] m_Data = new uint[4];
 
-        public uint this[uint index] { get => data[index]; set => data[index] = value; }
+        public uint this[uint index] { get => m_Data[index]; set => m_Data[index] = value; }
 
-        public uint Length => (uint)data.Length;
+        public uint Length => (uint)m_Data.Length;
     }
 
-    private readonly MockRegisters registers = new MockRegisters();
+    private readonly MockRegisters m_Registers = new MockRegisters();
 
-    private readonly Dictionary<ushort, uint> csr = new Dictionary<ushort, uint>();
+    private readonly Dictionary<ushort, uint> m_Csr = new Dictionary<ushort, uint>();
 
-    public IRegisters Registers => registers;
+    public IRegisters Registers => m_Registers;
 
     public HashSet<uint> Brakpoints { get; } = new HashSet<uint>(); 
 
@@ -62,11 +62,11 @@ public class MockEmulator : IDebuggable
 
     public uint GetCSR(ushort index)
     {
-        return csr.GetValueOrDefault(index, (uint)0);
+        return m_Csr.GetValueOrDefault(index, (uint)0);
     }
 
     public void SetCSR(ushort index, uint value)
     {
-        csr[index] = value;
+        m_Csr[index] = value;
     }
 }

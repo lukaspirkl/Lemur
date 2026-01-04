@@ -9,14 +9,14 @@ public interface IRegisters
 
 public class Registers : IRegisters
 {
-    private uint[] data = new uint[32];
-    private readonly IEmuLogger<Registers> logger;
+    private uint[] m_Data = new uint[32];
+    private readonly IEmuLogger<Registers> m_Logger;
 
     public uint Length => 32;
 
     public Registers(IEmuLogger<Registers> logger)
     {
-        this.logger = logger;
+        this.m_Logger = logger;
     }
 
     public uint this[uint index]
@@ -28,7 +28,7 @@ public class Registers : IRegisters
                 return 0;
             }
 
-            return data[index]; 
+            return m_Data[index]; 
         }
         set
         {
@@ -37,9 +37,9 @@ public class Registers : IRegisters
                 return;
             }
 
-            logger.LogRegisterSet(index, value);
+            m_Logger.LogRegisterSet(index, value);
 
-            data[index] = value;
+            m_Data[index] = value;
         }
     }
 

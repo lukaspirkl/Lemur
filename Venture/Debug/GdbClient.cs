@@ -6,17 +6,17 @@ namespace Venture.Debug;
 
 public class RP2350GDB : IDebuggable
 {
-    private readonly GdbClient gdbClient;
+    private readonly GdbClient m_GdbClient;
 
-    private static SemaphoreSlim semaphore = new SemaphoreSlim(1);
+    private static SemaphoreSlim m_Semaphore = new SemaphoreSlim(1);
 
     public event EventHandler? Stopped;
 
     public RP2350GDB(string host, int port)
     {
-        semaphore.Wait();
-        gdbClient = new GdbClient(host, port);
-        Registers = new GdbRegisters(gdbClient);
+        m_Semaphore.Wait();
+        m_GdbClient = new GdbClient(host, port);
+        Registers = new GdbRegisters(m_GdbClient);
     }
 
     public IRegisters Registers { get; }
@@ -25,18 +25,18 @@ public class RP2350GDB : IDebuggable
 
     public void Dispose()
     {
-        gdbClient.Dispose();
-        semaphore.Release();
+        m_GdbClient.Dispose();
+        m_Semaphore.Release();
     }
 
     public byte[] MemoryRead(uint address, int count)
     {
-        return gdbClient.ReadMemory(address, (uint)count);
+        return m_GdbClient.ReadMemory(address, (uint)count);
     }
 
     public void MemoryWrite(uint address, byte[] data)
     {
-        gdbClient.WriteMemory(address, data);
+        m_GdbClient.WriteMemory(address, data);
     }
 
     public void Run()
@@ -46,7 +46,7 @@ public class RP2350GDB : IDebuggable
 
     public void Step()
     {
-        gdbClient.Step();
+        m_GdbClient.Step();
     }
 
     public void Stop()
@@ -56,39 +56,39 @@ public class RP2350GDB : IDebuggable
 
     public void Reset()
     {
-        gdbClient.Monitor("reset halt");
+        m_GdbClient.Monitor("reset halt");
     }
 
     public uint GetCSR(ushort index)
     {
         // 32 base registers, 32 float registers and PC register = 65
-        return gdbClient.ReadRegister((uint)(index + 65));
+        return m_GdbClient.ReadRegister((uint)(index + 65));
     }
 
     public void SetCSR(ushort index, uint value)
     {
         // 32 base registers, 32 float registers and PC register = 65
-        gdbClient.WriteRegister((uint)(index + 65), value);
+        m_GdbClient.WriteRegister((uint)(index + 65), value);
     }
 
     class GdbRegisters : IRegisters
     {
-        private readonly GdbClient gdbClient;
+        private readonly GdbClient m_GdbClient;
 
         public GdbRegisters(GdbClient gdbClient)
         {
-            this.gdbClient = gdbClient;
+            m_GdbClient = gdbClient;
         }
 
         public uint this[uint index]
         {
             get
             {
-                return gdbClient.ReadRegister(index);
+                return m_GdbClient.ReadRegister(index);
             }
             set
             {
-                gdbClient.WriteRegister(index, value);
+                m_GdbClient.WriteRegister(index, value);
             }
         }
 
@@ -98,27 +98,27 @@ public class RP2350GDB : IDebuggable
 
 public class GdbClient : IDisposable
 {
-    private TcpClient _client;
-    private NetworkStream _stream;
-    private StreamReader _reader;
-    private StreamWriter _writer;
-    private readonly object _lock = new object();
+    private TcpClient m_Client;
+    private NetworkStream m_Stream;
+    private StreamReader m_Reader;
+    private StreamWriter m_Writer;
+    private readonly object m_Lock = new object();
 
-    public bool IsConnected => _client != null && _client.Connected;
+    public bool IsConnected => m_Client != null && m_Client.Connected;
 
     public GdbClient(string host, int port)
     {
         Console.WriteLine($"[GDB] Connecting to {host}:{port}...");
-        _client = new TcpClient();
-        _client.Connect(host, port);
-        _stream = _client.GetStream();
+        m_Client = new TcpClient();
+        m_Client.Connect(host, port);
+        m_Stream = m_Client.GetStream();
 
         // Using basic ASCII/binary reading
-        _reader = new StreamReader(_stream, Encoding.ASCII);
-        _writer = new StreamWriter(_stream, Encoding.ASCII) { AutoFlush = true };
+        m_Reader = new StreamReader(m_Stream, Encoding.ASCII);
+        m_Writer = new StreamWriter(m_Stream, Encoding.ASCII) { AutoFlush = true };
 
         // Turn off Nagle's algorithm for lower latency
-        _client.NoDelay = true;
+        m_Client.NoDelay = true;
 
         // Initial handshake usually involves disabling AckMode in modern GDB, 
         // but for a basic client, we will assume standard AckMode is active.
@@ -129,10 +129,10 @@ public class GdbClient : IDisposable
 
     public void Dispose()
     {
-        _stream.Close();
-        _stream.Dispose();
-        _client.Close();
-        _client.Dispose();
+        m_Stream.Close();
+        m_Stream.Dispose();
+        m_Client.Close();
+        m_Client.Dispose();
     }
 
     public string SendCommand(string commandData)
@@ -148,7 +148,7 @@ public class GdbClient : IDisposable
 
     public void SendCommand(string commandData, Func<string, bool> handleResponse)
     {
-        lock (_lock)
+        lock (m_Lock)
         {
             string packet = FormatPacket(commandData);
 
@@ -196,12 +196,12 @@ public class GdbClient : IDisposable
     private void WriteRaw(string data)
     {
         byte[] bytes = Encoding.ASCII.GetBytes(data);
-        _stream.Write(bytes, 0, bytes.Length);
+        m_Stream.Write(bytes, 0, bytes.Length);
     }
 
     private char ReadChar()
     {
-        int b = _stream.ReadByte();
+        int b = m_Stream.ReadByte();
         if (b == -1) throw new EndOfStreamException("GDB connection closed.");
         return (char)b;
     }

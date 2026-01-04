@@ -13,23 +13,23 @@ namespace Venture.Debug;
 
 public class GdbConnectionHandler : ConnectionHandler
 {
-    private readonly ILogger<GdbConnectionHandler> _logger;
-    private readonly IDebuggable emulator;
-    private readonly IHostApplicationLifetime hostLifetime;
+    private readonly ILogger<GdbConnectionHandler> m_Logger;
+    private readonly IDebuggable m_Emulator;
+    private readonly IHostApplicationLifetime m_HostLifetime;
 
     public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, IDebuggable emulator, IHostApplicationLifetime hostLifetime)
     {
-        _logger = logger;
-        this.emulator = emulator;
-        this.hostLifetime = hostLifetime;
+        m_Logger = logger;
+        m_Emulator = emulator;
+        m_HostLifetime = hostLifetime;
     }
 
     public override async Task OnConnectedAsync(ConnectionContext connection)
     {
-        using var cts = CancellationTokenSource.CreateLinkedTokenSource(connection.ConnectionClosed, hostLifetime.ApplicationStopping);
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(connection.ConnectionClosed, m_HostLifetime.ApplicationStopping);
         var cancellationToken = cts.Token;
 
-        _logger.LogInformation($"Debugger connected: {connection.RemoteEndPoint}");
+        m_Logger.LogInformation($"Debugger connected: {connection.RemoteEndPoint}");
 
         var input = connection.Transport.Input;
         var output = connection.Transport.Output;
@@ -41,7 +41,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
         try
         {
-            emulator.Stopped += sendStopped;
+            m_Emulator.Stopped += sendStopped;
 
             while (!cancellationToken.IsCancellationRequested)
             {
@@ -50,7 +50,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
                 if (buffer.Length == 1 && buffer.FirstSpan[0] == 0x3)
                 {
-                    emulator.Stop();
+                    m_Emulator.Stop();
                     await SendPacketAsync(output, "S05");
                 }
 
@@ -70,12 +70,12 @@ public class GdbConnectionHandler : ConnectionHandler
 
                         string packet = Encoding.ASCII.GetString(packetData);
 
-                        _logger.LogDebug("GDB>> {packet}", packet);
+                        m_Logger.LogDebug("GDB>> {packet}", packet);
 
                         var response = ProcessGdbCommand(packet);
                         if (response != null)
                         {
-                            _logger.LogDebug("GDB<< {response}", response);
+                            m_Logger.LogDebug("GDB<< {response}", response);
 
                             await SendPacketAsync(output, response);
                         }
@@ -102,20 +102,20 @@ public class GdbConnectionHandler : ConnectionHandler
         }
         catch (OperationCanceledException)
         {
-            _logger.LogInformation("GDB connection cancelled");
+            m_Logger.LogInformation("GDB connection cancelled");
         }
         catch (ConnectionResetException e)
         {
-            _logger.LogWarning(e, "Connection reset");
+            m_Logger.LogWarning(e, "Connection reset");
         }
         catch (Exception e)
         {
-            _logger.LogError(e, "Unexpected exception while handling GDB connection");
+            m_Logger.LogError(e, "Unexpected exception while handling GDB connection");
         }
         finally
         {
-            emulator.Stopped -= sendStopped;
-            _logger.LogInformation("Debugger disconnected.");
+            m_Emulator.Stopped -= sendStopped;
+            m_Logger.LogInformation("Debugger disconnected.");
         }
     }
 
@@ -157,7 +157,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
     private string? ProcessGdbCommand(string command)
     {
-        using var _ = _logger.BeginScope("GDB command: {gdbCommand}", command);
+        using var _ = m_Logger.BeginScope("GDB command: {gdbCommand}", command);
 
         if (command == "?")
         {
@@ -249,19 +249,19 @@ public class GdbConnectionHandler : ConnectionHandler
 
         if (command.StartsWith("vCont;s"))
         {
-            emulator.Step();
+            m_Emulator.Step();
             return "T05";
         }
 
         if (command.StartsWith("vCont;c"))
         {
-            emulator.Run();
+            m_Emulator.Run();
             return null;
         }
 
         if (command.StartsWith("vCont;t"))
         {
-            emulator.Stop();
+            m_Emulator.Stop();
             return "S05";
         }
 
@@ -270,17 +270,17 @@ public class GdbConnectionHandler : ConnectionHandler
             var str = Encoding.ASCII.GetString(HexStringToBytes(command.Substring(6)));
             if (str == "reset halt")
             {
-                emulator.Reset();
+                m_Emulator.Reset();
                 return "OK";
             }
 
             if (str == "reset init")
             {
-                emulator.Reset();
+                m_Emulator.Reset();
                 return "OK";
             }
 
-            _logger.LogWarning("Unknown qRcmd: {cmd}", str);
+            m_Logger.LogWarning("Unknown qRcmd: {cmd}", str);
             return "";
         }
 
@@ -288,7 +288,7 @@ public class GdbConnectionHandler : ConnectionHandler
         {
             try
             {
-                int registerCount = (int)emulator.Registers.Length;
+                int registerCount = (int)m_Emulator.Registers.Length;
                 int hexCharsPerReg = 8;
                 int totalLength = registerCount * hexCharsPerReg;
 
@@ -297,7 +297,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
                 for (int i = 0; i < registerCount; i++)
                 {
-                    uint regValue = emulator.Registers[(uint)i];
+                    uint regValue = m_Emulator.Registers[(uint)i];
                     WriteLittleEndianHex(regValue, response.Slice(position, hexCharsPerReg));
                     position += hexCharsPerReg;
                 }
@@ -314,23 +314,23 @@ public class GdbConnectionHandler : ConnectionHandler
         if (Regex.IsMatch(command, @"G[0-9ABCDEFabcdef]+"))
         {
             var hexData = command.Substring(1);
-            if (hexData.Length != emulator.Registers.Length * 8)
+            if (hexData.Length != m_Emulator.Registers.Length * 8)
             {
                 return "E01"; // Error: insufficient data
             }
 
             try
             {
-                for (int i = 0; i < emulator.Registers.Length; i++)
+                for (int i = 0; i < m_Emulator.Registers.Length; i++)
                 {
-                    emulator.Registers[(uint)i] = ParseLittleEndianHex(hexData.AsSpan(i * 8, 8));
+                    m_Emulator.Registers[(uint)i] = ParseLittleEndianHex(hexData.AsSpan(i * 8, 8));
                 }
 
                 return "OK";
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Unexpected exception when getting register data");
+                m_Logger.LogError(e, "Unexpected exception when getting register data");
                 return "E02"; // Error: parsing failed
             }
         }
@@ -346,7 +346,7 @@ public class GdbConnectionHandler : ConnectionHandler
             var reg = Convert.ToUInt32(args[0], 16);
             var value = BitConverter.ToUInt32(HexStringToBytes(args[1]));
 
-            emulator.Registers[reg] = value;
+            m_Emulator.Registers[reg] = value;
             return "OK";
         }
 
@@ -359,11 +359,11 @@ public class GdbConnectionHandler : ConnectionHandler
                 var address = Convert.ToUInt32(args[0], 16);
                 var length = Convert.ToUInt32(args[1], 16);
 
-                return string.Join("", emulator.MemoryRead(address, (int)length).Select(x => Convert.ToString(x, 16).PadLeft(2, '0')));
+                return string.Join("", m_Emulator.MemoryRead(address, (int)length).Select(x => Convert.ToString(x, 16).PadLeft(2, '0')));
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Unexpected exception while reading memory");
+                m_Logger.LogError(e, "Unexpected exception while reading memory");
                 return "E01";
             }
         }
@@ -384,13 +384,13 @@ public class GdbConnectionHandler : ConnectionHandler
                 {
                     data[i] = Convert.ToByte(hexData.Substring(i * 2, 2), 16);
                 }
-                emulator.MemoryWrite(address, data);
+                m_Emulator.MemoryWrite(address, data);
 
                 return "OK";
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Unexpected exception while writing memory");
+                m_Logger.LogError(e, "Unexpected exception while writing memory");
                 return "E01";
             }
         }
@@ -406,7 +406,7 @@ public class GdbConnectionHandler : ConnectionHandler
             //}
 
             var address = Convert.ToUInt32(args[1], 16);
-            emulator.Brakpoints.Add(address);
+            m_Emulator.Brakpoints.Add(address);
             return "OK";
         }
 
@@ -421,7 +421,7 @@ public class GdbConnectionHandler : ConnectionHandler
             //}
 
             var address = Convert.ToUInt32(args[1], 16);
-            emulator.Brakpoints.Remove(address);
+            m_Emulator.Brakpoints.Remove(address);
             return "OK";
         }
 
@@ -450,7 +450,7 @@ public class GdbConnectionHandler : ConnectionHandler
             return "";
         }
 
-        _logger.LogWarning("Unknown GDB command: {command}", command);
+        m_Logger.LogWarning("Unknown GDB command: {command}", command);
         return ""; // Empty = Not Supported (Correct for vMustReplyEmpty)
     }
 

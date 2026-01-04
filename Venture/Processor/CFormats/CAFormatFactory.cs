@@ -26,7 +26,7 @@ public class CAFormatFactory : CFormatFactoryBase
                         // C.SUB -> sub rd′, rd′, rs2′
                         return new RFormat
                         { 
-                            Mnemonic = RFormat.sub,
+                            Mnemonic = RFormat.SUB,
                             rd = rd,
                             rs1 = rs1,
                             rs2 = rs2,
@@ -36,7 +36,7 @@ public class CAFormatFactory : CFormatFactoryBase
                         // C.XOR -> xor rd′, rd′, rs2′
                         return new RFormat
                         {
-                            Mnemonic = RFormat.xor,
+                            Mnemonic = RFormat.XOR,
                             rd = rd,
                             rs1 = rs1,
                             rs2 = rs2,
@@ -46,7 +46,7 @@ public class CAFormatFactory : CFormatFactoryBase
                         // C.OR -> or rd′, rd′, rs2′
                         return new RFormat
                         {
-                            Mnemonic = RFormat.or,
+                            Mnemonic = RFormat.OR,
                             rd = rd,
                             rs1 = rs1,
                             rs2 = rs2,
@@ -56,7 +56,7 @@ public class CAFormatFactory : CFormatFactoryBase
                         // C.AND -> and rd′, rd′, rs2′
                         return new RFormat
                         {
-                            Mnemonic = RFormat.and,
+                            Mnemonic = RFormat.AND,
                             rd = rd,
                             rs1 = rs1,
                             rs2 = rs2,

@@ -4,7 +4,7 @@ namespace Venture.Peripherals;
 
 public abstract class BytePeripheralBase : IAddressableResource
 {
-    protected readonly ILogger logger;
+    protected readonly ILogger m_Logger;
 
     public uint BaseAddress { get; }
 
@@ -13,7 +13,7 @@ public abstract class BytePeripheralBase : IAddressableResource
     protected BytePeripheralBase(uint baseAddress, string name, ILogger logger)
     {
         BaseAddress = baseAddress;
-        this.logger = logger;
+        m_Logger = logger;
     }
 
     public byte[] Read(uint address, int count)
@@ -76,9 +76,9 @@ public abstract class BytePeripheralBase : IAddressableResource
 
 public abstract class PeripheralBase : IAddressableResource
 {
-    private readonly Dictionary<uint, Register32> registers = new();
-    protected readonly string name;
-    protected readonly ILogger logger;
+    private readonly Dictionary<uint, Register32> m_Registers = new();
+    protected readonly string m_Name;
+    protected readonly ILogger m_Logger;
 
     public uint BaseAddress { get; }
 
@@ -87,14 +87,14 @@ public abstract class PeripheralBase : IAddressableResource
     protected PeripheralBase(uint baseAddress, string name, ILogger logger)
     {
         BaseAddress = baseAddress;
-        this.name = name;
-        this.logger = logger;
+        m_Name = name;
+        m_Logger = logger;
     }
 
     protected Register32 AddRegister(uint offset, string registerName, uint resetValue = 0)
     {
-        var reg = new Register32(logger, name, registerName, resetValue);
-        registers[offset] = reg;
+        var reg = new Register32(m_Logger, m_Name, registerName, resetValue);
+        m_Registers[offset] = reg;
         return reg;
     }
 
@@ -118,7 +118,7 @@ public abstract class PeripheralBase : IAddressableResource
 
     protected virtual uint HandleRead(uint offset)
     {
-        if (registers.TryGetValue(offset, out var r))
+        if (m_Registers.TryGetValue(offset, out var r))
         {
             return r.Read();
         }
@@ -205,7 +205,7 @@ public abstract class PeripheralBase : IAddressableResource
 
     protected virtual void HandleWrite(uint offset, uint data)
     {
-        if (registers.TryGetValue(offset, out var r))
+        if (m_Registers.TryGetValue(offset, out var r))
         {
             r.Write(data);
         }

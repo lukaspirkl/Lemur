@@ -25,11 +25,11 @@ public interface IViewModelCollection
 
 public class ViewModelCollection : IViewModelCollection
 {
-    private readonly IServiceCollection services;
+    private readonly IServiceCollection m_Services;
 
     public ViewModelCollection(IServiceCollection services)
     {
-        this.services = services;
+        m_Services = services;
     }
 
     public IViewModelCollection AddSingletonViewModel<[DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TViewModel, TView>()
@@ -41,7 +41,7 @@ public class ViewModelCollection : IViewModelCollection
             throw new InvalidOperationException("You are using interface as TViewModel. You should use the AddInterface method instead.");
         }
 
-        services.AddSingleton<TViewModel>();
+        m_Services.AddSingleton<TViewModel>();
         AddViewModelMapping<TViewModel, TView>();
         return this;
     }
@@ -55,7 +55,7 @@ public class ViewModelCollection : IViewModelCollection
             throw new InvalidOperationException("You are using interface as TViewModel. You should use the AddInterface method instead.");
         }
 
-        services.AddTransient<TViewModel>();
+        m_Services.AddTransient<TViewModel>();
         AddViewModelMapping<TViewModel, TView>();
         return this;
     }
@@ -77,11 +77,11 @@ public class ViewModelCollection : IViewModelCollection
         where TViewModel : class
         where TView : Control, new()
     {
-        services.AddSingleton(_ => new ViewModelToViewMapping(typeof(TViewModel), new ViewFactory<TView>()));
+        m_Services.AddSingleton(_ => new ViewModelToViewMapping(typeof(TViewModel), new ViewFactory<TView>()));
 
         if (typeof(IPeripheralTab).IsAssignableFrom(typeof(TViewModel)))
         {
-            services.AddSingleton<IPeripheralTab>(provider => (IPeripheralTab)provider.GetRequiredService<TViewModel>());
+            m_Services.AddSingleton<IPeripheralTab>(provider => (IPeripheralTab)provider.GetRequiredService<TViewModel>());
         }
 
         return this;

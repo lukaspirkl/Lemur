@@ -32,7 +32,7 @@ public class CJFormatFactory : CFormatFactoryBase
                 // C.JAL -> jal x1, offset
                 return new JFormat
                 {
-                    Mnemonic = JFormat.jal,
+                    Mnemonic = JFormat.JAL,
                     rd = 1,
                     imm = offset,
                     StepSize = 2,
@@ -42,7 +42,7 @@ public class CJFormatFactory : CFormatFactoryBase
                 // C.J -> jal x0, offset
                 return new JFormat
                 {
-                    Mnemonic = JFormat.jal,
+                    Mnemonic = JFormat.JAL,
                     rd = 0,
                     imm = offset,
                     StepSize = 2,

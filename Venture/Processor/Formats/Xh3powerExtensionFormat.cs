@@ -19,9 +19,9 @@ public class Xh3powerExtensionFormatFactory : FormatFactoryBase
             switch (rs2)
             {
                 case 0:
-                    return new Xh3powerExtensionFormat { Mnemonic = Xh3powerExtensionFormat.h3_block };
+                    return new Xh3powerExtensionFormat { Mnemonic = Xh3powerExtensionFormat.H3_BLOCK };
                 case 1:
-                    return new Xh3powerExtensionFormat { Mnemonic = Xh3powerExtensionFormat.h3_unblock };
+                    return new Xh3powerExtensionFormat { Mnemonic = Xh3powerExtensionFormat.H3_UNBLOCK };
             }
         }
 
@@ -31,8 +31,8 @@ public class Xh3powerExtensionFormatFactory : FormatFactoryBase
 
 public class Xh3powerExtensionFormat : FormatBase
 {
-    public const string h3_block = "h3.block";
-    public const string h3_unblock = "h3.unblock";
+    public const string H3_BLOCK = "h3.block";
+    public const string H3_UNBLOCK = "h3.unblock";
 
     public override void Execute(Hazard3Processor e)
     {
@@ -40,10 +40,10 @@ public class Xh3powerExtensionFormat : FormatBase
 
         switch (Mnemonic)
         {
-            case h3_block:
+            case H3_BLOCK:
                 return;
 
-            case h3_unblock:
+            case H3_UNBLOCK:
                 return;
 
             default:

@@ -24,7 +24,7 @@ public class CRFormatFactory : CFormatFactoryBase
                     // C.JR -> jalr x0, 0(rs1)
                     return new IFormat
                     {
-                        Mnemonic = IFormat.jalr,
+                        Mnemonic = IFormat.JALR,
                         imm = 0,
                         rd = 0,
                         rs1 = rs1,
@@ -37,7 +37,7 @@ public class CRFormatFactory : CFormatFactoryBase
                     // C.MV -> add rd, x0, rs2
                     return new RFormat
                     {
-                        Mnemonic = RFormat.add,
+                        Mnemonic = RFormat.ADD,
                         rd = rd,
                         rs1 = 0,
                         rs2 = rs2,
@@ -48,7 +48,7 @@ public class CRFormatFactory : CFormatFactoryBase
                 if (rs1 == 0 && rs2 != 0)
                 {
                     // Hints
-                    return nop;
+                    return m_Nop;
                 }
 
                 return null;
@@ -60,7 +60,7 @@ public class CRFormatFactory : CFormatFactoryBase
                     //throw new NotImplementedException("C.EBREAK");
                     return new IFormat
                     {
-                        Mnemonic = IFormat.ebreak,
+                        Mnemonic = IFormat.EBREAK,
                         rd = 0,
                         imm = 0,
                         rs1 = 0,
@@ -73,7 +73,7 @@ public class CRFormatFactory : CFormatFactoryBase
                     // C.JALR -> jalr x1, 0(rs1)
                     return new IFormat
                     {
-                        Mnemonic = IFormat.jalr,
+                        Mnemonic = IFormat.JALR,
                         imm = 0,
                         rd = 1,
                         rs1 = rs1,
@@ -86,7 +86,7 @@ public class CRFormatFactory : CFormatFactoryBase
                     // C.ADD -> add rd, rd, rs2
                     return new RFormat
                     {
-                        Mnemonic = RFormat.add,
+                        Mnemonic = RFormat.ADD,
                         rd = rd,
                         rs1 = rd,
                         rs2 = rs2,
@@ -97,7 +97,7 @@ public class CRFormatFactory : CFormatFactoryBase
                 if (rs1 == 0 && rs2 != 0)
                 {
                     // Hints
-                    return nop;
+                    return m_Nop;
                 }
 
                 return null;

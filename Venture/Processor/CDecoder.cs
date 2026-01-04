@@ -5,14 +5,14 @@ namespace Venture.Processor;
 
 public class CDecoder : IDecoder
 {
-    private readonly IDecoder innerDecoder;
-    private readonly CFormatFactoryBase[] formatFactories;
+    private readonly IDecoder m_InnerDecoder;
+    private readonly CFormatFactoryBase[] m_FormatFactories;
 
     public CDecoder(IDecoder innerDecoder)
     {
-        this.innerDecoder = innerDecoder;
+        m_InnerDecoder = innerDecoder;
 
-        formatFactories =
+        m_FormatFactories =
         [
             new CIFormatFactory(),
             new CSFormatFactory(),
@@ -34,7 +34,7 @@ public class CDecoder : IDecoder
         // Instruction is not compressed
         if (op == 0b11)
         {
-            return innerDecoder.Decode(instruction);
+            return m_InnerDecoder.Decode(instruction);
         }
 
         // Get just first half of the instruction
@@ -42,7 +42,7 @@ public class CDecoder : IDecoder
 
         var quadrant = instruction.ExtractBits(0, 2);
         var funct3 = instruction.ExtractBits(13, 3);
-        foreach (var factory in formatFactories)
+        foreach (var factory in m_FormatFactories)
         {
             if (factory.ForQuadrant.Contains(quadrant) && factory.ForFunct3.Contains(funct3))
             {

@@ -4,7 +4,7 @@ namespace Venture.Peripherals;
 
 public class UserBankIO : PeripheralBase, IGpioSource
 {
-    private readonly MuxedGpioLine[] gpioLines = Enumerable.Range(0, 48).Select(x => new MuxedGpioLine()).ToArray();
+    private readonly MuxedGpioLine[] m_GpioLines = Enumerable.Range(0, 48).Select(x => new MuxedGpioLine()).ToArray();
 
     public GpioControl[] GpioControl { get; }
 
@@ -14,14 +14,14 @@ public class UserBankIO : PeripheralBase, IGpioSource
     {
         for (int i = 0; i < 48; i++)
         {
-            gpioLines[i].Add(0x05, "SIO", sio.GetGpioLine(i));
+            m_GpioLines[i].Add(0x05, "SIO", sio.GetGpioLine(i));
         }
 
         GpioControl = new GpioControl[48];
         for (uint i = 0; i <= 47; i++)
         {
             AddRegister(i * 8, $"GPIO{i}_STATUS");
-            GpioControl[i] = new GpioControl(AddRegister(i * 8 + 4, $"GPIO{i}_CTRL"), gpioLines[i]);
+            GpioControl[i] = new GpioControl(AddRegister(i * 8 + 4, $"GPIO{i}_CTRL"), m_GpioLines[i]);
         }
 
         AddRegister(0x200, "IRQSUMMARY_PROC0_SECURE0");
@@ -91,24 +91,24 @@ public class UserBankIO : PeripheralBase, IGpioSource
 
     public IGpioLine GetGpioLine(int index)
     {
-        return gpioLines[index];
+        return m_GpioLines[index];
     }
 }
 
 public class MuxedGpioLine : IGpioLine
 {
-    private readonly Dictionary<uint, IGpioLine> lines = new();
-    private readonly Dictionary<uint, string> names = new();
+    private readonly Dictionary<uint, IGpioLine> m_Lines = new();
+    private readonly Dictionary<uint, string> m_Names = new();
 
-    private IGpioLine? currentLine;
+    private IGpioLine? m_CurrentLine;
 
     public void Add(ushort function, string name, IGpioLine line)
     {
-        lines.Add(function, line);
-        names.Add(function, name);
+        m_Lines.Add(function, line);
+        m_Names.Add(function, name);
     }
 
-    public string Name => names.GetValueOrDefault(Function, "NULL");
+    public string Name => m_Names.GetValueOrDefault(Function, "NULL");
 
     public uint Function
     {
@@ -117,23 +117,23 @@ public class MuxedGpioLine : IGpioLine
         {
             if (field != value)
             {
-                if (currentLine != null)
+                if (m_CurrentLine != null)
                 {
-                    currentLine.Changed -= ChangedHandler;
+                    m_CurrentLine.Changed -= ChangedHandler;
                 }
 
-                var currentDrive = currentLine?.Value ?? GpioValue.HiZ;
+                var currentDrive = m_CurrentLine?.Value ?? GpioValue.HiZ;
                 var newDrive = GpioValue.HiZ;
 
-                if (lines.TryGetValue(value, out var newLine))
+                if (m_Lines.TryGetValue(value, out var newLine))
                 {
                     newDrive = newLine.Value;
-                    currentLine = newLine;
+                    m_CurrentLine = newLine;
                     newLine.Changed += ChangedHandler;
                 }
                 else
                 {
-                    currentLine = null;
+                    m_CurrentLine = null;
                 }
 
                 field = value;
@@ -157,7 +157,7 @@ public class MuxedGpioLine : IGpioLine
     {
         get
         {
-            return currentLine == null ? GpioValue.HiZ : currentLine.Value;
+            return m_CurrentLine == null ? GpioValue.HiZ : m_CurrentLine.Value;
         }
     }
 
@@ -167,7 +167,7 @@ public class MuxedGpioLine : IGpioLine
 
 public class GpioControl
 {
-    private readonly MuxedGpioLine muxedGpioLine;
+    private readonly MuxedGpioLine m_MuxedGpioLine;
 
     public enum Function : ushort
     {
@@ -273,7 +273,7 @@ public class GpioControl
         get { return field; } 
         set 
         {
-            muxedGpioLine.Function = value;
+            m_MuxedGpioLine.Function = value;
             field = value; 
         }
     }
@@ -293,7 +293,7 @@ public class GpioControl
         reg.Field(14, 2, () => OEOVER, value => OEOVER = value);
         reg.Field(12, 2, () => OUTOVER, value => OUTOVER = value);
         reg.Field(0, 5, () => FUNCSEL, value => FUNCSEL = value);
-        this.muxedGpioLine = muxedGpioLine;
+        this.m_MuxedGpioLine = muxedGpioLine;
         
         FUNCSEL = 0x1f; /// this default value represents null
     }

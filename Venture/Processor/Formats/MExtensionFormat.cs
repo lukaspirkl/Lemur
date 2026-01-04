@@ -21,28 +21,28 @@ public class MExtensionFormatFactory : FormatFactoryBase
         switch (funct3)
         {
             case 0b000:
-                mnemonic = MExtensionFormat.mul;
+                mnemonic = MExtensionFormat.MUL;
                 break;
             case 0b001:
-                mnemonic = MExtensionFormat.mulh;
+                mnemonic = MExtensionFormat.MULH;
                 break;
             case 0b010:
-                mnemonic = MExtensionFormat.mulhsu;
+                mnemonic = MExtensionFormat.MULHSU;
                 break;
             case 0b011:
-                mnemonic = MExtensionFormat.mulhu;
+                mnemonic = MExtensionFormat.MULHU;
                 break;
             case 0b100:
-                mnemonic = MExtensionFormat.div;
+                mnemonic = MExtensionFormat.DIV;
                 break;
             case 0b101:
-                mnemonic = MExtensionFormat.divu;
+                mnemonic = MExtensionFormat.DIVU;
                 break;
             case 0b110:
-                mnemonic = MExtensionFormat.rem;
+                mnemonic = MExtensionFormat.REM;
                 break;
             case 0b111:
-                mnemonic = MExtensionFormat.remu;
+                mnemonic = MExtensionFormat.REMU;
                 break;
         }
 
@@ -63,14 +63,14 @@ public class MExtensionFormatFactory : FormatFactoryBase
 
 public class MExtensionFormat : FormatBase
 {
-    public const string mul = "mul";
-    public const string mulh = "mulh";
-    public const string mulhsu = "mulhsu";
-    public const string mulhu = "mulhu";
-    public const string div = "div";
-    public const string divu = "divu";
-    public const string rem = "rem";
-    public const string remu = "remu";
+    public const string MUL = "mul";
+    public const string MULH = "mulh";
+    public const string MULHSU = "mulhsu";
+    public const string MULHU = "mulhu";
+    public const string DIV = "div";
+    public const string DIVU = "divu";
+    public const string REM = "rem";
+    public const string REMU = "remu";
 
     public required uint rs1 { get; init; }
     public required uint rs2 { get; init; }
@@ -82,20 +82,20 @@ public class MExtensionFormat : FormatBase
 
         switch (Mnemonic)
         {
-            case mul:
+            case MUL:
                 // Multiplication of XLEN bits, keep lower XLEN bits.
                 // Signedness does not affect the lower 32 bits of the product.
                 x[rd] = unchecked(x[rs1] * x[rs2]);
                 break;
 
-            case mulh:
+            case MULH:
                 // Signed x Signed multiplication, return upper XLEN bits.
                 // Cast to long to perform 64-bit math, shift down to get high bits.
                 long productH = (long)(int)x[rs1] * (long)(int)x[rs2];
                 x[rd] = (uint)(productH >> 32);
                 break;
 
-            case mulhsu:
+            case MULHSU:
                 // Signed x Unsigned multiplication, return upper XLEN bits.
                 // C# implicitly handles the mixed sign correctly if we cast rs2 to long 
                 // (which treats it as positive because it fits in the positive range of int64).
@@ -103,13 +103,13 @@ public class MExtensionFormat : FormatBase
                 x[rd] = (uint)(productHSU >> 32);
                 break;
 
-            case mulhu:
+            case MULHU:
                 // Unsigned x Unsigned multiplication, return upper XLEN bits.
                 ulong productHU = (ulong)x[rs1] * (ulong)x[rs2];
                 x[rd] = (uint)(productHU >> 32);
                 break;
 
-            case div:
+            case DIV:
                 // Signed division.
                 if ((int)x[rs2] == 0)
                 {
@@ -127,7 +127,7 @@ public class MExtensionFormat : FormatBase
                 }
                 break;
 
-            case divu:
+            case DIVU:
                 // Unsigned division.
                 if (x[rs2] == 0)
                 {
@@ -140,7 +140,7 @@ public class MExtensionFormat : FormatBase
                 }
                 break;
 
-            case rem:
+            case REM:
                 // Signed remainder.
                 if ((int)x[rs2] == 0)
                 {
@@ -158,7 +158,7 @@ public class MExtensionFormat : FormatBase
                 }
                 break;
 
-            case remu:
+            case REMU:
                 // Unsigned remainder.
                 if (x[rs2] == 0)
                 {

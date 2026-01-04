@@ -23,21 +23,21 @@ public class FakeHostApplicationLigetime : IHostApplicationLifetime
 
 public sealed partial class GdbConnectionFixture : ConnectionContext, IAsyncDisposable
 {
-    private readonly Pipe _inPipe = new();   // Handler reads from here
-    private readonly Pipe _outPipe = new();  // Handler writes to here
-    private readonly MockEmulator _emulator;
-    private readonly Task _handlerTask;
+    private readonly Pipe m_InPipe = new();   // Handler reads from here
+    private readonly Pipe m_OutPipe = new();  // Handler writes to here
+    private readonly MockEmulator m_Emulator;
+    private readonly Task m_HandlerTask;
 
     public GdbConnectionFixture()
     {
-        Transport = new DuplexPipe(_inPipe.Reader, _outPipe.Writer);
+        Transport = new DuplexPipe(m_InPipe.Reader, m_OutPipe.Writer);
         ConnectionId = Guid.NewGuid().ToString();
         Items = new Dictionary<object, object?>();
         Features = new FeatureCollection();
 
-        _emulator = new MockEmulator();
-        var handler = new GdbConnectionHandler(new NullLogger<GdbConnectionHandler>(), _emulator, new FakeHostApplicationLigetime());
-        _handlerTask = handler.OnConnectedAsync(this);
+        m_Emulator = new MockEmulator();
+        var handler = new GdbConnectionHandler(new NullLogger<GdbConnectionHandler>(), m_Emulator, new FakeHostApplicationLigetime());
+        m_HandlerTask = handler.OnConnectedAsync(this);
     }
 
     public override string ConnectionId { get; set; }
@@ -46,24 +46,24 @@ public sealed partial class GdbConnectionFixture : ConnectionContext, IAsyncDisp
     public override IDictionary<object, object?> Items { get; set; }
     public override void Abort(ConnectionAbortedException abortReason) { }
 
-    public MockEmulator Emulator => _emulator;
+    public MockEmulator Emulator => m_Emulator;
 
     public async Task<string> SendPacketAsync(string packet, CancellationToken cancellationToken = default)
     {
-        await _inPipe.Writer.WriteAsync(Encoding.UTF8.GetBytes($"${packet}#{CalculateChecksum(packet)}"), cancellationToken);
-        await _inPipe.Writer.CompleteAsync();
+        await m_InPipe.Writer.WriteAsync(Encoding.UTF8.GetBytes($"${packet}#{CalculateChecksum(packet)}"), cancellationToken);
+        await m_InPipe.Writer.CompleteAsync();
 
         var stringBuilder = new StringBuilder();
         while (true)
         {
-            var result = await _outPipe.Reader.ReadAsync(cancellationToken);
+            var result = await m_OutPipe.Reader.ReadAsync(cancellationToken);
 
             foreach (var segment in result.Buffer)
             {
                 stringBuilder.Append(Encoding.UTF8.GetString(segment.Span));
             }
 
-            _outPipe.Reader.AdvanceTo(result.Buffer.End);
+            m_OutPipe.Reader.AdvanceTo(result.Buffer.End);
 
             if (result.IsCompleted)
             {
@@ -71,7 +71,7 @@ public sealed partial class GdbConnectionFixture : ConnectionContext, IAsyncDisp
             }
         }
 
-        await _outPipe.Reader.CompleteAsync();
+        await m_OutPipe.Reader.CompleteAsync();
         var reply = stringBuilder.ToString();
 
         var match = ReplyRegex().Match(reply);
@@ -97,8 +97,8 @@ public sealed partial class GdbConnectionFixture : ConnectionContext, IAsyncDisp
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
-        await _inPipe.Writer.CompleteAsync();
-        await _handlerTask;
+        await m_InPipe.Writer.CompleteAsync();
+        await m_HandlerTask;
     }
 
     private sealed class DuplexPipe(PipeReader input, PipeWriter output) : IDuplexPipe

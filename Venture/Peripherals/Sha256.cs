@@ -9,13 +9,13 @@ public class Sha256 : PeripheralBase
     // Control and status register
     private const uint SCR = 0x00;
 
-    private List<byte> wdata = new List<byte>(64);
-    private uint[] H = new uint[8];
+    private List<byte> m_Wdata = new List<byte>(64);
+    private uint[] m_H = new uint[8];
 
-    private bool wdata_rdy = false;
-    private bool sum_vld = false;
-    private DmaSize dma_size = DmaSize.bit32;
-    private bool bswap = true;
+    private bool m_Wdata_rdy = false;
+    private bool m_Sum_vld = false;
+    private DmaSize m_Dma_size = DmaSize.bit32;
+    private bool m_Bswap = true;
 
     private enum DmaSize
     {
@@ -30,25 +30,25 @@ public class Sha256 : PeripheralBase
 
     protected override uint HandleRead(uint offset)
     {
-        logger.LogInformation("READ offset: {offset}", offset.ToHex());
+        m_Logger.LogInformation("READ offset: {offset}", offset.ToHex());
 
         if (offset == SCR)
         {
             uint value = 0;
 
-            if (wdata_rdy)
+            if (m_Wdata_rdy)
             {
                 value |= (uint)1 << 1;
             }
 
-            if (sum_vld)
+            if (m_Sum_vld)
             {
                 value |= (uint)1 << 2;
             }
 
-            value |= (uint)dma_size << 8;
+            value |= (uint)m_Dma_size << 8;
 
-            if (bswap)
+            if (m_Bswap)
             {
                 value |= (uint)1 << 12;
             }
@@ -58,11 +58,11 @@ public class Sha256 : PeripheralBase
         else if (0x08 <= offset && offset <= 0x024) // SUM0-SUM7
         {
             var index = (offset - 0x08) / 4;
-            return H[index];
+            return m_H[index];
         }
         else
         {
-            logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+            m_Logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
             return 0;
         }
     }
@@ -70,17 +70,17 @@ public class Sha256 : PeripheralBase
 
     protected override void HandleWrite(uint offset, uint data)
     {
-        logger.LogInformation("WRITE offset: {offset} data: {data}", offset.ToHex(), data.ToHex());
+        m_Logger.LogInformation("WRITE offset: {offset} data: {data}", offset.ToHex(), data.ToHex());
 
 
         if (offset == SCR)
         {
             if (data.ExtractBits(0, 1) == 1) // START
             {
-                wdata.Clear();
-                wdata_rdy = false;
-                sum_vld = false;
-                InitialH.CopyTo(H);
+                m_Wdata.Clear();
+                m_Wdata_rdy = false;
+                m_Sum_vld = false;
+                InitialH.CopyTo(m_H);
             }
 
             if (data.ExtractBits(4, 1) == 1) // ERR_WDATA_NOT_RDY
@@ -88,39 +88,39 @@ public class Sha256 : PeripheralBase
                 // Set when a write occurs whilst the SHA-256 core is not ready for data(WDATA_RDY is low).Write one to clear.
             }
 
-            dma_size = (DmaSize)data.ExtractBits(8, 2);
-            if (dma_size != DmaSize.bit32)
+            m_Dma_size = (DmaSize)data.ExtractBits(8, 2);
+            if (m_Dma_size != DmaSize.bit32)
             {
                 throw new NotImplementedException("Anything other than 32bit is probably not working. It should be verified!");
             }
 
-            bswap = data.ExtractBits(12, 1) == 1;
+            m_Bswap = data.ExtractBits(12, 1) == 1;
         }
         else if (offset == 0x04) // WDATA register
         {
-            wdata.AddRange(BitConverter.GetBytes(data));
-            if (wdata.Count == 64)
+            m_Wdata.AddRange(BitConverter.GetBytes(data));
+            if (m_Wdata.Count == 64)
             {
                 Digest();
-                wdata.Clear();
+                m_Wdata.Clear();
             }
-            wdata_rdy = true;
+            m_Wdata_rdy = true;
         }
         else
         {
-            logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), data.ToHex());
+            m_Logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), data.ToHex());
         }
     }
 
     private void Digest()
     {
         var M = new UInt32[16];
-        var span = CollectionsMarshal.AsSpan(wdata);
+        var span = CollectionsMarshal.AsSpan(m_Wdata);
         for (int i = 0; i < 16; i++)
         {
             uint word = BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(i * 4, 4));
 
-            if (bswap)
+            if (m_Bswap)
             {
                 word = BinaryPrimitives.ReverseEndianness(word);
                 
@@ -144,14 +144,14 @@ public class Sha256 : PeripheralBase
         }
 
         // 2. Initialize the eight working variables with the (i-1)-st hash value:
-        UInt32 a = H[0],
-               b = H[1],
-               c = H[2],
-               d = H[3],
-               e = H[4],
-               f = H[5],
-               g = H[6],
-               h = H[7];
+        UInt32 a = m_H[0],
+               b = m_H[1],
+               c = m_H[2],
+               d = m_H[3],
+               e = m_H[4],
+               f = m_H[5],
+               g = m_H[6],
+               h = m_H[7];
 
         // 3. For t=0 to 63:
         for (int t = 0; t < 64; ++t)
@@ -169,14 +169,14 @@ public class Sha256 : PeripheralBase
         }
 
         // 4. Compute the intermediate hash value H:
-        H[0] = a + H[0];
-        H[1] = b + H[1];
-        H[2] = c + H[2];
-        H[3] = d + H[3];
-        H[4] = e + H[4];
-        H[5] = f + H[5];
-        H[6] = g + H[6];
-        H[7] = h + H[7];
+        m_H[0] = a + m_H[0];
+        m_H[1] = b + m_H[1];
+        m_H[2] = c + m_H[2];
+        m_H[3] = d + m_H[3];
+        m_H[4] = e + m_H[4];
+        m_H[5] = f + m_H[5];
+        m_H[6] = g + m_H[6];
+        m_H[7] = h + m_H[7];
     }
 
     private static readonly UInt32[] InitialH = new UInt32[8] {

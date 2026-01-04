@@ -10,11 +10,11 @@ public class USBCtrlRegs : PeripheralBase
 
     protected override uint HandleRead(uint offset)
     {
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+        m_Logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
 
         if (offset == 0x4C) // SIE_CTRL Register
         {
-            logger.LogWarning("Reading SIE_CTRL register from USBCTRL_REGS");
+            m_Logger.LogWarning("Reading SIE_CTRL register from USBCTRL_REGS");
             return 0x00048000;
         }
 
@@ -23,6 +23,6 @@ public class USBCtrlRegs : PeripheralBase
 
     protected override void HandleWrite(uint offset, uint value)
     {
-        logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
+        m_Logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
     }
 }

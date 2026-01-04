@@ -42,7 +42,7 @@ public class CIFormatFactory : CFormatFactoryBase
                 {
                     return new IFormat
                     {
-                        Mnemonic = IFormat.addi,
+                        Mnemonic = IFormat.ADDI,
                         rd = rd,
                         rs1 = 2,
                         imm = (int)nzuimm,
@@ -75,7 +75,7 @@ public class CIFormatFactory : CFormatFactoryBase
                     // C.ADDI -> addi rd, rd, imm
                     return new IFormat
                     {
-                        Mnemonic = IFormat.addi,
+                        Mnemonic = IFormat.ADDI,
                         rd = rd,
                         rs1 = rd,
                         imm = imm,
@@ -86,23 +86,23 @@ public class CIFormatFactory : CFormatFactoryBase
                 if (rd == 0)
                 {
                     // C.NOP
-                    return nop;
+                    return m_Nop;
                 }
 
                 // Reserved for hints - no-op
-                return nop;
+                return m_Nop;
 
             case 0b010:
                 if (rd == 0)
                 {
                     // Reserved for hints - no-op
-                    return nop;
+                    return m_Nop;
                 }
 
                 // C.LI -> addi rd, x0, imm
                 return new IFormat
                 {
-                    Mnemonic = IFormat.addi,
+                    Mnemonic = IFormat.ADDI,
                     rd = rd,
                     rs1 = 0,
                     imm = imm,
@@ -114,7 +114,7 @@ public class CIFormatFactory : CFormatFactoryBase
                 if (rd == 0)
                 {
                     // Reserved for hints - no-op
-                    return nop;
+                    return m_Nop;
                 }
 
                 if (rd == 2)
@@ -133,7 +133,7 @@ public class CIFormatFactory : CFormatFactoryBase
                     {
                         return new IFormat
                         {
-                            Mnemonic = IFormat.addi,
+                            Mnemonic = IFormat.ADDI,
                             rd = 2,
                             rs1 = 2,
                             imm = ((int)nzimm).SignExtend(10),
@@ -149,7 +149,7 @@ public class CIFormatFactory : CFormatFactoryBase
                 // C.LUI -> lui rd, imm
                 return new UFormat
                 {
-                    Mnemonic = UFormat.lui,
+                    Mnemonic = UFormat.LUI,
                     rd = rd,
                     imm = (uint)imm << 12,
                     StepSize = 2,
@@ -177,7 +177,7 @@ public class CIFormatFactory : CFormatFactoryBase
 
                     return new IFormat
                     {
-                        Mnemonic = IFormat.slli,
+                        Mnemonic = IFormat.SLLI,
                         rd = rd,
                         rs1 = rd,
                         imm = (int)shamt,
@@ -202,7 +202,7 @@ public class CIFormatFactory : CFormatFactoryBase
 
                     return new IFormat
                     {
-                        Mnemonic = IFormat.lw,
+                        Mnemonic = IFormat.LW,
                         rd = rd,
                         rs1 = 2,
                         imm = (int)uoffset,

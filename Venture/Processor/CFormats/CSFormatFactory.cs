@@ -28,7 +28,7 @@ public class CSFormatFactory : CFormatFactoryBase
 
                 return new SFormat
                 {
-                    Mnemonic = SFormat.sw,
+                    Mnemonic = SFormat.SW,
                     imm = (int)offset,
                     rs2 = rs2,
                     rs1 = rs1,

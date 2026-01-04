@@ -10,7 +10,7 @@ public class Resets : PeripheralBase
 
     protected override uint HandleRead(uint offset)
     {
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+        m_Logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
 
         /*
             - reset: This register contains a bit for each component that can be reset. 
@@ -26,7 +26,7 @@ public class Resets : PeripheralBase
 
         if (offset == 0x8) // RESET_DONE Register
         {
-            logger.LogInformation("Read RESET_DONE Register");
+            m_Logger.LogInformation("Read RESET_DONE Register");
 
             // bits 31-29 are reserved
             return 0x1FFFFFFF;
@@ -37,6 +37,6 @@ public class Resets : PeripheralBase
 
     protected override void HandleWrite(uint offset, uint value)
     {
-        logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
+        m_Logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
     }
 }

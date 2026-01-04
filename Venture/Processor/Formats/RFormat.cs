@@ -19,10 +19,10 @@ public class RFormatFactory : FormatFactoryBase
                 switch (funct7)
                 {
                     case 0b0000000:
-                        mnemonic = RFormat.add;
+                        mnemonic = RFormat.ADD;
                         break;
                     case 0b0100000:
-                        mnemonic = RFormat.sub;
+                        mnemonic = RFormat.SUB;
                         break;
                 }
                 break;
@@ -30,7 +30,7 @@ public class RFormatFactory : FormatFactoryBase
                 switch (funct7)
                 {
                     case 0b0000000:
-                        mnemonic = RFormat.sll;
+                        mnemonic = RFormat.SLL;
                         break;
                 }
                 break;
@@ -38,7 +38,7 @@ public class RFormatFactory : FormatFactoryBase
                 switch (funct7)
                 {
                     case 0b0000000:
-                        mnemonic = RFormat.slt;
+                        mnemonic = RFormat.SLT;
                         break;
                 }
                 break;
@@ -46,7 +46,7 @@ public class RFormatFactory : FormatFactoryBase
                 switch (funct7)
                 {
                     case 0b0000000:
-                        mnemonic = RFormat.sltu;
+                        mnemonic = RFormat.SLTU;
                         break;
                 }
                 break;
@@ -54,7 +54,7 @@ public class RFormatFactory : FormatFactoryBase
                 switch (funct7)
                 {
                     case 0b0000000:
-                        mnemonic = RFormat.xor;
+                        mnemonic = RFormat.XOR;
                         break;
                 }
                 break;
@@ -62,10 +62,10 @@ public class RFormatFactory : FormatFactoryBase
                 switch (funct7)
                 {
                     case 0b0000000:
-                        mnemonic = RFormat.srl;
+                        mnemonic = RFormat.SRL;
                         break;
                     case 0b0100000:
-                        mnemonic = RFormat.sra;
+                        mnemonic = RFormat.SRA;
                         break;
                 }
                 break;
@@ -73,7 +73,7 @@ public class RFormatFactory : FormatFactoryBase
                 switch (funct7)
                 {
                     case 0b0000000:
-                        mnemonic = RFormat.or;
+                        mnemonic = RFormat.OR;
                         break;
                 }
                 break;
@@ -81,7 +81,7 @@ public class RFormatFactory : FormatFactoryBase
                 switch (funct7)
                 {
                     case 0b0000000:
-                        mnemonic = RFormat.and;
+                        mnemonic = RFormat.AND;
                         break;
                 }
                 break;
@@ -105,16 +105,16 @@ public class RFormatFactory : FormatFactoryBase
 
 public class RFormat : FormatBase
 {
-    public const string add = "add";
-    public const string sub = "sub";
-    public const string sll = "sll";
-    public const string slt = "slt";
-    public const string sltu = "sltu";
-    public const string xor = "xor";
-    public const string srl = "srl";
-    public const string sra = "sra";
-    public const string or = "or";
-    public const string and = "and";
+    public const string ADD = "add";
+    public const string SUB = "sub";
+    public const string SLL = "sll";
+    public const string SLT = "slt";
+    public const string SLTU = "sltu";
+    public const string XOR = "xor";
+    public const string SRL = "srl";
+    public const string SRA = "sra";
+    public const string OR = "or";
+    public const string AND = "and";
 
 
     public required uint rd { get; init; }
@@ -128,43 +128,43 @@ public class RFormat : FormatBase
 
         switch (Mnemonic)
         {
-            case add:
+            case ADD:
                 x[rd] = x[rs1] + x[rs2];
                 return;
 
-            case sub:
+            case SUB:
                 x[rd] = x[rs1] - x[rs2];
                 return;
 
-            case sll:
+            case SLL:
                 x[rd] = x[rs1] << (int)x[rs2].ExtractBits(0, 5);
                 return;
 
-            case slt:
+            case SLT:
                 x[rd] = ((int)x[rs1] < (int)x[rs2]) ? (uint)1 : 0;
                 return;
 
-            case sltu:
+            case SLTU:
                 x[rd] = (x[rs1] < x[rs2]) ? (uint)1 : 0;
                 return;
 
-            case xor:
+            case XOR:
                 x[rd] = x[rs1] ^ x[rs2];
                 return;
 
-            case srl:
+            case SRL:
                 x[rd] = x[rs1] >> (int)x[rs2].ExtractBits(0, 5);
                 return;
 
-            case sra:
+            case SRA:
                 x[rd] = (uint)((int)x[rs1] >> (int)x[rs2].ExtractBits(0, 5));
                 return;
 
-            case or:
+            case OR:
                 x[rd] = x[rs1] | x[rs2];
                 return;
 
-            case and:
+            case AND:
                 x[rd] = x[rs1] & x[rs2];
                 return;
 

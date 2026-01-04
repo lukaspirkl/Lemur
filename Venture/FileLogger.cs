@@ -2,23 +2,23 @@
 
 public class FileLogger
 {
-    private readonly string fileName;
+    private readonly string m_FileName;
 
     public FileLogger(string fileName)
     {
-        this.fileName = fileName;
+        m_FileName = fileName;
     }
 
     public void Clear()
     {
-        if (File.Exists(fileName))
+        if (File.Exists(m_FileName))
         {
-            File.Delete(fileName);
+            File.Delete(m_FileName);
         }
     }
 
     public void Log(string message)
     {
-        File.AppendAllLines(fileName, [message]);
+        File.AppendAllLines(m_FileName, [message]);
     }
 }

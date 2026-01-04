@@ -5,11 +5,11 @@ namespace Venture;
 
 public class RP2350Emulator : BackgroundService, IDebuggable
 {
-    private readonly Hazard3Processor processor;
-    private readonly RegistersWrapper registers;
+    private readonly Hazard3Processor m_Processor;
+    private readonly RegistersWrapper m_Registers;
 
-    private bool running = false;
-    private Task? run;
+    private bool m_Running = false;
+    private Task? m_Run;
 
     public HashSet<uint> Brakpoints { get; } = new HashSet<uint>();
 
@@ -17,8 +17,8 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 
     public RP2350Emulator(Hazard3Processor processor)
     {
-        this.processor = processor;
-        registers = new RegistersWrapper(processor);
+        m_Processor = processor;
+        m_Registers = new RegistersWrapper(processor);
         Reset();
     }
 
@@ -31,54 +31,54 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 
     public void Step()
     {
-        if (run != null)
+        if (m_Run != null)
         {
             throw new InvalidOperationException("Already running");
         }
 
-        processor.Step();
+        m_Processor.Step();
     }
 
     public void Run()
     {
-        if (run != null)
+        if (m_Run != null)
         {
             throw new InvalidOperationException("Already running");
         }
 
-        running = true;
-        run = Task.Run(() =>
+        m_Running = true;
+        m_Run = Task.Run(() =>
         {
             // TODO: This is wrong! It will swallow exception until Stop() is called!
-            while (running)
+            while (m_Running)
             {
-                processor.Step();
-                if (Brakpoints.Contains(processor.PC))
+                m_Processor.Step();
+                if (Brakpoints.Contains(m_Processor.PC))
                 {
                     break;
                 }
             }
 
-            run = null;
+            m_Run = null;
             Stopped?.Invoke(this, EventArgs.Empty);
         });
     }
 
     public void Stop()
     {
-        if (run == null)
+        if (m_Run == null)
         {
             throw new InvalidOperationException("Already stopped");
         }
 
-        running = false;
-        run.Wait();
-        run = null;
+        m_Running = false;
+        m_Run.Wait();
+        m_Run = null;
     }
 
     public void Reset()
     {
-        processor.PC = 0x00007dfc; // riscv_entry_point - it is always on this address
+        m_Processor.PC = 0x00007dfc; // riscv_entry_point - it is always on this address
 
         SetCSR(0x300, 0x00001808); //MSTATUS
         SetCSR(0xBE5, 0x00008000); //meicontext
@@ -89,7 +89,7 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         var misalignement = address % 4;
         if (misalignement == 1 && data.Length == 1)
         {
-            processor.Memory.Write(address, data);
+            m_Processor.Memory.Write(address, data);
             return;
         }
 
@@ -98,19 +98,19 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         if (misalignement == 1)
         {
             offset = 1;
-            processor.Memory.Write(address + offset, data.Skip((int)offset).Take(2).ToArray());
+            m_Processor.Memory.Write(address + offset, data.Skip((int)offset).Take(2).ToArray());
             offset += 2;
         }
 
         if (misalignement == 2)
         {
-            processor.Memory.Write(address + offset, data.Take(2).ToArray());
+            m_Processor.Memory.Write(address + offset, data.Take(2).ToArray());
             offset += 2;
         }
 
         if (misalignement == 3)
         {
-            processor.Memory.Write(address + offset, data.Take(1).ToArray());
+            m_Processor.Memory.Write(address + offset, data.Take(1).ToArray());
             offset += 1;
         }
 
@@ -118,11 +118,11 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         {
             if (data.Length - offset == 3)
             {
-                processor.Memory.Write(address + offset, data.Skip((int)offset + 2).ToArray());
+                m_Processor.Memory.Write(address + offset, data.Skip((int)offset + 2).ToArray());
             }
             else
             {
-                processor.Memory.Write(address + offset, data.Skip((int)offset).Take(4).ToArray());
+                m_Processor.Memory.Write(address + offset, data.Skip((int)offset).Take(4).ToArray());
             }
             offset += 4;
         }
@@ -137,13 +137,13 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         var misalignement = address % 4;
         if (misalignement != 0)
         {
-            result.AddRange(processor.Memory.Read(address - misalignement, 4).Skip((int)misalignement));
+            result.AddRange(m_Processor.Memory.Read(address - misalignement, 4).Skip((int)misalignement));
             address += misalignement;
         }
 
         while (address < endAddress)
         {
-            result.AddRange(processor.Memory.Read(address, 4));
+            result.AddRange(m_Processor.Memory.Read(address, 4));
             address += 4;
         }
 
@@ -152,15 +152,15 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 
     public uint GetCSR(ushort index)
     {
-        return processor.CSR.Get(index);
+        return m_Processor.CSR.Get(index);
     }
 
     public void SetCSR(ushort index, uint value)
     {
-        processor.CSR.Set(index, value);
+        m_Processor.CSR.Set(index, value);
     }
 
-    public IRegisters Registers => registers;
+    public IRegisters Registers => m_Registers;
 
     /// <summary>
     /// Aggregate all registers with PC register as the last one

@@ -16,31 +16,31 @@ public class MainWindowViewModelForPreviewer : MainWindowViewModel
 
 public partial class MainWindowViewModel : ObservableObject
 {
-    private readonly IDebuggable system;
+    private readonly IDebuggable m_System;
 
     public IEnumerable<IPeripheralTab> Tabs { get; }
 
     public MainWindowViewModel(IEnumerable<IPeripheralTab> tabs, IDebuggable system)
     {
         Tabs = tabs;
-        this.system = system;
+        m_System = system;
     }
 
     [RelayCommand]
     private void Run()
     {
-        system.Run();
+        m_System.Run();
     }
 
     [RelayCommand]
     private void Stop()
     {
-        system.Stop();
+        m_System.Stop();
     }
 
     [RelayCommand]
     private void Reset()
     {
-        system.Reset();
+        m_System.Reset();
     }
 }

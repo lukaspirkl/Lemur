@@ -12,7 +12,7 @@ public class Clocks : PeripheralBase
         LPOSC_CLKSRC = 0x3
     }
 
-    private RefSource refSource = RefSource.ROSC_CLKSRC_PH;
+    private RefSource m_RefSource = RefSource.ROSC_CLKSRC_PH;
 
     enum RefAuxSource
     {
@@ -22,7 +22,7 @@ public class Clocks : PeripheralBase
         CLKSRC_PLL_USB_PRIMARY_REF_OPCG = 0x3
     }
 
-    private RefAuxSource refAuxSource = RefAuxSource.CLKSRC_PLL_USB;
+    private RefAuxSource m_RefAuxSource = RefAuxSource.CLKSRC_PLL_USB;
 
 
     enum SysSource
@@ -31,27 +31,27 @@ public class Clocks : PeripheralBase
         CLKSRC_CLK_SYS_AUX = 0x1,
     }
 
-    private SysSource sysSource = SysSource.CLK_REF;
+    private SysSource m_SysSource = SysSource.CLK_REF;
 
 
     public Clocks(uint baseAddress, string name, ILogger<Clocks> logger) : base(baseAddress, name, logger)
     {
         AddRegister(0x30, "CLK_REF_CTRL")
-            .Field(5, 2, () => refAuxSource, v => refAuxSource = v)
-            .Field(0, 2, () => refSource, v => refSource = v);
+            .Field(5, 2, () => m_RefAuxSource, v => m_RefAuxSource = v)
+            .Field(0, 2, () => m_RefSource, v => m_RefSource = v);
 
         AddRegister(0x34, "CLK_REF_DIV", 0x00010000);
 
         AddRegister(0x38, "CLK_REF_SELECTED")
-            .OnRead(() => 1u << (int)refSource);
+            .OnRead(() => 1u << (int)m_RefSource);
 
         AddRegister(0x3c, "CLK_SYS_CTRL")
-            .Field(0, 1, () => sysSource, v => sysSource = v);
+            .Field(0, 1, () => m_SysSource, v => m_SysSource = v);
 
         AddRegister(0x40, "CLK_SYS_DIV", 0x00010000);
 
         AddRegister(0x44, "CLK_SYS_SELECTED")
-            .OnRead(() => 1u << (int)sysSource);
+            .OnRead(() => 1u << (int)m_SysSource);
 
         AddRegister(0x4c, "CLK_PERI_DIV", 0x00010000);
 

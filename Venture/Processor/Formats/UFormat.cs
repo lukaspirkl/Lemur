@@ -10,7 +10,7 @@ public class UFormatFactory : FormatFactoryBase
 
         return new UFormat
         {
-            Mnemonic = opcode == 0b0110111 ? UFormat.lui : UFormat.auipc,
+            Mnemonic = opcode == 0b0110111 ? UFormat.LUI : UFormat.AUIPC,
             imm = instruction & 0xfffff000,
             rd = instruction.ExtractBits(7, 5),
         };
@@ -19,8 +19,8 @@ public class UFormatFactory : FormatFactoryBase
 
 public class UFormat : FormatBase
 {
-    public const string lui = "lui";
-    public const string auipc = "auipc";
+    public const string LUI = "lui";
+    public const string AUIPC = "auipc";
 
     public required uint rd { get; init; }
     public required uint imm { get; init; }
@@ -31,11 +31,11 @@ public class UFormat : FormatBase
 
         switch (Mnemonic)
         {
-            case lui:
+            case LUI:
                 x[rd] = imm;
                 return;
 
-            case auipc:
+            case AUIPC:
                 x[rd] = e.PC + imm;
                 return;
 

@@ -4,23 +4,23 @@ namespace Venture.Peripherals;
 
 public class UnimplementedPeripheralFactory
 {
-    private readonly ILogger<UnimplementedPeripheral> _logger;
+    private readonly ILogger<UnimplementedPeripheral> m_Logger;
 
     public UnimplementedPeripheralFactory(ILogger<UnimplementedPeripheral> logger)
     {
-        _logger = logger;
+        m_Logger = logger;
     }
 
     public UnimplementedPeripheral Create(uint address, string name, uint? size)
     {
-        return new UnimplementedPeripheral(address, size ?? 0x4000, name, _logger);
+        return new UnimplementedPeripheral(address, size ?? 0x4000, name, m_Logger);
     }
 }
 
 public class UnimplementedPeripheral : IAddressableResource
 {
-    private readonly string name;
-    private readonly ILogger<UnimplementedPeripheral> logger;
+    private readonly string m_Name;
+    private readonly ILogger<UnimplementedPeripheral> m_Logger;
 
     public uint BaseAddress { get; }
 
@@ -30,20 +30,20 @@ public class UnimplementedPeripheral : IAddressableResource
     {
         BaseAddress = startAddress;
         Size = size;
-        this.name = name;
-        this.logger = logger;
+        m_Name = name;
+        m_Logger = logger;
     }
 
     public byte[] Read(uint address, int count)
     {
         //throw new NotImplementedException($"Read from {address.ToHex()} - unimplemented peripheral: {name}");
-        logger.LogError("Reading from {address} - unimplemented peripheral: {name}", address.ToHex(), name);
+        m_Logger.LogError("Reading from {address} - unimplemented peripheral: {name}", address.ToHex(), m_Name);
         return new byte[count];
     }
 
     public void Write(uint address, byte[] data)
     {
         //throw new NotImplementedException($"Write to {address.ToHex()} - unimplemented peripheral: {name}");
-        logger.LogError("Write to {address} value {value} - unimplemented peripheral: {name}", address.ToHex(), data.ToHex(), name);
+        m_Logger.LogError("Write to {address} value {value} - unimplemented peripheral: {name}", address.ToHex(), data.ToHex(), m_Name);
     }
 }

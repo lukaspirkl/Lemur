@@ -2,8 +2,8 @@ namespace Venture;
 
 public class BusFabric : IBusFabric
 {
-    private readonly IEnumerable<IAddressableResource> resources;
-    private readonly IEmuLogger<BusFabric> logger;
+    private readonly IEnumerable<IAddressableResource> m_Resources;
+    private readonly IEmuLogger<BusFabric> m_Logger;
 
     public BusFabric(IEnumerable<IAddressableResource> resources, IEmuLogger<BusFabric> logger)
     {
@@ -12,8 +12,8 @@ public class BusFabric : IBusFabric
             throw new InvalidOperationException("This platform is not little endian.");
         }
 
-        this.resources = resources;
-        this.logger = logger;
+        m_Resources = resources;
+        m_Logger = logger;
     }
 
     private bool CanHandle(IAddressableResource resource, uint address)
@@ -23,7 +23,7 @@ public class BusFabric : IBusFabric
 
     public void Write(uint address, byte[] data)
     {
-        logger.LogMemoryWrite(address, data);
+        m_Logger.LogMemoryWrite(address, data);
 
         if (data.Length != 1 && data.Length != 2 && data.Length != 4)
         {
@@ -35,7 +35,7 @@ public class BusFabric : IBusFabric
             throw new RiscVException(ExceptionCause.StoreAddressMisaligned, address, $"Misaligned address {address.ToHex()} when writing {data.Length} bytes.");
         }
 
-        var segment = resources.FirstOrDefault(x => CanHandle(x, address));
+        var segment = m_Resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
         {
             throw new IndexOutOfRangeException($"Writing to invalid memory: {address.ToHex()}");
@@ -51,7 +51,7 @@ public class BusFabric : IBusFabric
             throw new RiscVException(ExceptionCause.InstructionAddressMisaligned, address, $"Misaligned address {address.ToHex()} when reading instruction.");
         }
 
-        var segment = resources.FirstOrDefault(x => CanHandle(x, address));
+        var segment = m_Resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
         {
             throw new IndexOutOfRangeException($"Reading invalid memory: {address.ToHex()}");
@@ -62,7 +62,7 @@ public class BusFabric : IBusFabric
 
     public byte[] Read(uint address, int count)
     {
-        logger.LogMemoryRead(address, count);
+        m_Logger.LogMemoryRead(address, count);
 
         if (count != 1 && count != 2 && count != 4)
         {
@@ -74,7 +74,7 @@ public class BusFabric : IBusFabric
             throw new RiscVException(ExceptionCause.LoadAddressMisaligned, address, $"Misaligned address {address.ToHex()} when reading {count} bytes.");
         }
 
-        var segment = resources.FirstOrDefault(x => CanHandle(x, address));
+        var segment = m_Resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
         {
             throw new IndexOutOfRangeException($"Reading invalid memory: {address.ToHex()}");

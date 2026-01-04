@@ -10,21 +10,21 @@ public class PPLUSB : PeripheralBase
 
     protected override uint HandleRead(uint offset)
     {
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+        m_Logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
 
         if (offset == 0x0) // CS Register
         {
-            logger.LogWarning("Reading STATUS register from PPLUSB");
+            m_Logger.LogWarning("Reading STATUS register from PPLUSB");
             return 0x80000001;
         }
         else if (offset == 0x8) // FBDIV_INT Register
         {
-            logger.LogWarning("Reading FBDIV_INT register from PPLUSB");
+            m_Logger.LogWarning("Reading FBDIV_INT register from PPLUSB");
             return 0x00000064;
         }
         else if (offset == 0xC) // PRIM Register
         {
-            logger.LogWarning("Reading PRIM register from PPLUSB");
+            m_Logger.LogWarning("Reading PRIM register from PPLUSB");
             return 0x00055000;
         }
 
@@ -33,6 +33,6 @@ public class PPLUSB : PeripheralBase
 
     protected override void HandleWrite(uint offset, uint value)
     {
-        logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
+        m_Logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), value.ToHex());
     }
 }

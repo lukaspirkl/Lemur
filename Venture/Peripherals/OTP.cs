@@ -10,7 +10,7 @@ public class OTP : PeripheralBase
 
     protected override uint HandleRead(uint offset)
     {
-        logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
+        m_Logger.LogWarning("Reading from unhandled offset {offset}", offset.ToHex());
 
         if (offset == 0x15C)
         {
@@ -24,6 +24,6 @@ public class OTP : PeripheralBase
 
     protected override void HandleWrite(uint offset, uint data)
     {
-        logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), data.ToHex());
+        m_Logger.LogWarning("Writing to unhandled offset {offset} data {data}", offset.ToHex(), data.ToHex());
     }
 }

@@ -16,13 +16,13 @@ public class SFormatFactory : FormatFactoryBase
         switch(funct3)
         {
             case 0b000:
-                mnemonic = SFormat.sb;
+                mnemonic = SFormat.SB;
                 break;
             case 0b001:
-                mnemonic = SFormat.sh;
+                mnemonic = SFormat.SH;
                 break;
             case 0b010:
-                mnemonic = SFormat.sw;
+                mnemonic = SFormat.SW;
                 break;
         }
 
@@ -45,9 +45,9 @@ public class SFormatFactory : FormatFactoryBase
 
 public class SFormat : FormatBase
 {
-    public const string sb = "sb";
-    public const string sh = "sh";
-    public const string sw = "sw";
+    public const string SB = "sb";
+    public const string SH = "sh";
+    public const string SW = "sw";
 
     public required uint rs1 { get; init; }
     public required uint rs2 { get; init; }
@@ -59,15 +59,15 @@ public class SFormat : FormatBase
 
         switch (Mnemonic)
         {
-            case sb:
+            case SB:
                 e.Memory.WriteByte((uint)(x[rs1] + imm), BitConverter.GetBytes(x[rs2])[0]);
                 return;
 
-            case sh:
+            case SH:
                 e.Memory.Write((uint)(x[rs1] + imm), BitConverter.GetBytes(x[rs2]).Take(2).ToArray());
                 return;
 
-            case sw:
+            case SW:
                 e.Memory.WriteWord((uint)(x[rs1] + imm), x[rs2]);
                 return;
 

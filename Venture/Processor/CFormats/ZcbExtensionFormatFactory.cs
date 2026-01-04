@@ -31,7 +31,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
 
                             return new IFormat
                             {
-                                Mnemonic = IFormat.lbu,
+                                Mnemonic = IFormat.LBU,
                                 rd = rs2,
                                 rs1 = rs1,
                                 imm = (int)uimm,
@@ -48,7 +48,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
                                 // C.LHU -> lhu rd', uimm(rs1')
                                 return new IFormat
                                 {
-                                    Mnemonic = IFormat.lhu,
+                                    Mnemonic = IFormat.LHU,
                                     imm = (int)uimm,
                                     rd = rs2,
                                     rs1 = rs1,
@@ -60,7 +60,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
                                 // C.LH -> lh rd', uimm(rs1')
                                 return new IFormat
                                 {
-                                    Mnemonic = IFormat.lh,
+                                    Mnemonic = IFormat.LH,
                                     imm = (int)uimm,
                                     rd = rs2,
                                     rs1 = rs1,
@@ -77,7 +77,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
 
                             return new SFormat
                             {
-                                Mnemonic = SFormat.sb,
+                                Mnemonic = SFormat.SB,
                                 rs1 = rs1,
                                 rs2 = rs2,
                                 imm = (int)uimm,
@@ -94,7 +94,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
                                 // C.SH -> sh rs2', uimm(rs1')
                                 return new SFormat
                                 {
-                                    Mnemonic = SFormat.sh,
+                                    Mnemonic = SFormat.SH,
                                     imm = (int)uimm,
                                     rs1 = rs1,
                                     rs2 = rs2,
@@ -118,7 +118,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
                                 // C.MUL -> mul rd', rd', rs2
                                 return new MExtensionFormat
                                 {
-                                    Mnemonic = MExtensionFormat.mul,
+                                    Mnemonic = MExtensionFormat.MUL,
                                     rd = rs1,
                                     rs1 = rs1,
                                     rs2 = rs2,
@@ -131,7 +131,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
                                         // C.ZEXT.B -> andi rd', rd', 0xFF
                                         return new IFormat
                                         {
-                                            Mnemonic = IFormat.andi,
+                                            Mnemonic = IFormat.ANDI,
                                             rd = rs1,
                                             rs1 = rs1,
                                             imm = 0xFF,
@@ -141,7 +141,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
                                         // C.SEXT.B -> sext.b rd', rd'
                                         return new BExtensionFormat
                                         {
-                                            Mnemonic = BExtensionFormat.sext_b,
+                                            Mnemonic = BExtensionFormat.SEXT_B,
                                             rd = rs1,
                                             rs1 = rs1,
                                             rs2 = rs1,
@@ -151,7 +151,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
                                         // C.ZEXT.H -> pack rd', rd', 0
                                         return new BExtensionFormat
                                         {
-                                            Mnemonic = BExtensionFormat.pack,
+                                            Mnemonic = BExtensionFormat.PACK,
                                             rd = rs1,
                                             rs1 = rs1,
                                             rs2 = 0,
@@ -161,7 +161,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
                                         // C.SEXT.H -> sext.h rd', rd'
                                         return new BExtensionFormat
                                         {
-                                            Mnemonic = BExtensionFormat.sext_h,
+                                            Mnemonic = BExtensionFormat.SEXT_H,
                                             rd = rs1,
                                             rs1 = rs1,
                                             rs2 = rs1,
@@ -171,7 +171,7 @@ public class ZcbExtensionFormatFactory : CFormatFactoryBase
                                         // C.NOT -> xori rd', rd', -1
                                         return new IFormat
                                         {
-                                            Mnemonic = IFormat.xori,
+                                            Mnemonic = IFormat.XORI,
                                             rd = rs1,
                                             rs1 = rs1,
                                             imm = -1,

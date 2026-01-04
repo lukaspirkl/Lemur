@@ -4,7 +4,7 @@ namespace Venture.Peripherals;
 
 public class UserBankPadControl : PeripheralBase, IGpioSource
 {
-    private readonly UserBankIO userBankIO;
+    private readonly UserBankIO m_UserBankIO;
 
     public PadControl[] Pads { get; }
     public PadControl SWCLK { get; }
@@ -24,12 +24,13 @@ public class UserBankPadControl : PeripheralBase, IGpioSource
 
         SWCLK = new PadControl(AddRegister(0xc4, "SWCLK"));
         SWD = new PadControl(AddRegister(0xc8, "SWD"));
-        this.userBankIO = userBankIO;
+
+        m_UserBankIO = userBankIO;
     }
 
     public IGpioLine GetGpioLine(int index)
     {
-        return userBankIO.GetGpioLine(index);
+        return m_UserBankIO.GetGpioLine(index);
     }
 
     public enum Voltage : byte

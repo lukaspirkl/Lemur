@@ -20,11 +20,11 @@ public class Timer1 : Timer
 
 public class Timer : PeripheralBase
 {
-    private Stopwatch timer;
+    private Stopwatch m_Timer;
 
     public Timer(uint baseAddress, string name, ILogger<Timer> logger) : base(baseAddress, name, logger)
     {
-        timer = Stopwatch.StartNew();
+        m_Timer = Stopwatch.StartNew();
 
         AddRegister(0x00, "TIMEHW");
         AddRegister(0x04, "TIMELW");
@@ -49,6 +49,6 @@ public class Timer : PeripheralBase
 
     private long GetMicroseconds()
     {
-        return timer.ElapsedTicks * 1_000_000 / Stopwatch.Frequency;
+        return m_Timer.ElapsedTicks * 1_000_000 / Stopwatch.Frequency;
     }
 }

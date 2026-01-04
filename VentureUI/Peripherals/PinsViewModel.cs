@@ -15,11 +15,6 @@ public class PinsViewModelForPreviewer : PinsViewModel
     }
 }
 
-public interface IPeripheralTab
-{
-    string TabName { get; }
-}
-
 public class PinsViewModel : ObservableObject, IPeripheralTab
 {
     public string TabName => "GPIO";

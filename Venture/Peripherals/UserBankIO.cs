@@ -8,8 +8,6 @@ public class UserBankIO : PeripheralBase, IGpioSource
 
     public GpioControl[] GpioControl { get; }
 
-    public int GpioLineCount => 48;
-
     public UserBankIO(uint baseAddress, string name, ILogger<UserBankIO> logger, SIO sio) : base(baseAddress, name, logger)
     {
         for (int i = 0; i < 48; i++)

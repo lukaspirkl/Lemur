@@ -70,6 +70,7 @@ internal class Program
     {
         collection.AddSingletonViewModel<MainWindowViewModel, MainWindowView>();
         collection.AddSingletonViewModel<PinsViewModel, PinsView>();
+        collection.AddSingletonViewModel<UserBankIOViewModel, UserBankIOView>();
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

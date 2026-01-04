@@ -28,4 +28,10 @@
     <ProjectReference Include="..\Venture\Venture.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Update="Peripherals\UserBankIOView.axaml.cs">
+      <DependentUpon>UserBankIOView.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
 </Project>

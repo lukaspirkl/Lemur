@@ -30,7 +30,7 @@
 			<TabControl.ContentTemplate>
 				<DataTemplate>
 					<ScrollViewer>
-						<ContentControl Content="{Binding}" Margin="2"/>
+						<ContentControl Content="{Binding}" Margin="4"/>
 					</ScrollViewer>		
 				</DataTemplate>
 			</TabControl.ContentTemplate>

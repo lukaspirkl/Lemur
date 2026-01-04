@@ -22,7 +22,15 @@ public static class RP2350ServiceCollectionExtensions
         services.AddSingleton<UnimplementedPeripheralFactory>();        
 
         // 0x00000000 - ROM
-        services.AddMemory("ROM", 0x00000000, 1024 * 32, m => m.LoadBin(@"Blink\A2\bootrom-combined.bin"), isReadonly: true); // 32kB
+        services.AddMemory("ROM", 0x00000000, 1024 * 32, m => 
+        {
+            var stream = typeof(RP2350ServiceCollectionExtensions).Assembly.GetManifestResourceStream("Venture.Blink.A2.bootrom-combined.bin");
+            if (stream == null)
+            {
+                throw new InvalidOperationException("Unable to get bootrom from resources");
+            }
+            m.Load(stream);
+        }, isReadonly: true); // 32kB
 
 
         // 0x10000000 - XIP

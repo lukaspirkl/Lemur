@@ -1,11 +1,6 @@
-using ELFSharp.ELF;
-using ELFSharp.ELF.Sections;
-using ELFSharp.ELF.Segments;
 using Microsoft.Extensions.Logging;
 
 namespace Venture;
-
-public record MemoryWriteArgs(uint Address, byte[] Data);
 
 public class MemoryFactory
 {
@@ -32,10 +27,6 @@ public class Memory : IAddressableResource
     public uint BaseAddress { get; }
     public uint Size { get; }
 
-    public event EventHandler<MemoryWriteArgs>? OnWrite;
-
-    public Dictionary<string, uint> Symbols { get; set; } = new Dictionary<string, uint>();
-
     public Memory(string name, uint startAddress, uint size, bool isReadonly, ILogger<Memory> logger)
     {
         m_Name = name;
@@ -56,10 +47,6 @@ public class Memory : IAddressableResource
             return;
         }
 
-        m_Logger.LogInformation("mem[{address}] <- {data}", address.ToHex(), data.ToHex());
-
-        OnWrite?.Invoke(this, new MemoryWriteArgs(address, data));
-
         data.CopyTo(m_Memory, (int)(address - BaseAddress));
     }
 
@@ -68,35 +55,15 @@ public class Memory : IAddressableResource
         return m_Memory.Skip((int)(address - BaseAddress)).Take(count).ToArray();
     }
 
-    public void LoadElf(string path)
-    {
-        m_Logger.LogInformation("Loading {path}", path);
-
-        var elf = ELFReader.Load(path);
-
-        Symbols = ((ISymbolTable)elf.GetSection(".symtab")).Entries.OfType<SymbolEntry<uint>>().GroupBy(x => x.Name).ToDictionary(x => x.Key, x => x.First().Value);
-
-        var loadableSegments = elf.Segments.OfType<Segment<UInt32>>().Where(x => x.Type == SegmentType.Load);
-        foreach (var segment in loadableSegments)
-        {
-            m_Logger.LogInformation("Processing segment at {address}...", segment.Address.ToHex());
-
-            long flashOffset = segment.Address - BaseAddress;
-            if (flashOffset >= 0 && (flashOffset + segment.Size) <= m_Memory.Length)
-            {
-                m_Logger.LogInformation("Segment is written to {name}", m_Name);
-                byte[] segmentData = segment.GetMemoryContents();
-                Array.Copy(segmentData, 0, m_Memory, flashOffset, segmentData.Length);
-                continue;
-            }
-
-            m_Logger.LogWarning("Segment at {addres} (size {size}) is outside the defined flash memory range. Skipping.", segment.Address.ToHex(), segment.Size.ToHex());
-        }
-    }
-
     public void LoadBin(string path)
     {
         var loaded = File.ReadAllBytes(path);
         loaded.CopyTo(m_Memory, 0);
+    }
+
+    public void Load(Stream stream)
+    {
+        using var ms = new MemoryStream(m_Memory);
+        stream.CopyTo(ms);
     }
 }

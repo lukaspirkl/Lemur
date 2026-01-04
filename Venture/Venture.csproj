@@ -8,7 +8,14 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ELFSharp" Version="2.17.3" />
+    <None Remove="Blink\A2\bootrom-combined.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Blink\A2\bootrom-combined.bin" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Serilog.Extensions.Hosting" Version="10.0.0" />
     <PackageReference Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageReference Include="Serilog.Sinks.Async" Version="2.1.0" />
@@ -19,7 +26,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Blink\**\*.*">
+    <None Update="Blink\*.*">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

@@ -56,8 +56,8 @@ public static class RP2350ServiceCollectionExtensions
         services.AddPeripheral(0x40058000, "PLL_USB_BASE").Implementation<PPLUSB>();
         services.AddPeripheral(0x40060000, "ACCESSCTRL_BASE").Unimplemented();
         services.AddPeripheral(0x40068000, "BUSCTRL_BASE").Unimplemented();
-        services.AddPeripheral(0x40070000, "UART0_BASE").Unimplemented();
-        services.AddPeripheral(0x40078000, "UART1_BASE").Unimplemented();
+        services.AddPeripheral(0x40070000, "UART0_BASE").Implementation<UART0>();
+        services.AddPeripheral(0x40078000, "UART1_BASE").Implementation<UART1>();
         services.AddPeripheral(0x40080000, "SPI0_BASE").Unimplemented();
         services.AddPeripheral(0x40088000, "SPI1_BASE").Unimplemented();
         services.AddPeripheral(0x40090000, "I2C0_BASE").Unimplemented();

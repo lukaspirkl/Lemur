@@ -7,5 +7,6 @@
 
     <Application.Styles>
         <semi:SemiTheme Locale="en-US" />
+        <semi:AvaloniaEditSemiTheme />
     </Application.Styles>
 </Application>

@@ -51,6 +51,8 @@ internal class Program
             .MinimumLevel.Override<SIO>(LogEventLevel.Verbose)
             .MinimumLevel.Override<UserBankIO>(LogEventLevel.Verbose)
             .MinimumLevel.Override<UserBankPadControl>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<UART0>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<UART1>(LogEventLevel.Verbose)
             .Enrich.FromLogContext()
             .WriteTo.Async(a => a.File(new CompactJsonFormatter(), m_LogFile))
             .WriteTo.Console());
@@ -71,6 +73,7 @@ internal class Program
         collection.AddSingletonViewModel<MainWindowViewModel, MainWindowView>();
         collection.AddSingletonViewModel<PinsViewModel, PinsView>();
         collection.AddSingletonViewModel<UserBankIOViewModel, UserBankIOView>();
+        collection.AddSingletonViewModel<UARTViewModel, UARTView>();
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

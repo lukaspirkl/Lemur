@@ -8,4 +8,14 @@ public partial class MainWindowView : Window
     {
         InitializeComponent();
     }
+
+    public override void Show()
+    {
+        base.Show();
+        if (DataContext is MainWindowViewModel vm)
+        {
+            vm.LoadCommand.Execute(null);
+        }
+    }
+
 }

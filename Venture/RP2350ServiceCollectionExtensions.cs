@@ -24,7 +24,7 @@ public static class RP2350ServiceCollectionExtensions
         // 0x00000000 - ROM
         services.AddMemory("ROM", 0x00000000, 1024 * 32, m => 
         {
-            var stream = typeof(RP2350ServiceCollectionExtensions).Assembly.GetManifestResourceStream("Venture.Blink.A2.bootrom-combined.bin");
+            var stream = typeof(RP2350ServiceCollectionExtensions).Assembly.GetManifestResourceStream("Venture.Bootrom.A2.bootrom-combined.bin");
             if (stream == null)
             {
                 throw new InvalidOperationException("Unable to get bootrom from resources");
@@ -34,7 +34,7 @@ public static class RP2350ServiceCollectionExtensions
 
 
         // 0x10000000 - XIP
-        services.AddXIP(1024 * 1024 * 2, m => m.LoadBin(@"Blink\KeySquareBlink.bin")); // 2MB
+        services.AddXIP(1024 * 1024 * 2, m => { }); // 2MB
 
 
         // 0x20000000 - SRAM

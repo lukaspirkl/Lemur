@@ -8,11 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="Blink\A2\bootrom-combined.bin" />
+    <None Remove="Bootrom\A2\bootrom-combined.bin" />
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Blink\A2\bootrom-combined.bin" />
+    <EmbeddedResource Include="Bootrom\A2\bootrom-combined.bin" />
   </ItemGroup>
 
   <ItemGroup>
@@ -23,12 +23,6 @@
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
 
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="Blink\*.*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
   </ItemGroup>
 
 </Project>

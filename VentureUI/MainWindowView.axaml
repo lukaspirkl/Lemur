@@ -18,12 +18,14 @@
 		<StackPanel Grid.Row="0" Orientation="Horizontal" Margin="2" Spacing="2">
 
 			<Menu x:Name="mainMenu">
-				<MenuItem Header="Examples" ItemsSource="{Binding Examples}">
-					<MenuItem.ItemTemplate>
-						<DataTemplate>
-							<MenuItem Header="{Binding Name}" Command="{Binding #mainMenu.DataContext.LoadExampleCommand}" CommandParameter="{Binding Path}" />
-						</DataTemplate>
-					</MenuItem.ItemTemplate>
+				<MenuItem Header="Examples" ItemsSource="{Binding Examples}" Classes="Examples">
+					<MenuItem.Styles>
+						<Style Selector="MenuItem.Examples MenuItem" x:DataType="vm:ExampleViewModel">
+							<Setter Property="Header" Value="{Binding Name}"/>
+							<Setter Property="Command" Value="{Binding #mainMenu.DataContext.LoadExampleCommand}"/>
+							<Setter Property="CommandParameter" Value="{Binding Path}"/>
+						</Style>
+					</MenuItem.Styles>
 				</MenuItem>
 			</Menu>
 

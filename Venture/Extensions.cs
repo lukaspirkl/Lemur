@@ -9,7 +9,34 @@ public static class Extensions
 
     public static string ToHex(this uint value, int padLeft = 8, bool prefix = true)
     {
-        return $"{(prefix ? "0x" : "")}{Convert.ToString(value, 16).PadLeft(padLeft, '0').ToUpper()}";
+        // Calculate the number of hex digits required.
+        // value == 0 -> 1 digit ('0')
+        // otherwise -> floor(log2(value) / 4) + 1
+        int hexLength = value == 0 ? 1 : (System.Numerics.BitOperations.Log2(value) >> 2) + 1;
+
+        int totalLength = (prefix ? 2 : 0) + (padLeft > hexLength ? padLeft : hexLength);
+
+        return string.Create(totalLength, (value, prefix, padLeft, hexLength), (span, state) =>
+        {
+            var (v, hasPrefix, minWidth, digits) = state;
+            int pos = 0;
+
+            if (hasPrefix)
+            {
+                span[0] = '0';
+                span[1] = 'x';
+                pos = 2;
+            }
+
+            int padding = minWidth - digits;
+            if (padding > 0)
+            {
+                span.Slice(pos, padding).Fill('0');
+                pos += padding;
+            }
+
+            v.TryFormat(span.Slice(pos), out _, "X");
+        });
     }
 
     public static string ToHex(this byte[] data)

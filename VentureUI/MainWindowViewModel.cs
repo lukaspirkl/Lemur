@@ -1,10 +1,12 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿using Avalonia.Threading;
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Venture;
 
 namespace VentureUI;
@@ -31,19 +33,38 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<ExampleViewModel> Examples { get; } = new();
 
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(RunCommand))]
+    [NotifyCanExecuteChangedFor(nameof(StopCommand))]
+    [NotifyCanExecuteChangedFor(nameof(LoadCommand))]
+    private bool m_IsRunning = false;
+
     public MainWindowViewModel(IEnumerable<IPeripheralTab> tabs, IDebuggable system)
     {
         Tabs = tabs;
         m_System = system;
+
+        m_System.EBreak += () => Task.Run(() =>
+        {
+            // TODO: Find some better way how to control execution
+            m_System.Stop();
+            m_System.Reset();
+        });
+        m_System.Stopped += () => Dispatcher.UIThread.Post(() => IsRunning = false);
     }
 
-    [RelayCommand]
+    private bool CanRun() => !IsRunning;
+
+    [RelayCommand(CanExecute = nameof(CanRun))]
     private void Run()
     {
         m_System.Run();
+        IsRunning = true;
     }
 
-    [RelayCommand]
+    private bool CanStop() => IsRunning;
+
+    [RelayCommand(CanExecute = nameof(CanStop))]
     private void Stop()
     {
         m_System.Stop();
@@ -73,7 +94,9 @@ public partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
+    private bool CanLoad(string path) => !IsRunning;
+
+    [RelayCommand(CanExecute = nameof(CanLoad))]
     private void LoadExample(string path)
     {
         if (!File.Exists(path))

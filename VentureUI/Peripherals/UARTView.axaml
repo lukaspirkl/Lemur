@@ -8,7 +8,7 @@
 			 x:Class="VentureUI.UARTView"
 			 x:DataType="vm:UARTViewModel">
 
-	<AvaloniaEdit:TextEditor x:Name="m_Output" Text="Hello AvaloniaEdit!" IsReadOnly="True" FontFamily="Cascadia Code,Consolas,Menlo,Monospace">
+	<AvaloniaEdit:TextEditor x:Name="m_Output" IsReadOnly="True" FontFamily="Cascadia Code,Consolas,Menlo,Monospace">
 		<AvaloniaEdit:TextEditor.ContextMenu>
 			<ContextMenu>
 				<MenuItem Header="Clear" Click="Clear" />

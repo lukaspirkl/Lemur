@@ -24,7 +24,9 @@ public class MockEmulator : IDebuggable
 
     public byte[] Memory = new byte[32];
 
-    public event EventHandler? Stopped;
+    public event Action? Stopped;
+
+    public event Action? EBreak;
 
     public byte[] MemoryRead(uint address, int count)
     {

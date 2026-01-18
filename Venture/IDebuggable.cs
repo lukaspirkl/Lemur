@@ -8,7 +8,9 @@ public interface IDebuggable : IDisposable
 
     HashSet<uint> Brakpoints { get; }
 
-    event EventHandler? Stopped;
+    event Action? Stopped;
+
+    event Action? EBreak;
 
     byte[] MemoryRead(uint address, int count);
     void MemoryWrite(uint address, byte[] data);
@@ -40,7 +42,9 @@ public class NullDebuggable : IDebuggable
 
     public HashSet<uint> Brakpoints { get; } = new HashSet<uint>();
 
-    public event EventHandler? Stopped;
+    public event Action? Stopped;
+
+    public event Action? EBreak;
 
     public void Dispose()
     {

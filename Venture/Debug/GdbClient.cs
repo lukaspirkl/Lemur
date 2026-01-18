@@ -10,7 +10,9 @@ public class RP2350GDB : IDebuggable
 
     private static SemaphoreSlim m_Semaphore = new SemaphoreSlim(1);
 
-    public event EventHandler? Stopped;
+    public event Action? Stopped;
+
+    public event Action? EBreak;
 
     public RP2350GDB(string host, int port)
     {

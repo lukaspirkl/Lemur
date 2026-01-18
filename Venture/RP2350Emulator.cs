@@ -13,7 +13,13 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 
     public HashSet<uint> Brakpoints { get; } = new HashSet<uint>();
 
-    public event EventHandler? Stopped;
+    public event Action? Stopped;
+
+    public event Action? EBreak
+    {
+        add { m_Processor.EBreak += value; }
+        remove { m_Processor.EBreak -= value; }
+    }
 
     public RP2350Emulator(Hazard3Processor processor)
     {
@@ -60,7 +66,7 @@ public class RP2350Emulator : BackgroundService, IDebuggable
             }
 
             m_Run = null;
-            Stopped?.Invoke(this, EventArgs.Empty);
+            Stopped?.Invoke();
         });
     }
 
@@ -167,35 +173,35 @@ public class RP2350Emulator : BackgroundService, IDebuggable
     /// </summary>
     private class RegistersWrapper : IRegisters
     {
-        private readonly Hazard3Processor processor;
+        private readonly Hazard3Processor m_Processor;
 
         public RegistersWrapper(Hazard3Processor processor)
         {
-            this.processor = processor;
+            this.m_Processor = processor;
         }
 
-        public uint Length => processor.Registers.Length + 1;
+        public uint Length => m_Processor.Registers.Length + 1;
 
         public uint this[uint index]
         {
             get
             {
-                if (index == processor.Registers.Length)
+                if (index == m_Processor.Registers.Length)
                 {
-                    return processor.PC;
+                    return m_Processor.PC;
                 }
 
-                return processor.Registers[index];
+                return m_Processor.Registers[index];
             }
             set
             {
-                if (index == processor.Registers.Length)
+                if (index == m_Processor.Registers.Length)
                 {
-                    processor.PC = value;
+                    m_Processor.PC = value;
                     return;
                 }
 
-                processor.Registers[index] = value;
+                m_Processor.Registers[index] = value;
             }
         }
     }

@@ -34,7 +34,7 @@ public class GdbConnectionHandler : ConnectionHandler
         var input = connection.Transport.Input;
         var output = connection.Transport.Output;
 
-        EventHandler sendStopped = (s, a) =>
+        Action sendStopped = () =>
         {
             SendPacketAsync(output, "S05").Wait();
         };
@@ -435,14 +435,14 @@ public class GdbConnectionHandler : ConnectionHandler
                 var offset = args[0];
                 var length = args[1];
 
-                if (offset > targetxml.Length)
+                if (offset > m_Targetxml.Length)
                 {
                     return "l"; // nothing left
                 }
 
-                int remaining = targetxml.Length - offset;
+                int remaining = m_Targetxml.Length - offset;
                 int chunkSize = Math.Min(length, remaining);
-                string chunk = targetxml.Substring(offset, chunkSize);
+                string chunk = m_Targetxml.Substring(offset, chunkSize);
 
                 char indicator = (chunkSize == remaining) ? 'l' : 'm';
                 return indicator + chunk;
@@ -516,7 +516,7 @@ public class GdbConnectionHandler : ConnectionHandler
         await output.WriteAsync(Encoding.ASCII.GetBytes(packet));
     }
 
-    private string targetxml = """
+    private string m_Targetxml = """
         <?xml version="1.0"?>
         <!DOCTYPE target SYSTEM "gdb-target.dtd">
         <target>

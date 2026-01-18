@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.LogicalTree;
 using Avalonia.Threading;
 
 namespace VentureUI;
@@ -16,6 +17,7 @@ public partial class UARTView : UserControl
         base.OnAttachedToVisualTree(e);
         if (DataContext is UARTViewModel vm)
         {
+            m_Output.Text = vm.Output.ToString();
             vm.DataReceived += DataReceived;
         }
     }
@@ -31,11 +33,15 @@ public partial class UARTView : UserControl
 
     private void DataReceived(char data)
     {
-        Dispatcher.UIThread.Post(() => m_Output.Text += data);
+        Dispatcher.UIThread.Post(() => m_Output.AppendText(data.ToString()));
     }
 
     private void Clear(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
+        if (DataContext is UARTViewModel vm)
+        {
+            vm.Output.Clear();
+        }
         m_Output.Clear();
     }
 }

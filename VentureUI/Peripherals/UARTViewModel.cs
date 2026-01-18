@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Venture;
 using Venture.Peripherals;
 
@@ -21,12 +22,18 @@ public class UARTViewModel : ObservableObject, IPeripheralTab
 
     public event Action<char>? DataReceived;
 
+    public StringBuilder Output { get; } = new(2000, 2000);
+
     public UARTViewModel(IEnumerable<IAddressableResource> resources)
     {
         var uart = resources.OfType<UART0>().FirstOrDefault();
         if (uart != null)
         {
-            uart.ReceivedData += data => DataReceived?.Invoke(data);
+            uart.ReceivedData += data =>
+            {
+                Output.Append(data);
+                DataReceived?.Invoke(data);
+            };
         }
     }
 }

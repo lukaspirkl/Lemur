@@ -12,18 +12,18 @@ public class Hazard3Processor
     public Registers Registers { get; }
     public CSR CSR { get; }
 
-    public event EventHandler? EBreak;
+    public event Action? EBreak;
 
     public void RaiseEBreak()
     {
-        EBreak?.Invoke(this, EventArgs.Empty);
+        EBreak?.Invoke();
     }
 
-    public event EventHandler? ECall;
+    public event Action? ECall;
 
     public void RaiseECall()
     {
-        ECall?.Invoke(this, EventArgs.Empty);
+        ECall?.Invoke();
     }
 
     public uint PC

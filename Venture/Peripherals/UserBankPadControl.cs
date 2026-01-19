@@ -11,6 +11,8 @@ public class UserBankPadControl : PeripheralBase, IGpioSource
     public PadControl SWD { get; }
     public Voltage VoltageSelect { get; set; }
 
+    public event Action<uint>? PadControlChanged;
+
     public UserBankPadControl(uint baseAddress, string name, ILogger<UserBankPadControl> logger, UserBankIO userBankIO) : base(baseAddress, name, logger)
     {
         AddRegister(0x00, "VOLTAGE_SELECT")
@@ -19,11 +21,12 @@ public class UserBankPadControl : PeripheralBase, IGpioSource
         Pads = new PadControl[48];
         for (uint i = 0; i < Pads.Length; i++)
         {
-            Pads[i] = new PadControl(AddRegister(4 + (i * 4), $"GPIO{i}"));
+            uint capturedI = i;
+            Pads[i] = new PadControl(AddRegister(4 + (i * 4), $"GPIO{i}").OnWrite(x => PadControlChanged?.Invoke(capturedI)));
         }
 
-        SWCLK = new PadControl(AddRegister(0xc4, "SWCLK"));
-        SWD = new PadControl(AddRegister(0xc8, "SWD"));
+        SWCLK = new PadControl(AddRegister(0xc4, "SWCLK").OnWrite(x => PadControlChanged?.Invoke(99)));
+        SWD = new PadControl(AddRegister(0xc8, "SWD").OnWrite(x => PadControlChanged?.Invoke(98)));
 
         m_UserBankIO = userBankIO;
     }

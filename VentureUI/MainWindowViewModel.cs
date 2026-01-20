@@ -107,6 +107,9 @@ public partial class MainWindowViewModel : ObservableObject
         var loaded = File.ReadAllBytes(path);
         m_System.MemoryWrite(0x10000000, loaded);
         m_System.Reset();
+
+
+        BinaryInfoReader.ProcessBinary(m_System);
     }
 }
 

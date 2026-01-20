@@ -25,6 +25,11 @@ public interface IDebuggable : IDisposable
 
 public static class DebuggableExtensions
 {
+    public static ushort MemoryRead16(this IDebuggable debuggable, uint address)
+    {
+        return BitConverter.ToUInt16(debuggable.MemoryRead(address, 2));
+    }
+
     public static uint MemoryRead32(this IDebuggable debuggable, uint address)
     {
         return BitConverter.ToUInt32(debuggable.MemoryRead(address, 4));

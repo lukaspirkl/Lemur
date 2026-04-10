@@ -1,10 +1,11 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.ComponentModel;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Venture;
 using Venture.Peripherals;
+using VentureUI.Terminal;
 
 namespace VentureUI;
 
@@ -20,20 +21,15 @@ public class UARTViewModel : ObservableObject, IPeripheralTab
 {
     public string TabName => "UART0";
 
-    public event Action<char>? DataReceived;
-
-    public StringBuilder Output { get; } = new(2000, 2000);
+    public TerminalEmulator Emulator { get; } = new();
 
     public UARTViewModel(IEnumerable<IAddressableResource> resources)
     {
         var uart = resources.OfType<UART0>().FirstOrDefault();
         if (uart != null)
         {
-            uart.ReceivedData += data =>
-            {
-                Output.Append(data);
-                DataReceived?.Invoke(data);
-            };
+            uart.ReceivedData += c =>
+                Emulator.Feed(Encoding.Latin1.GetBytes([c]));
         }
     }
 }

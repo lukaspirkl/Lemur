@@ -14,6 +14,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddHostedService(x => x.GetRequiredService<RP2350Emulator>());
         services.AddSingleton<IDebuggable>(x => x.GetRequiredService<RP2350Emulator>());
 
+        services.AddSingleton<BinaryInfoService>();
         services.AddSingleton<Hazard3Processor>();
         services.AddSingleton<IBusFabric, BusFabric>();
         services.AddSingleton<Registers>();
@@ -167,13 +168,15 @@ public static class RP2350ServiceCollectionExtensions
 
     private static IServiceCollection AddXIP(this IServiceCollection services, uint size, Action<Memory>? init = null)
     {
-        services.AddSingleton<IAddressableResource>(sp =>
+        // Register XIP as a typed singleton so BinaryInfoService can depend on it directly,
+        // then expose it as IAddressableResource so BusFabric discovers it.
+        services.AddSingleton<XIP>(sp =>
         {
-            // This is not really read only but I want to catch possible issues
             var memory = sp.GetRequiredService<MemoryFactory>().Create("XIP", 0x10000000, size, isReadonly: false);
             init?.Invoke(memory);
             return new XIP(memory, sp.GetRequiredService<ILogger<XIP>>());
         });
+        services.AddSingleton<IAddressableResource, XIP>(sp => sp.GetRequiredService<XIP>());
         return services;
     }
 

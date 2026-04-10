@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Venture;
 
@@ -11,6 +11,9 @@ public class XIP : IAddressableResource
 
     public uint Size => 0x10000000;
 
+    /// <summary>Raised on the calling thread whenever data is written to the flash region.</summary>
+    public event Action? Written;
+
     public XIP(Memory memory, ILogger<XIP> logger)
     {
         m_Memory = memory;
@@ -20,7 +23,7 @@ public class XIP : IAddressableResource
     public byte[] Read(uint address, int count)
     {
         var offset = (address - BaseAddress) % 0x0400_0000;
-        
+
         var type = (address - BaseAddress) / 0x0400_0000;
         if (type != 0)
         {
@@ -42,5 +45,6 @@ public class XIP : IAddressableResource
         }
 
         m_Memory.Write(BaseAddress + offset, data);
+        Written?.Invoke();
     }
 }

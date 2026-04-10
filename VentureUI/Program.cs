@@ -48,11 +48,12 @@ internal class Program
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
             .MinimumLevel.Is(LogEventLevel.Fatal)
             //.MinimumLevel.Override<GdbConnectionHandler>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<BinaryInfoService>(LogEventLevel.Verbose)
             .MinimumLevel.Override<SIO>(LogEventLevel.Verbose)
             .MinimumLevel.Override<UserBankIO>(LogEventLevel.Verbose)
             .MinimumLevel.Override<UserBankPadControl>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<UART0>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<UART1>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<UART0>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<UART1>(LogEventLevel.Verbose)
             .Enrich.FromLogContext()
             .WriteTo.Async(a => a.File(new CompactJsonFormatter(), m_LogFile))
             .WriteTo.Console());
@@ -71,6 +72,7 @@ internal class Program
     public static void RegisterViewModels(IViewModelCollection collection)
     {
         collection.AddSingletonViewModel<MainWindowViewModel, MainWindowView>();
+        collection.AddSingletonViewModel<BinaryInfoViewModel, BinaryInfoView>();
         collection.AddSingletonViewModel<PinsViewModel, PinsView>();
         collection.AddSingletonViewModel<UserBankIOViewModel, UserBankIOView>();
         collection.AddSingletonViewModel<UARTViewModel, UARTView>();

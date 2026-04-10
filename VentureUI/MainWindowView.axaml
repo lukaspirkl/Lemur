@@ -1,4 +1,4 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+<Window xmlns="https://github.com/avaloniaui"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
 		xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
 		xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -29,10 +29,16 @@
 				</MenuItem>
 			</Menu>
 
-
 			<Button Content="Run" Command="{Binding RunCommand}" />
 			<Button Content="Stop" Command="{Binding StopCommand}" />
 			<Button Content="Reset" Command="{Binding ResetCommand}" />
+
+			<Separator Width="1" Margin="4,4" Background="Gray" />
+
+			<TextBlock Text="{Binding ProgramLabel}"
+					   VerticalAlignment="Center"
+					   FontWeight="SemiBold"
+					   Margin="4,0" />
 		</StackPanel>
 
 		<TabControl Grid.Row="1" TabStripPlacement="Left" Classes="ReverseSeparator" ItemsSource="{Binding Tabs}">

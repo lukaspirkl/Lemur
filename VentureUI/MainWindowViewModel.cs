@@ -1,4 +1,4 @@
-﻿using Avalonia.Threading;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System;
@@ -14,7 +14,7 @@ namespace VentureUI;
 public class MainWindowViewModelForPreviewer : MainWindowViewModel
 {
     public MainWindowViewModelForPreviewer()
-        : base(Enumerable.Empty<IPeripheralTab>(), new NullDebuggable())
+        : base(Enumerable.Empty<IPeripheralTab>(), new NullDebuggable(), null)
     {
     }
 
@@ -39,7 +39,10 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(LoadCommand))]
     private bool m_IsRunning = false;
 
-    public MainWindowViewModel(IEnumerable<IPeripheralTab> tabs, IDebuggable system)
+    [ObservableProperty]
+    private string m_ProgramLabel = "No binary loaded";
+
+    public MainWindowViewModel(IEnumerable<IPeripheralTab> tabs, IDebuggable system, BinaryInfoService? binaryInfoService)
     {
         Tabs = tabs;
         m_System = system;
@@ -51,6 +54,19 @@ public partial class MainWindowViewModel : ObservableObject
             m_System.Reset();
         });
         m_System.Stopped += () => Dispatcher.UIThread.Post(() => IsRunning = false);
+
+        if (binaryInfoService != null)
+            binaryInfoService.MetadataChanged += info =>
+                Dispatcher.UIThread.Post(() => ProgramLabel = FormatProgramLabel(info));
+    }
+
+    private static string FormatProgramLabel(BinaryInfo? info)
+    {
+        if (info == null)
+            return "Unknown";
+
+        var name = info.ProgramName ?? "Unknown";
+        return info.ProgramVersion != null ? $"{name}  {info.ProgramVersion}" : name;
     }
 
     private bool CanRun() => !IsRunning;
@@ -100,16 +116,12 @@ public partial class MainWindowViewModel : ObservableObject
     private void LoadExample(string path)
     {
         if (!File.Exists(path))
-        {
             return;
-        }
 
         var loaded = File.ReadAllBytes(path);
         m_System.MemoryWrite(0x10000000, loaded);
         m_System.Reset();
-
-
-        BinaryInfoReader.ProcessBinary(m_System);
+        // BinaryInfoService picks up the flash write automatically via XIP.Written.
     }
 }
 

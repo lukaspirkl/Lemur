@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using System.Collections.Concurrent;
+using Microsoft.Extensions.Logging;
 
 namespace Venture.Peripherals;
 
@@ -20,11 +21,18 @@ public class UART : PeripheralBase
 {
     public event Action<char>? ReceivedData;
 
+    private readonly ConcurrentQueue<byte> _rxFifo = new();
+
+    public void EnqueueRxByte(byte b) => _rxFifo.Enqueue(b);
+
     public UART(uint baseAddress, string name, ILogger<UART> logger) : base(baseAddress, name, logger)
     {
         AddRegister(0x000, "UARTDR").Field(0, 8, ReceiveData, TransmitData); // Data Register, UARTDR
         AddRegister(0x004, "UARTRSR"); // Receive Status Register/Error Clear Register, UARTRSR/UARTECR
-        AddRegister(0x018, "UARTFR"); // Flag Register, UARTFR
+        AddRegister(0x018, "UARTFR")  // Flag Register, UARTFR
+            .Field(lsb: 4, getter: () => _rxFifo.IsEmpty)   // RXFE: receive FIFO empty
+            .Field(lsb: 5, getter: () => false)              // TXFF: transmit FIFO full (never)
+            .Field(lsb: 7, getter: () => true);              // TXFE: transmit FIFO empty (always)
         AddRegister(0x020, "UARTILPR"); // IrDA Low-Power Counter Register, UARTILPR
         AddRegister(0x024, "UARTIBRD"); // Integer Baud Rate Register, UARTIBRD
         AddRegister(0x028, "UARTFBRD"); // Fractional Baud Rate Register, UARTFBRD
@@ -53,6 +61,6 @@ public class UART : PeripheralBase
 
     private uint ReceiveData()
     {
-        return 0;
+        return _rxFifo.TryDequeue(out var b) ? b : 0u;
     }
 }

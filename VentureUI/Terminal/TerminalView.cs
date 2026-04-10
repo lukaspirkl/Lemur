@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using Avalonia;
@@ -84,10 +85,44 @@ public class TerminalView : Control
     private static readonly IBrush DefaultFgBrush = new SolidColorBrush(DefaultFgColor);
     private static readonly IBrush CursorBrush = new SolidColorBrush(Colors.White);
 
+    // --- Keyboard input ---
+
+    public event Action<byte[]>? Input;
+
+    private static readonly Dictionary<Key, byte[]> KeySequences = new()
+    {
+        [Key.Up]       = "\x1B[A"u8.ToArray(),
+        [Key.Down]     = "\x1B[B"u8.ToArray(),
+        [Key.Right]    = "\x1B[C"u8.ToArray(),
+        [Key.Left]     = "\x1B[D"u8.ToArray(),
+        [Key.Home]     = "\x1B[H"u8.ToArray(),
+        [Key.End]      = "\x1B[F"u8.ToArray(),
+        [Key.Delete]   = "\x1B[3~"u8.ToArray(),
+        [Key.PageUp]   = "\x1B[5~"u8.ToArray(),
+        [Key.PageDown] = "\x1B[6~"u8.ToArray(),
+        [Key.F1]       = "\x1BOP"u8.ToArray(),
+        [Key.F2]       = "\x1BOQ"u8.ToArray(),
+        [Key.F3]       = "\x1BOR"u8.ToArray(),
+        [Key.F4]       = "\x1BOS"u8.ToArray(),
+        [Key.F5]       = "\x1B[15~"u8.ToArray(),
+        [Key.F6]       = "\x1B[17~"u8.ToArray(),
+        [Key.F7]       = "\x1B[18~"u8.ToArray(),
+        [Key.F8]       = "\x1B[19~"u8.ToArray(),
+        [Key.F9]       = "\x1B[20~"u8.ToArray(),
+        [Key.F10]      = "\x1B[21~"u8.ToArray(),
+        [Key.F11]      = "\x1B[23~"u8.ToArray(),
+        [Key.F12]      = "\x1B[24~"u8.ToArray(),
+        [Key.Tab]      = [(byte)'\t'],
+        [Key.Escape]   = [0x1B],
+        [Key.Return]   = [(byte)'\r'],
+        [Key.Back]     = [0x7F],
+    };
+
     public TerminalView()
     {
         MeasureCellSize();
         ClipToBounds = true;
+        Focusable = true;
 
         _blinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
         _blinkTimer.Tick += (_, _) =>
@@ -96,6 +131,43 @@ public class TerminalView : Control
             InvalidateVisual();
         };
         _blinkTimer.Start();
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        Focus();
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        // Ctrl+X → control character (e.g. Ctrl+C = 0x03)
+        if (e.KeyModifiers == KeyModifiers.Control &&
+            e.Key >= Key.A && e.Key <= Key.Z)
+        {
+            int code = e.Key - Key.A + 1;
+            Input?.Invoke([(byte)code]);
+            e.Handled = true;
+            return;
+        }
+
+        if (KeySequences.TryGetValue(e.Key, out var seq))
+        {
+            Input?.Invoke(seq);
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnTextInput(TextInputEventArgs e)
+    {
+        base.OnTextInput(e);
+        if (!string.IsNullOrEmpty(e.Text))
+        {
+            Input?.Invoke(Encoding.UTF8.GetBytes(e.Text));
+            e.Handled = true;
+        }
     }
 
     protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)

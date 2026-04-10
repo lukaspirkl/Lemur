@@ -30,6 +30,17 @@ public class UARTViewModel : ObservableObject, IPeripheralTab
         {
             uart.ReceivedData += c =>
                 Emulator.Feed(Encoding.Latin1.GetBytes([c]));
+
+            _uart = uart;
         }
+    }
+
+    private readonly UART0? _uart;
+
+    public void Transmit(byte[] bytes)
+    {
+        if (_uart == null) return;
+        foreach (var b in bytes)
+            _uart.EnqueueRxByte(b);
     }
 }

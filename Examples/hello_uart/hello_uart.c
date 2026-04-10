@@ -19,6 +19,14 @@
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
 
+
+#define ANSI_COLOR_RED "\x1b[31m"
+#define ANSI_COLOR_GREEN "\x1b[32m"
+#define ANSI_BOLD "\x1b[1m"
+#define ANSI_COLOR_RESET "\x1b[0m"
+
+
+
 int main() {
     // Set up our UART with the required speed.
     uart_init(UART_ID, BAUD_RATE);
@@ -38,8 +46,18 @@ int main() {
     uart_putc(UART_ID, 'B');
 
     // Send out a string, with CR/LF conversions
-    uart_puts(UART_ID, " Hello, UART!\n");
-    return 0;
+    uart_puts(UART_ID, " Hello, UART!\n\r");
+
+    uart_puts(UART_ID, ANSI_COLOR_GREEN ANSI_BOLD "KeySquare_Control" ANSI_COLOR_RESET "> ");
+
+    while(true)
+    {
+        if (uart_is_readable(UART_ID))
+        {
+            char c = uart_getc(UART_ID);
+            uart_putc(UART_ID, c);
+        }
+    }
 }
 
 /// \end::hello_uart[]

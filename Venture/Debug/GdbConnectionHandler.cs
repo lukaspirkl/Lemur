@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Connections;
+using Microsoft.AspNetCore.Connections;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
@@ -10,18 +10,64 @@ namespace Venture.Debug;
 // https://sourceware.org/gdb/current/onlinedocs/gdb.html/Remote-Protocol.html
 // https://medium.com/swlh/implement-gdb-remote-debug-protocol-stub-from-scratch-1-a6ab2015bfc5
 
-
-public class GdbConnectionHandler : ConnectionHandler
+public partial class GdbConnectionHandler : ConnectionHandler
 {
     private readonly ILogger<GdbConnectionHandler> m_Logger;
     private readonly IDebuggable m_Emulator;
     private readonly IHostApplicationLifetime m_HostLifetime;
+    private readonly GdbCommandRouter m_Router;
+
+    [GeneratedRegex(@"^G[0-9A-Fa-f]+$")]
+    private static partial Regex WriteAllRegistersPattern();
+
+    [GeneratedRegex(@"^P[0-9A-Fa-f]+=[0-9A-Fa-f]+$")]
+    private static partial Regex WriteRegisterPattern();
+
+    [GeneratedRegex(@"^m[0-9A-Fa-f]+,[0-9A-Fa-f]+$")]
+    private static partial Regex ReadMemoryPattern();
+
+    [GeneratedRegex(@"^M[0-9A-Fa-f]+,[0-9A-Fa-f]+:[0-9A-Fa-f]+$")]
+    private static partial Regex WriteMemoryPattern();
 
     public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, IDebuggable emulator, IHostApplicationLifetime hostLifetime)
     {
         m_Logger = logger;
         m_Emulator = emulator;
         m_HostLifetime = hostLifetime;
+        m_Router = BuildRouter();
+    }
+
+    private GdbCommandRouter BuildRouter()
+    {
+        var router = new GdbCommandRouter();
+
+        router.Map("?",               _ => "S05");
+        router.MapPrefix("qSupported",_ => "PacketSize=400;hwbreak+;hwbreak+;vContSupported+;multiprocess-");
+        router.Map("vMustReplyEmpty", _ => "");
+        router.Map("qfThreadInfo",    _ => "m1");
+        router.Map("qsThreadInfo",    _ => "1");
+        router.Map("qC",              _ => "1");
+        router.Map("qSymbol::",       _ => "OK");
+        router.MapPrefix("Hg",        _ => "OK");
+        router.MapPrefix("Hc",        _ => "OK");
+        router.Map("qOffsets",        _ => "Text=0;Data=0;Bss=0");
+        router.Map("qTStatus",        _ => "");
+        router.Map("qAttached",       _ => "1");
+        router.Map("vCont?",          _ => "vCont;c;C;s;S");
+        router.MapPrefix("vCont;s",   _ => { m_Emulator.Step(); return "T05"; });
+        router.MapPrefix("vCont;c",   _ => { m_Emulator.Run(); return null; });
+        router.MapPrefix("vCont;t",   _ => { m_Emulator.Stop(); return "S05"; });
+        router.MapPrefix("qRcmd,",    HandleQRcmd);
+        router.Map("g",               HandleReadAllRegisters);
+        router.MapPattern(WriteAllRegistersPattern(), HandleWriteAllRegisters);
+        router.MapPattern(WriteRegisterPattern(),     HandleWriteRegister);
+        router.MapPattern(ReadMemoryPattern(),        HandleMemoryRead);
+        router.MapPattern(WriteMemoryPattern(),       HandleMemoryWrite);
+        router.MapPrefix("Z",         HandleAddBreakpoint);
+        router.MapPrefix("z",         HandleRemoveBreakpoint);
+        router.MapPrefix("qXfer:",    HandleQXfer);
+
+        return router;
     }
 
     public override async Task OnConnectedAsync(ConnectionContext connection)
@@ -119,6 +165,171 @@ public class GdbConnectionHandler : ConnectionHandler
         }
     }
 
+    private string? ProcessGdbCommand(string command)
+    {
+        using var _ = m_Logger.BeginScope("GDB command: {gdbCommand}", command);
+
+        if (!m_Router.TryDispatch(command, out var response))
+        {
+            m_Logger.LogWarning("Unknown GDB command: {command}", command);
+            return "";
+        }
+
+        return response;
+    }
+
+    private string? HandleQRcmd(string command)
+    {
+        var str = Encoding.ASCII.GetString(HexStringToBytes(command.Substring(6)));
+
+        if (str is "reset halt" or "reset init")
+        {
+            m_Emulator.Reset();
+            return "OK";
+        }
+
+        m_Logger.LogWarning("Unknown qRcmd: {cmd}", str);
+        return "";
+    }
+
+    private string HandleReadAllRegisters(string _)
+    {
+        try
+        {
+            int registerCount = (int)m_Emulator.Registers.Length;
+            int hexCharsPerReg = 8;
+            int totalLength = registerCount * hexCharsPerReg;
+
+            Span<char> response = stackalloc char[totalLength];
+            int position = 0;
+
+            for (int i = 0; i < registerCount; i++)
+            {
+                uint regValue = m_Emulator.Registers[(uint)i];
+                WriteLittleEndianHex(regValue, response.Slice(position, hexCharsPerReg));
+                position += hexCharsPerReg;
+            }
+
+            return new string(response);
+        }
+        catch (Exception)
+        {
+            return "E01";
+        }
+    }
+
+    private string HandleWriteAllRegisters(string command)
+    {
+        var hexData = command.Substring(1);
+        if (hexData.Length != m_Emulator.Registers.Length * 8)
+            return "E01";
+
+        try
+        {
+            for (int i = 0; i < m_Emulator.Registers.Length; i++)
+                m_Emulator.Registers[(uint)i] = ParseLittleEndianHex(hexData.AsSpan(i * 8, 8));
+
+            return "OK";
+        }
+        catch (Exception e)
+        {
+            m_Logger.LogError(e, "Unexpected exception when getting register data");
+            return "E02";
+        }
+    }
+
+    private string HandleWriteRegister(string command)
+    {
+        var args = command.Substring(1).Split('=');
+        if (args.Length != 2)
+            return "E01";
+
+        var reg = Convert.ToUInt32(args[0], 16);
+        var value = BitConverter.ToUInt32(HexStringToBytes(args[1]));
+        m_Emulator.Registers[reg] = value;
+        return "OK";
+    }
+
+    private string HandleMemoryRead(string command)
+    {
+        try
+        {
+            var args = command.Substring(1).Split(',');
+            var address = Convert.ToUInt32(args[0], 16);
+            var length = Convert.ToUInt32(args[1], 16);
+
+            return string.Join("", m_Emulator.MemoryRead(address, (int)length).Select(x => Convert.ToString(x, 16).PadLeft(2, '0')));
+        }
+        catch (Exception e)
+        {
+            m_Logger.LogError(e, "Unexpected exception while reading memory");
+            return "E01";
+        }
+    }
+
+    private string HandleMemoryWrite(string command)
+    {
+        try
+        {
+            var args = command.Substring(1).Split(',');
+            var address = Convert.ToUInt32(args[0], 16);
+            var args2 = args[1].Split(':');
+            var hexData = args2[1];
+
+            var data = new byte[hexData.Length / 2];
+            for (int i = 0; i < data.Length; i++)
+                data[i] = Convert.ToByte(hexData.Substring(i * 2, 2), 16);
+
+            m_Emulator.MemoryWrite(address, data);
+            return "OK";
+        }
+        catch (Exception e)
+        {
+            m_Logger.LogError(e, "Unexpected exception while writing memory");
+            return "E01";
+        }
+    }
+
+    private string HandleAddBreakpoint(string command)
+    {
+        var args = command.Split(',');
+        var address = Convert.ToUInt32(args[1], 16);
+        m_Emulator.Brakpoints.Add(address);
+        return "OK";
+    }
+
+    private string HandleRemoveBreakpoint(string command)
+    {
+        var args = command.Split(',');
+        var address = Convert.ToUInt32(args[1], 16);
+        m_Emulator.Brakpoints.Remove(address);
+        return "OK";
+    }
+
+    private string HandleQXfer(string command)
+    {
+        var c = command.Split(':');
+        // qXfer:features:read:target.xml:OFFSET,LENGTH
+        if (c[1] == "features" && c[2] == "read" && c[3] == "target.xml")
+        {
+            var args = c[4].Split(",").Select(hex => Convert.ToInt32(hex, 16)).ToArray();
+            var offset = args[0];
+            var length = args[1];
+
+            if (offset > m_Targetxml.Length)
+                return "l";
+
+            int remaining = m_Targetxml.Length - offset;
+            int chunkSize = Math.Min(length, remaining);
+            string chunk = m_Targetxml.Substring(offset, chunkSize);
+
+            char indicator = (chunkSize == remaining) ? 'l' : 'm';
+            return indicator + chunk;
+        }
+
+        return "";
+    }
+
     // Helper to find '$...#CC' in the buffer
     private bool TryFindPacket(ReadOnlySequence<byte> buffer, out byte[] packetData, out SequencePosition consumedTo)
     {
@@ -144,7 +355,7 @@ public class GdbConnectionHandler : ConnectionHandler
 
         if (afterHash.Length < 2) return false; // Waiting for checksum bytes
 
-        // We have a full packet! 
+        // We have a full packet!
         // Extract content between $ and #
         // Start+1 to skip '$', length is up to '#'
         var contentBuffer = dataAfterStart.Slice(1, hash.Value);
@@ -153,305 +364,6 @@ public class GdbConnectionHandler : ConnectionHandler
         // The packet ends 2 bytes after the '#'
         consumedTo = afterHash.GetPosition(2);
         return true;
-    }
-
-    private string? ProcessGdbCommand(string command)
-    {
-        using var _ = m_Logger.BeginScope("GDB command: {gdbCommand}", command);
-
-        if (command == "?")
-        {
-            return "S05"; // Use stop reason SIGTRAP(5).
-        }
-
-
-        if (command.StartsWith("qSupported"))
-        {
-            return "PacketSize=400;hwbreak+;hwbreak+;vContSupported+;multiprocess-";// ;qXfer:features:read+";
-        }
-
-        if (command == "vMustReplyEmpty")
-        {
-            // The correct reply to an unknown ‘v’ packet is to return the empty string.
-            // The ‘vMustReplyEmpty’ is used as a feature test to check how gdbserver handles unknown packets, it is important
-            // that this packet be handled in the same way as other unknown ‘v’ packets. If this packet is handled differently
-            // to other unknown ‘v’ packets then it is possible that GDB may run into problems in other areas,
-            // specifically around use of ‘vFile:setfs:’.
-            return "";
-        }
-
-        if (command == "qfThreadInfo")
-        {
-            return "m1";
-        }
-
-        if (command == "qsThreadInfo")
-        {
-            return "1";
-        }
-
-        if (command == "qC")
-        {
-            // Get current thread
-            return "1";
-        }
-
-        if (command == "qSymbol::")
-        {
-            // Notify the target that GDB is prepared to serve symbol lookup requests. Accept requests from the target for the values of symbols.
-            return "OK"; // The target does not need to look up any (more) symbols
-        }
-
-        if (command.StartsWith("Hg"))
-        {
-            // Set thread for subsequent operations
-            // Hc-1  - all threads
-            // Hc1   - thread 1
-            return "OK";
-        }
-
-        if (command.StartsWith("Hc"))
-        {
-            // Selector for the thread used for continue operations.
-            // Hc-1  - select all threads for continue
-            // Hc1   - select thread 1 for continue
-            return "OK";
-        }
-
-        if (command == "qOffsets")
-        {
-            // This queries relocation offsets between sections, normally used by targets with dynamic loading or strange memory maps.
-            return "Text=0;Data=0;Bss=0";
-        }
-
-        if (command == "qTStatus")
-        {
-            // https://sourceware.org/gdb/current/onlinedocs/gdb.html/Tracepoint-Packets.html#Tracepoint-Packets
-            // Return nothing as I am not supporting tracepoints
-            return "";
-        }
-
-        if (command == "qAttached")
-        {
-            //Return an indication of whether the remote server attached to an existing process or created a new process.
-            // 1 - attached to existing process
-            // 0 - created new process
-            return "1";
-        }
-
-        if (command == "vCont?")
-        {
-            // Supported vCont actions.
-            // s - step
-            // c - continue
-            return "vCont;c;C;s;S";
-        }
-
-        if (command.StartsWith("vCont;s"))
-        {
-            m_Emulator.Step();
-            return "T05";
-        }
-
-        if (command.StartsWith("vCont;c"))
-        {
-            m_Emulator.Run();
-            return null;
-        }
-
-        if (command.StartsWith("vCont;t"))
-        {
-            m_Emulator.Stop();
-            return "S05";
-        }
-
-        if (command.StartsWith("qRcmd,"))
-        {
-            var str = Encoding.ASCII.GetString(HexStringToBytes(command.Substring(6)));
-            if (str == "reset halt")
-            {
-                m_Emulator.Reset();
-                return "OK";
-            }
-
-            if (str == "reset init")
-            {
-                m_Emulator.Reset();
-                return "OK";
-            }
-
-            m_Logger.LogWarning("Unknown qRcmd: {cmd}", str);
-            return "";
-        }
-
-        if (command == "g")
-        {
-            try
-            {
-                int registerCount = (int)m_Emulator.Registers.Length;
-                int hexCharsPerReg = 8;
-                int totalLength = registerCount * hexCharsPerReg;
-
-                Span<char> response = stackalloc char[totalLength];
-                int position = 0;
-
-                for (int i = 0; i < registerCount; i++)
-                {
-                    uint regValue = m_Emulator.Registers[(uint)i];
-                    WriteLittleEndianHex(regValue, response.Slice(position, hexCharsPerReg));
-                    position += hexCharsPerReg;
-                }
-
-                return new string(response);
-            }
-            catch (Exception)
-            {
-                return "E01";
-            }
-        }
-
-        // Read registers
-        if (Regex.IsMatch(command, @"G[0-9ABCDEFabcdef]+"))
-        {
-            var hexData = command.Substring(1);
-            if (hexData.Length != m_Emulator.Registers.Length * 8)
-            {
-                return "E01"; // Error: insufficient data
-            }
-
-            try
-            {
-                for (int i = 0; i < m_Emulator.Registers.Length; i++)
-                {
-                    m_Emulator.Registers[(uint)i] = ParseLittleEndianHex(hexData.AsSpan(i * 8, 8));
-                }
-
-                return "OK";
-            }
-            catch (Exception e)
-            {
-                m_Logger.LogError(e, "Unexpected exception when getting register data");
-                return "E02"; // Error: parsing failed
-            }
-        }
-
-        if (Regex.IsMatch(command, @"P[0-9ABCDEFabcdef]+=[0-9ABCDEFabcdef]"))
-        {
-            var args = command.Substring(1).Split('=');
-            if (args.Length != 2)
-            {
-                return "E01";
-            }
-
-            var reg = Convert.ToUInt32(args[0], 16);
-            var value = BitConverter.ToUInt32(HexStringToBytes(args[1]));
-
-            m_Emulator.Registers[reg] = value;
-            return "OK";
-        }
-
-        // Read memory - mADDR,LEN
-        if (Regex.IsMatch(command, @"m[0-9abcdefABCDEF]+,[0-9abcdefABCDEF]+"))
-        {
-            try
-            {
-                var args = command.Substring(1).Split(',');
-                var address = Convert.ToUInt32(args[0], 16);
-                var length = Convert.ToUInt32(args[1], 16);
-
-                return string.Join("", m_Emulator.MemoryRead(address, (int)length).Select(x => Convert.ToString(x, 16).PadLeft(2, '0')));
-            }
-            catch (Exception e)
-            {
-                m_Logger.LogError(e, "Unexpected exception while reading memory");
-                return "E01";
-            }
-        }
-
-        // Write memory - MADDR,LEN:DATA
-        if (Regex.IsMatch(command, @"M[0-9abcdefABCDEF]+,[0-9abcdefABCDEF]+:[0-9abcdefABCDEF]+"))
-        {
-            try
-            {
-                var args = command.Substring(1).Split(',');
-                var address = Convert.ToUInt32(args[0], 16);
-                var args2 = args[1].Split(':');
-                var length = Convert.ToUInt32(args2[0], 16);
-                var hexData = args2[1];
-
-                var data = new byte[hexData.Length / 2];
-                for (int i = 0; i < data.Length; i++)
-                {
-                    data[i] = Convert.ToByte(hexData.Substring(i * 2, 2), 16);
-                }
-                m_Emulator.MemoryWrite(address, data);
-
-                return "OK";
-            }
-            catch (Exception e)
-            {
-                m_Logger.LogError(e, "Unexpected exception while writing memory");
-                return "E01";
-            }
-        }
-
-        // Add breakpoint
-        if (command.StartsWith("Z"))
-        {
-            var args = command.Split(',');
-            //if (args[0] == "Z0")
-            //{
-            //    // Software breakpoint is not supported
-            //    return "E0E";
-            //}
-
-            var address = Convert.ToUInt32(args[1], 16);
-            m_Emulator.Brakpoints.Add(address);
-            return "OK";
-        }
-
-        // Remove breakpoint
-        if (command.StartsWith("z"))
-        {
-            var args = command.Split(',');
-            //if (args[0] == "z0")
-            //{
-            //    // Software breakpoint is not supported
-            //    return "E0E";
-            //}
-
-            var address = Convert.ToUInt32(args[1], 16);
-            m_Emulator.Brakpoints.Remove(address);
-            return "OK";
-        }
-
-        if (command.StartsWith("qXfer:"))
-        {
-            var c = command.Split(':');
-            // qXfer:features:read:target.xml:OFFSET,LENGTH
-            if (c[1] == "features" && c[2] == "read" && c[3] == "target.xml")
-            {
-                var args = c[4].Split(",").Select(hex => Convert.ToInt32(hex, 16)).ToArray();
-                var offset = args[0];
-                var length = args[1];
-
-                if (offset > m_Targetxml.Length)
-                {
-                    return "l"; // nothing left
-                }
-
-                int remaining = m_Targetxml.Length - offset;
-                int chunkSize = Math.Min(length, remaining);
-                string chunk = m_Targetxml.Substring(offset, chunkSize);
-
-                char indicator = (chunkSize == remaining) ? 'l' : 'm';
-                return indicator + chunk;
-            }
-            return "";
-        }
-
-        m_Logger.LogWarning("Unknown GDB command: {command}", command);
-        return ""; // Empty = Not Supported (Correct for vMustReplyEmpty)
     }
 
     private uint ParseBigEndianHex(ReadOnlySpan<char> hex)
@@ -559,6 +471,6 @@ public class GdbConnectionHandler : ConnectionHandler
             <reg name="pc"  bitsize="32"/>
           </feature>
         </target>
-        
+
         """;
 }

@@ -1,0 +1,6 @@
+﻿# 10.7.2 Memory Protection Unit
+
+The RP2350 DMA features a memory protection unit that you can configure to set the security/privilege level required to access up to eight different address ranges, plus a default level for addresses not matched by any of those eight ranges. The addresses of all DMA reads and writes are checked against the MPU address map. If the originating channel's security level is lower than that defined in the address map, the access is filtered. A filtered access has no effect on the downstream bus, and returns a bus error to the offending channel.
+
+The DMA memory protection unit is configured by DMA control registers starting from [MPU\\_CTRL](#page-1137-0). See [Section 12.6.6.3](#page-1101-0) for more details.
+

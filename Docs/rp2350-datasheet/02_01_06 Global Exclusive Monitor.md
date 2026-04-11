@@ -1,0 +1,76 @@
+﻿# 2.1.6 Global Exclusive Monitor
+
+The Global Exclusive Monitor enables standard Arm and RISC-V atomic instructions to safely access shared variables in SRAM from both cores. This underpins software libraries for manipulating shared variables, such as stdatomic.h in C11. For detailed rules governing the monitor's operation, see the [Armv8-M Architecture Reference Manual](https://developer.arm.com/documentation/ddi0553/latest/).
+
+Arm describes exclusive monitor interactions in terms of a *processing element*, PE, which performs a sequence of bus accesses. For RP2350 purposes, this is one AHB5 manager out of the following three: core 0 load/store, core 1 load/store, and DMA write. The DMA does not itself perform exclusive accesses, but its writes are monitored with respect to exclusive sequences on either processor. No distinction is made between debugger and non-debugger accesses from a processor.
+
+The monitor observes all transfers on SRAM initiated by the DMA write and processor load/store ports, and pays particular attention to two types of transfer:
+
+- AHB5 *exclusive reads*: Arm ldrex\* instructions, RISC-V lr.w instructions, and the read phase of RISC-V AMOs (The Hazard3 cores on RP2350 implement AMOs as an exclusive read/write pair which retries until the write succeeds)
+- AHB5 *exclusive writes*: Arm strex\* instructions, RISC-V sc.w instructions, and the writeback phase of RISC-V AMOs
+
+Based on these observations, the monitor enforces that an atomic read-modify-write sequence (formed of an exclusive read followed by a successful exclusive write by the same PE) is not interleaved with another PE's successful write (exclusive or not) to the same reservation granule. A reservation granule is any 16-byte, naturally aligned area of SRAM. An exclusive write succeeds when all of the following are true:
+
+- It is preceded by an exclusive read by the same PE
+- No other exclusive writes were performed by this PE since that exclusive read
+- The exclusive read was to the same reservation granule
+- The exclusive read was of the same size (byte/halfword/word)
+- The exclusive read was from the same security and privilege state
+- No other PEs successfully wrote to the same granule since that exclusive read
+
+If the above conditions are *not* met, the Global Exclusive Monitor shoots down the exclusive write before SRAM can commit the write data. The failure is reported to the originating PE, for example by a non-zero return value from an Arm strex instruction.
+
+This implementation of the Armv8-M Global Exclusive Monitor also meets the requirements for RISC-V lr/sc and amo\* instructions, with the caveat that the *RsrvEventual* PMA is not supported. (In practice, whilst it is quite easy to come up with contrived examples of starvation such as the DMA writing to a shared variable on every single cycle, bounded LR/SC and AMO sequences will generally complete quickly.)
+
+#### **CAUTION**
+
+Secure software should avoid shared variables in Non-secure-accessible memory. Such variables are vulnerable to deliberate starvation from exclusive accesses by repeatedly performing non-exclusive writes.
+
+Exclusive accesses are only supported on SRAM. The system treats exclusive accesses to other memory regions as normal reads and writes, reporting exclusivity failure to the originating PE, for example by a non-zero return value from an Arm strex instruction.
+
+#### **2.1.6.1. Implementation-defined Monitor Behaviour**
+
+The [Armv8-M Architecture Reference Manual](https://developer.arm.com/documentation/ddi0553/latest/) leaves several aspects of the Global Exclusive Monitor up to the implementation. For completeness, the RP2350 implementation defines them as follows:
+
+- The reservation granule size is fixed at 16 bytes
+- A single reservation is tracked per PE
+- The Arm clrex instruction does not affect global monitor state
+- Any exclusive write by a PE clears that PE's global reservation
+- A non-exclusive write by a PE does *not* clear that PE's global reservation, no matter the address
+
+Only the following updates a PE's reservation tag, setting its reservation state to **Exclusive**:
+
+• An exclusive read on SRAM
+
+Only the following changes a PE's reservation state from **Exclusive** to **Open**:
+
+- <sup>A</sup>*successful* exclusive write from another PE to this PE's reservation
+- A non-exclusive write from another PE to this PE's reservation
+- Any exclusive write by this PE
+- An exclusive read by this PE, *not* on SRAM
+
+A reservation granule can span multiple SRAM banks, so multiple operations on the same reservation granule may complete on the same cycle. This can result in the following problematic situations:
+
+- Multiple exclusive writes to the same reservation granule, reserved on each PE: in this case the lowest-numbered PE succeeds (in the order DMA < core 0 < core 1), and all others fail.
+- A mixture of non-exclusive and exclusive writes to the same reservation granule on the same cycle: in this case, the exclusive writes fail.
+- One PE *x* can write to a reservation granule on the same cycle that another PE *y* attempts to reserve the *same* reservation granule via exclusive load: in this case, *y*'s reservation is granted (i.e. the write takes place logically before the load).
+- One PE *x* can write to a reservation granule reserved by another PE *y*, on the same cycle that PE *y* makes a new reservation on a *different* reservation granule: in this case, again, *y*'s reservation is granted.
+
+These rules can be summarised by a *logical* ordering of all possible events on a reservation granule that can occur on the same cycle: first all normal writes in arbitrary order, then all exclusive writes in ascending PE order (DMA, core 0, core 1), then all loads in arbitrary order.
+
+#### **2.1.6.2. Regions Without Exclusives Support**
+
+The Global Exclusive monitor only supports exclusive transactions on certain address ranges. The main system SRAM supports exclusive transactions throughout its entire range: 0x20000000 through 0x20082000. Within ranges that support exclusive transactions, the Global Exclusive monitor:
+
+- tracks exclusive sequences across all participating PEs
+- drives the exclusive success/failure response correctly based on the observed ordering
+- shoots down failing exclusive writes so that they have no effect
+
+Exclusive transactions are not supported outside of this range: all exclusive accesses report exclusive failure (both exclusive reads and exclusive writes), and exclusive writes will not be suppressed.
+
+Outside of regions with exclusive transaction support, load/store exclusive loops run forever while still affecting SRAM contents. This applies to both Arm processors performing exclusive reads/writes and RISC-V processors performing lr.w/sc.w instructions. However, an amo\*.w instruction on Hazard3 will result in a Store/AMO Fault, as the hardware
+
+detects the failed exclusive read and bails out to avoid an infinite loop.
+
+It is recommended not to perform exclusive accesses on regions outside of main SRAM. Shared variables outside of main SRAM can be protected using either lock variables in main SRAM, the SIO spinlocks, or a locking protocol that does not require exclusive accesses, such as a lock-free queue.
+

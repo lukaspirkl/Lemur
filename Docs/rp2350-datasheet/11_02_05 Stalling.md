@@ -1,0 +1,29 @@
+﻿# 11.2.5 Stalling
+
+State machines may momentarily pause execution for a number of reasons:
+
+- <sup>A</sup>WAIT instruction's condition is not yet met
+- A blocking PULL when the TX FIFO is empty, or a blocking PUSH when the RX FIFO is full
+- An IRQ WAIT instruction which has set an IRQ flag, and is waiting for it to clear
+- An OUT instruction when autopull is enabled, and OSR has already reached its shift threshold
+- An IN instruction when autopush is enabled, ISR reaches its shift threshold, and the RX FIFO is full
+
+In this case, the program counter does not advance, and the state machine will continue executing this instruction on the next cycle. If the instruction specifies some number of delay cycles before the next instruction starts, these do not begin until *after* the stall clears.
+
+![](_page_881_Figure_11.jpeg)
+
+Side-set [\(Section 11.5.1](#page-899-1)) is not affected by stalls, and always takes place on the first cycle of the attached instruction.
+
+#### <span id="page-881-1"></span>**11.2.6. Pin Mapping**
+
+PIO controls the output level and direction of up to 32 GPIOs, and can observe their input levels. On every system clock cycle, each state machine may do none, one, or both of the following:
+
+- Change the level or direction of some GPIOs via an OUT or SET instruction, or read some GPIOs via an IN instruction
+- Change the level or direction of some GPIOs via a side-set operation
+
+Each of these operations uses one of four contiguous ranges of GPIOs, with the base and count of each range configured via each state machine's PINCTRL register. There is a range for each of OUT, SET, IN and side-set operations. Each range can cover any of the GPIOs accessible to a given PIO block (on RP2350 this is the 30 user GPIOs), and the ranges can overlap.
+
+For each individual GPIO output (level and direction separately), PIO considers all 8 writes that may have occurred on that cycle, and applies the write from the highest-numbered state machine. If the same state machine performs a SET /OUT and a side-set on the same GPIO simultaneously, the side-set is used. If no state machine writes to this GPIO output, its value does not change from the previous cycle.
+
+Generally each state machine's outputs are mapped to a distinct group of GPIOs, implementing some peripheral interface.
+

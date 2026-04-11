@@ -1,0 +1,35 @@
+﻿# 10.1.1 Secure Boot
+
+You can permanently alter blank RP2350 devices to restrict code execution to only your own code. With further alteration, you can revoke the ability to run older software versions.
+
+The RP2350 bootrom uses a cryptographic **signature** to distinguish authentic from inauthentic binaries. A signature is a hash of the binary signed with the user's private key. You can include signatures in binary images compiled for RP2350 devices. Signatures use the SHA-256 hash algorithm and secp256k1 ECDSA elliptic curve cipher to authenticate binaries. The bootrom authenticates binaries using the following steps:
+
+- 1. Calculate a SHA-256 hash using image code and data when loading the binary.
+- 2. Verify the image's signature using the user's public key, which is also stored in the image.
+- 3. Check the included, verified signature (from step 2) against the calculated SHA-256 hash value for the binary (from step 1).
+- 4. Check the image's public key against a SHA-256 key fingerprint stored in OTP.
+
+If both checks succeed, the bootrom assumes someone in possession of the private key registered by an OTP public key fingerprint calculated the same SHA-256 hash. Based on the properties of hash functions, the bootrom assumes that the binary contents have not been altered since the signature was generated. This proves that this is an authentic binary signed by the owner of the private key, so the bootrom will entertain the idea of running the binary.
+
+The image may also have an anti-rollback version number (rollback.major.minor) that the bootrom checks against a
+
+10.1. Overview (Arm) **813**
+
+counter stored in OTP. The bootrom refuses to boot images with rollback versions lower than the OTP counter number, and automatically increments the OTP counter upon booting a higher version. This is useful if older binaries have known vulnerabilities, as installing a newer version automatically revokes the ability to downgrade to older versions. Incrementing the major and minor versions allows you to express a preference for newer, higher binary versions without blocking execution of older, lower-versioned binaries. For more discussion of bootrom anti-rollback support, see [Section](#page-359-0) [5.1.11](#page-359-0).
+
+RP2350 can boot from any of the following sources:
+
+- Directly on external flash via execute-in-place (XIP)
+- Loading into SRAM from external flash
+- Loading into SRAM from user-specified OTP contents
+- Loading into SRAM via USB or other serial bootloader
+- Loading into SRAM via debugger
+
+RP2350 enforces signatures on all of these boot media, with the exception of the debugger, when an external host has control of RP2350's processors and can completely skip execution of the bootrom. Disabling debug is part of the secure boot enable procedure outlined in [Section 10.5.](#page-819-0)
+
+Although signatures *can* be enforced on a flash execute-in-place binary, we do not recommend it. With this boot media, flash contents can change between checks and execution. For example, an attacker could emulate a QSPI device using an FPGA or another microcontroller. Instead, load your complete application into SRAM and verify it in-place before execution. RP2350 has sufficient SRAM capacity to do this with most applications.
+
+Pure-software secure boot implementations are susceptible to fault injection attacks when an attacker has physical access to the device, as is often the case for embedded hardware. Our very own Pico is a popular tool for voltage fault injection. Instead of potentially booting an unauthorised binary, the RP2350 glitch detectors [\(Section 10.9\)](#page-866-1) and redundancy coprocessor ([Section 3.6.3\)](#page-112-0) mitigate fault injection attacks by detecting out-of-envelope operation and bringing the system to a safe halt. To enable the glitch detectors, set the [CRIT1](#page-1304-0).GLITCH\_DETECTOR\_ENABLE OTP flag. The redundancy coprocessor is always used by the bootrom.
+
+To learn more about how to enable secure boot on a blank RP2350 device, see [Section 10.5](#page-819-0).
+

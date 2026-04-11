@@ -1,0 +1,14 @@
+﻿# 4.3 Boot RAM
+
+Boot RAM is a 1 kB (256 × 32-bit) SRAM dedicated for use by the bootrom. It is slower than main SRAM, as it is accessed over APB, taking three cycles for a read and four cycles for a write.
+
+Boot RAM is used for myriad purposes during boot, including the initial pre-boot stack. After the bootrom enters the user application, boot RAM contains state for the user-facing ROM APIs, such as the resident partition table used for flash programming protection, and a copy of the flash XIP setup function (formerly known as boot2) to quickly reinitialise flash XIP modes following serial programming operations.
+
+Boot RAM is hardwired to permit Secure access only (Arm) or Machine-mode access only (RISC-V). It is physically impossible to execute code from boot RAM, regardless of MPU configuration, as it is on the APB peripheral bus segment, which is not wired to the processor instruction fetch ports.
+
+Since boot RAM is in the XIP RAM power domain, it is always powered when the switched core domain is powered. This simplifies SRAM power management in the bootrom, because it doesn't have to power up any RAM before it has a place to store the call stack.
+
+Boot RAM supports the standard atomic set/clear/XOR accesses used by other peripherals on RP2350 ([Section 2.1.3\)](#page-26-0).
+
+It is possible to use boot RAM for user-defined purposes, but this is not recommended, as it may cause ROM APIs to behave unpredictably. Calling into the ROM could modify data stored in boot RAM.
+

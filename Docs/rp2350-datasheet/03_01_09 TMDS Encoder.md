@@ -1,0 +1,10 @@
+﻿# 3.1.9 TMDS Encoder
+
+Each core is equipped with an implementation of the TMDS encode algorithm described in chapter 3 of the DVI 1.0 specification. In general, the HSTX peripheral ([Section 12.11](#page-1199-1)) supports lower processor overhead for DVI-D output as well as a wider range of pixel formats, but the SIO TMDS encoders are included for use with non-HSTX-capable GPIOs.
+
+The [TMDS\\_CTRL](#page-78-4) register allows configuration of a number of input pixel formats, from 16-bit RGB down to 1-bit monochrome. Once the encoder has been set up, the processor writes 32 bits of colour data at a time to [TMDS\\_WDATA,](#page-80-0) and then reads TMDS data symbols from the output registers. Depending on the pixel format, there may be multiple TMDS symbols read for each write to [TMDS\\_WDATA](#page-80-0). There are no stalls: encoding is limited entirely by the processor's load/store bandwidth, up to one 32-bit read or write per cycle per core.
+
+To allow for framebuffer/scanbuffer resolution lower than the display resolution, the output registers have both peek and pop aliases (e.g. [TMDS\\_PEEK\\_SINGLE](#page-80-1) and [TMDS\\_POP\\_SINGLE](#page-80-2)). Reading either register advances the encoder's DC balance counter, but only the pop alias shifts the colour data in [TMDS\\_WDATA](#page-80-0) so that multiple correctly-DC-balanced TMDS symbols can be generated from the same input pixel.
+
+The TMDS encoder peripherals are not duplicated over security domains. They are assigned to the Secure SIO at reset, and can be reassigned to the Non-secure SIO using the [PERI\\_NONSEC](#page-76-0) register.
+

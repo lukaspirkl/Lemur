@@ -1,0 +1,22 @@
+﻿# 3.9 Arm/RISC-V Architecture Switching
+
+RP2350 supports both Arm and RISC-V processor architectures. SDK-based programs which do not contain assembly code typically run unmodified on either architecture by providing the appropriate build flag.
+
+There are two processor sockets on RP2350, referred to as core 0 and core 1 throughout this document. Each socket can be occupied *either* by a Cortex-M33 processor (implementing the Armv8-M Main architecture, plus extensions) or by a Hazard3 processor (implementing the RV32IMAC architecture, plus extensions).
+
+When a processor reset is removed, hardware samples the [ARCHSEL](#page-1285-1) register in the OTP control register block to determine which processor to connect to that socket. The unused processor is held in reset indefinitely, with its clock inputs gated. The default and allowable values of the [ARCHSEL](#page-1285-1) register are determined by critical OTP flags:
+
+- 1. If CRIT0\_ARM\_DISABLE is set, only RISC-V is allowed.
+- 2. Else if CRIT0\_RISCV\_DISABLE is set, only Arm is allowed.
+- 3. Else if CRIT1\_SECURE\_BOOT\_ENABLE is set, only Arm is allowed.
+- 4. Else if CRIT1\_BOOT\_ARCH is set, both architectures are permitted, and the default is RISC-V.
+- 5. If none of the above flags are set, both architectures are permitted, and the default is Arm.
+
+No CRIT1 flags are set by default, so on devices where both architectures are available, the default is Arm. To change the default architecture to RISC-V, set the CRIT1\_BOOT\_ARCH flag to 1.
+
+Enabling secure boot disables the RISC-V cores because the RP2350 bootrom does not implement secure boot for RISC-V. This prevents a bad actor from side-stepping secure boot by switching architectures.
+
+RP2350 only samples the [ARCHSEL](#page-1285-1) register when a processor is reset. Its value is ignored at all other times, so software can program the register before a watchdog reset to implement a software-initiated switch between architectures.
+
+Read the [ARCHSEL\\_STATUS](#page-1286-0) register to check the ARCHSEL value most recently sampled by each processor.
+

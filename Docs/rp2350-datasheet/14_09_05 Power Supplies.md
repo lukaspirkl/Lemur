@@ -1,0 +1,26 @@
+﻿# 14.9.5 Power Supplies
+
+*Table 1440. Power Supply Specifications*
+
+<span id="page-1339-1"></span>
+
+| Power Supply                 | Supplies          | Min   | Typ       | Max  | Units |
+|------------------------------|-------------------|-------|-----------|------|-------|
+| IOVDDa                       | Digital IO        | 1.62  | 1.8 / 3.3 | 3.63 | V     |
+| QSPI_IOVDD<br>(RP2350 only)a | Digital IO        | 1.62  | 1.8 / 3.3 | 3.63 | V     |
+| QSPI_IOVDD<br>(RP2354 only)  | Digital IO        | 2.97  | 3.3       | 3.63 | V     |
+| DVDDb                        | Digital core      | 1.05  | 1.1       | 1.16 | V     |
+| VREG_VIN                     | Voltage regulator | 2.7   | 3.3       | 5.5  | V     |
+| VREG_AVDD                    | Voltage regulator | 3.135 | 3.3       | 3.63 | V     |
+
+| Power Supply | Supplies      | Min   | Typ | Max  | Units |
+|--------------|---------------|-------|-----|------|-------|
+| USB_OTP_VDD  | USB PHY & OTP | 3.135 | 3.3 | 3.63 | V     |
+| ADC_AVDDc    | ADC           | 1.62  | 3.3 | 3.63 | V     |
+
+a If IOVDD <2.5V, GPIO VOLTAGE\_SELECT registers should be adjusted accordingly. See [Section 6.1](#page-439-1) for details.
+
+# **NOTE**
+
+RP2354 contains an internal 3.3V flash device, therefore QSPI\_IOVDD *must* be 3.3V. Furthermore, if the QSPI pins are to be used to connect to an additional flash or PSRAM device, then IOVDD *must* be 3.3V, as a GPIO is used as QSPI chip select in this case.
+

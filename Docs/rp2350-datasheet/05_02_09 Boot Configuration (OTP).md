@@ -1,0 +1,12 @@
+﻿# 5.2.9 Boot Configuration (OTP)
+
+User configuration stored in OTP can be found in [Section 13.9,](#page-1288-0) starting at [CRIT1.](#page-1304-0)
+
+The main controls for the bootrom are stored in [BOOT\\_FLAGS0](#page-1304-1) and [BOOT\\_FLAGS1.](#page-1306-0) These are both in page 1 of OTP, which has the following default permissions on a blank device:
+
+- Read-write for Secure (S)
+- Read-write for bootloader (BL)
+- Read-only for Non-secure (NS)
+
+Boot key hashes are stored in page 2 of OTP, starting from [BOOTKEY0\\_0.](#page-1315-1) There is space for up to four boot key hashes in this page. See [Section 5.10.1](#page-427-1) for an example of how keys can be installed.
+

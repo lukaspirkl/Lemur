@@ -1,0 +1,17 @@
+﻿# 14.9.1 Absolute Maximum Ratings
+
+*Table 1432. Absolute maximum ratings*
+
+| Parameter                                                         | Symbol | Conditions | Minimum | Maximum     | Units | Comment |
+|-------------------------------------------------------------------|--------|------------|---------|-------------|-------|---------|
+| Core Supply<br>(DVDD) Voltage                                     | DVDD   |            | -0.5    | 1.21        | V     |         |
+| I/O Supply<br>(IOVDD) & QSPI<br>Supply<br>(QSPI_IOVDD)<br>Voltage | IOVDD  |            | -0.5    | 3.63        | V     |         |
+| Voltage at IO<br>(Standard)                                       | VPIN   |            | -0.5    | IOVDD + 0.5 | V     |         |
+
+| Parameter             | Symbol  | Conditions | Minimum | Maximum | Units | Comment                  |
+|-----------------------|---------|------------|---------|---------|-------|--------------------------|
+| Voltage at IO<br>(FT) | VPIN_FT | IOVDD=3.3V | -0.5    | 5.5     | V     | IOVDD must be<br>present |
+|                       |         | IOVDD=2.5V | -0.5    | 4.2     | V     |                          |
+|                       |         | IOVDD=1.8V | -0.5    | 3.63    | V     |                          |
+|                       |         | IOVDD=0V   | -0.5    | 3.63    | V     |                          |
+

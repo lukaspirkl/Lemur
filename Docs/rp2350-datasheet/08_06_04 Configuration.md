@@ -1,0 +1,155 @@
+﻿# 8.6.4 Configuration
+
+The SDK uses the following PLL settings:
+
+*SDK: [https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2\\_common/hardware\\_clocks/include/hardware/clocks.h](https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/hardware_clocks/include/hardware/clocks.h#L143-L164) Lines 143 - 164*
+
+```
+143 // There are two PLLs in RP-series microcontrollers:
+144 // 1. The 'SYS PLL' generates the system clock, the frequency is defined by `SYS_CLK_KHZ`.
+145 // 2. The 'USB PLL' generates the USB clock, the frequency is defined by `USB_CLK_KHZ`.
+146 //
+147 // The two PLLs use the crystal oscillator output directly as their reference frequency input;
+  the PLLs reference
+148 // frequency cannot be reduced by the dividers present in the clocks block. The crystal
+  frequency is defined by `XOSC_HZ` (or
+149 // `XOSC_KHZ` or `XOSC_MHZ`).
+150 //
+151 // The system's default definitions are correct for the above frequencies with a 12MHz
+152 // crystal frequency. If different frequencies are required, these must be defined in
+153 // the board configuration file together with the revised PLL settings
+154 // Use `vcocalc.py` to check and calculate new PLL settings if you change any of these
+  frequencies.
+155 //
+156 // Default PLL configuration RP2040:
+157 // REF FBDIV VCO POSTDIV
+158 // PLL SYS: 12 / 1 = 12MHz * 125 = 1500MHz / 6 / 2 = 125MHz
+159 // PLL USB: 12 / 1 = 12MHz * 100 = 1200MHz / 5 / 5 = 48MHz
+160 //
+161 // Default PLL configuration RP2350:
+162 // REF FBDIV VCO POSTDIV
+163 // PLL SYS: 12 / 1 = 12MHz * 125 = 1500MHz / 5 / 2 = 150MHz
+164 // PLL USB: 12 / 1 = 12MHz * 100 = 1200MHz / 5 / 5 = 48MHz
+```
+
+The pll\_init function in the SDK (examined below) asserts that all of these conditions are true before attempting to configure the PLL.
+
+The SDK defines the PLL control registers as a struct. It then maps them into memory for each instance of the PLL.
+
+*SDK: [https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2350/hardware\\_structs/include/hardware/structs/pll.h](https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2350/hardware_structs/include/hardware/structs/pll.h#L27-L74) Lines 27 - 74*
+
+```
+27 typedef struct {
+28 _REG_(PLL_CS_OFFSET) // PLL_CS
+29 // Control and Status
+30 // 0x80000000 [31] LOCK (0) PLL is locked
+31 // 0x40000000 [30] LOCK_N (0) PLL is not locked +
+32 // 0x00000100 [8] BYPASS (0) Passes the reference clock to the output instead of
+  the...
+33 // 0x0000003f [5:0] REFDIV (0x01) Divides the PLL input reference clock
+34 io_rw_32 cs;
+35 
+36 _REG_(PLL_PWR_OFFSET) // PLL_PWR
+37 // Controls the PLL power modes
+38 // 0x00000020 [5] VCOPD (1) PLL VCO powerdown +
+39 // 0x00000008 [3] POSTDIVPD (1) PLL post divider powerdown +
+40 // 0x00000004 [2] DSMPD (1) PLL DSM powerdown +
+41 // 0x00000001 [0] PD (1) PLL powerdown +
+42 io_rw_32 pwr;
+43 
+44 _REG_(PLL_FBDIV_INT_OFFSET) // PLL_FBDIV_INT
+45 // Feedback divisor
+46 // 0x00000fff [11:0] FBDIV_INT (0x000) see ctrl reg description for constraints
+47 io_rw_32 fbdiv_int;
+48 
+49 _REG_(PLL_PRIM_OFFSET) // PLL_PRIM
+50 // Controls the PLL post dividers for the primary output
+51 // 0x00070000 [18:16] POSTDIV1 (0x7) divide by 1-7
+52 // 0x00007000 [14:12] POSTDIV2 (0x7) divide by 1-7
+53 io_rw_32 prim;
+54 
+55 _REG_(PLL_INTR_OFFSET) // PLL_INTR
+56 // Raw Interrupts
+57 // 0x00000001 [0] LOCK_N_STICKY (0)
+58 io_rw_32 intr;
+59 
+60 _REG_(PLL_INTE_OFFSET) // PLL_INTE
+61 // Interrupt Enable
+62 // 0x00000001 [0] LOCK_N_STICKY (0)
+63 io_rw_32 inte;
+64 
+65 _REG_(PLL_INTF_OFFSET) // PLL_INTF
+66 // Interrupt Force
+67 // 0x00000001 [0] LOCK_N_STICKY (0)
+68 io_rw_32 intf;
+69 
+70 _REG_(PLL_INTS_OFFSET) // PLL_INTS
+71 // Interrupt status after masking & forcing
+72 // 0x00000001 [0] LOCK_N_STICKY (0)
+73 io_ro_32 ints;
+74 } pll_hw_t;
+```
+
+The SDK defines pll\_init, which is used to configure or reconfigure a PLL. It starts by clearing any previous power state in the PLL, then calculates the appropriate feedback divider value. There are assertions to check that these values satisfy the constraints above.
+
+*SDK: [https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2\\_common/hardware\\_pll/pll.c](https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/hardware_pll/pll.c#L13-L21) Lines 13 - 21*
+
+```
+13 void pll_init(PLL pll, uint refdiv, uint vco_freq, uint post_div1, uint post_div2) {
+14 uint32_t ref_freq = XOSC_HZ / refdiv;
+15
+```
+
+```
+16 // Check vco freq is in an acceptable range
+17 assert(vco_freq >= PICO_PLL_VCO_MIN_FREQ_HZ && vco_freq <= PICO_PLL_VCO_MAX_FREQ_HZ);
+18 
+19 // What are we multiplying the reference clock by to get the vco freq
+20 // (The regs are called div, because you divide the vco output and compare it to the
+  refclk)
+21 uint32_t fbdiv = vco_freq / ref_freq;
+```
+
+The programming sequence for the PLL is as follows:
+
+- 1. Program the reference clock divider (is a divide by 1 in the RP2350 case).
+- 2. Program the feedback divider.
+- 3. Turn on the main power and VCO.
+- 4. Wait for the VCO to achieve a stable frequency, as indicated by the LOCK status flag.
+- 5. Set up post dividers and turn them on.
+
+*SDK: [https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2\\_common/hardware\\_pll/pll.c](https://github.com/raspberrypi/pico-sdk/blob/master/src/rp2_common/hardware_pll/pll.c#L42-L69) Lines 42 - 69*
+
+```
+42 if ((pll->cs & PLL_CS_LOCK_BITS) &&
+43 (refdiv == (pll->cs & PLL_CS_REFDIV_BITS)) &&
+44 (fbdiv == (pll->fbdiv_int & PLL_FBDIV_INT_BITS)) &&
+45 (pdiv == (pll->prim & (PLL_PRIM_POSTDIV1_BITS | PLL_PRIM_POSTDIV2_BITS)))) {
+46 // do not disrupt PLL that is already correctly configured and operating
+47 return;
+48 }
+49 
+50 reset_unreset_block_num_wait_blocking(PLL_RESET_NUM(pll));
+51 
+52 // Load VCO-related dividers before starting VCO
+53 pll->cs = refdiv;
+54 pll->fbdiv_int = fbdiv;
+55 
+56 // Turn on PLL
+57 uint32_t power = PLL_PWR_PD_BITS | // Main power
+58 PLL_PWR_VCOPD_BITS; // VCO Power
+59 
+60 hw_clear_bits(&pll->pwr, power);
+61 
+62 // Wait for PLL to lock
+63 while (!(pll->cs & PLL_CS_LOCK_BITS)) tight_loop_contents();
+64 
+65 // Set up post dividers
+66 pll->prim = pdiv;
+67 
+68 // Turn on post divider
+69 hw_clear_bits(&pll->pwr, PLL_PWR_POSTDIVPD_BITS);
+```
+
+The VCO turns on first, followed by the post dividers, so the PLL does not output a dirty clock while waiting for the VCO to lock.
+

@@ -1,0 +1,16 @@
+﻿# 13.5.4 Special Pages
+
+The following pages require special case handling in their lock checks:
+
+- The lock word region itself (pages 62 and 63)
+  - Lock words are always world-readable
+  - Lock words are writable by Secure code if the lock word itself permits Secure writes
+  - Consequently, lock words 62 and 63 are considered "spare", since they do not protect pages 62 and 63; the page 63 lock word is repurposed for the RMA flag
+- The hardware access key page (page 61)
+  - Contains OTP access keys and debug access keys
+  - Each key also has a valid bit (rbit)
+  - Page 61 (key page) has all of the usual protections from the page 61 lock word
+  - If a key's valid bit is set, that key is inaccessible; the converse is not necessarily true
+
+Page 0, known as the **chip info page**, is *not* a special page. Raspberry Pi sets page 0 to read-only during factory test, after writing chip identification and calibration values.
+

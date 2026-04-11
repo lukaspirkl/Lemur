@@ -1,0 +1,4 @@
+﻿# 7.3 Chip Level Resets
+
+Chip-level resets put the entire chip into a default state. These resets are only initiated by hardware events, the debugger, or a watchdog timeout.
+

@@ -1,0 +1,164 @@
+﻿# 5.9.4 Partition Table Items
+
+Partition tables allows dividing the 32 MB flash region (2 × 16 MB) into partitions. Permissions and other partition attributes may be specified for each partition, along with permissions for the un-partitioned space.
+
+The permission specify read/write access for Secure code, Non-secure code, and "NSBoot" which refers to the boot loader (and PICOBOOT)
+
+# **NOTE**
+
+These permissions are only advisory to Secure code, however they are respected by [flash\\_op\(\),](#page-386-0) the PICOBOOT flash access commands, and UF2 downloads.
+
+#### **5.9.4.1. PARTITION\_TABLE item**
+
+| Word        | Bytes                                            | Value                                                                  |
+|-------------|--------------------------------------------------|------------------------------------------------------------------------|
+| 0           | 1                                                | 0x44 (size_flag == 0, item_type == PICOBIN_BLOCK_ITEM_PARTITION_TABLE) |
+|             | 2                                                | Block size in words                                                    |
+|             | 1                                                | singleton_flag:1, pad:3 , partition_count:4                            |
+| 1           | 4                                                | unpartitioned_space_permissions_and_flags                              |
+| Partition 0 |                                                  |                                                                        |
+| 2           | 4                                                | permissions_and_location for partition 0                               |
+| 3           | 4                                                | permissions_and_flags for partition 0                                  |
+|             | if _partition_0_has_id:                          |                                                                        |
+| 3           | 4                                                | partition_0_ID_lo                                                      |
+| 4           | 4                                                | partition_0_ID_hi                                                      |
+|             | one word per additional family ID (can be none): |                                                                        |
+| x           | 4                                                | partition_0_family ID_0                                                |
+| x + 1       | 4                                                | partition_0_family ID_1                                                |
+|             | …                                                | …                                                                      |
+|             |                                                  | if _partition_0_has_name:                                              |
+| y           | 1                                                | reserved:1 (0), name_len_bytes:7                                       |
+|             | 1                                                | partition_0_name_byte_0                                                |
+|             | 1                                                | partition_0_name_byte_1                                                |
+|             | 1                                                | partition_0_name_byte_2                                                |
+
+| Word          | Bytes | Value                                                              |
+|---------------|-------|--------------------------------------------------------------------|
+| y+1           | 1     | partition_0_name_byte_3                                            |
+|               | 1     | partition_0_name_byte_4                                            |
+|               | 1     | partition_0_name_byte_5                                            |
+|               | 1     | partition_0_name_byte_6                                            |
+| …             | …     | …                                                                  |
+|               | ?     | partition_0_name_byte_n_minus_x to partition_0_name_byte_n_minus_2 |
+|               | 1     | partition_0_name_byte_n_minus_1                                    |
+|               | ?     | (padding zero bytes to reach word alignment)                       |
+| (Partition 1) |       |                                                                    |
+| …             | …     | …                                                                  |
+
+#### <span id="page-424-0"></span>**5.9.4.2. Partition location, permissions and flags**
+
+Two common words are stored in the partition table for both un-partitioned space and each partition. These common words describe the size/location, along with access permissions and various flags.
+
+The permission fields are repeated in both words, hence the two words are permissions\_and\_location and permissions\_and\_flags.
+
+*Table 471. Permission Fields.* 'P' *means the field applies to partitions,* 'U' *means the field applies to unpartitioned space, however the word "partition" is always used in the description*
+
+| Mask        | AppliesTo | Description                                                                                   |
+|-------------|-----------|-----------------------------------------------------------------------------------------------|
+| 0x04000000u | 'P' 'U'   | PERMISSION_S_R_BITS                                                                           |
+|             |           | If set, the partition is readable by Secure code. See Section 5.1.3                           |
+| 0x08000000u | 'P' 'U'   | PERMISSION_S_W_BITS                                                                           |
+|             |           | If set, the partition is writable by Secure code. See Section 5.1.3                           |
+| 0x10000000u | 'P' 'U'   | PERMISSION_NS_R_BITS                                                                          |
+|             |           | If set, the partition is readable by Non-secure code. See Section 5.1.3                       |
+| 0x20000000u | 'P' 'U'   | PERMISSION_NS_W_BITS                                                                          |
+|             |           | If set, the partition is writable by Non-secure code. See Section 5.1.3                       |
+| 0x40000000u | 'P' 'U'   | PERMISSION_NSBOOT_R_BITS                                                                      |
+|             |           | If set, the partition is readable by NSBOOT (i.e. boot loader) Secure code. See Section 5.1.3 |
+| 0x80000000u | 'P' 'U'   | PERMISSION_NSBOOT_W_BITS                                                                      |
+|             |           | If set, the partition is writable by NSBOOT (i.e. boot loader) Secure code. See Section 5.1.3 |
+
+*Table 472. Location Fields.* 'P' *means the field applies to partitions,* 'U' *means the field applies to unpartitioned space, however the word "partition" is always used in the description*
+
+| Mask        | AppliesTo | Description                                                                        |  |
+|-------------|-----------|------------------------------------------------------------------------------------|--|
+| 0x00001fffu | 'P' 'U'   | LOCATION_FIRST_SECTOR_BITS                                                         |  |
+|             |           | The sector number (0-4095) of the first sector in the partition (a sector is 4 kB) |  |
+| 0x03ffe000u | 'P' 'U'   | LOCATION_LAST_SECTOR_BITS                                                          |  |
+|             |           | The sector number (0-4095) of the last sector in the partition (a sector is 4 kB)  |  |
+
+*Table 473. Flags Fields.* 'P' *means the field applies to partitions,* 'U' *means the field applies to unpartitioned space, however the word "partition" is always used in the description*
+
+| Mask        | AppliesTo | Description                                                                                                                                                                                                                                                                                                                                                                                    |
+|-------------|-----------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 0x00000001u | 'P'       | FLAGS_HAS_ID_BITS                                                                                                                                                                                                                                                                                                                                                                              |
+|             |           | If set, the partition has a 64 bit identifier                                                                                                                                                                                                                                                                                                                                                  |
+| 0x00000006u | 'P'       | FLAGS_LINK_TYPE_BITS                                                                                                                                                                                                                                                                                                                                                                           |
+|             |           | The type of link stored in the partition:                                                                                                                                                                                                                                                                                                                                                      |
+|             |           | •<br>0x0 - None                                                                                                                                                                                                                                                                                                                                                                                |
+|             |           | •<br>0x1 - A_PARTITION : This is a "B" partition, and The LINK_VALUE field stores the partition<br>number of the corresponding "A" partition                                                                                                                                                                                                                                                   |
+|             |           | •<br>0x2 - OWNER : This is an "A" partition, and the LINK_VALUE field stores the partition number of<br>the owning partition (which should also be an "A" partition).                                                                                                                                                                                                                          |
+| 0x00000078u | 'P'       | FLAGS_LINK_VALUE_BITS                                                                                                                                                                                                                                                                                                                                                                          |
+|             |           | If LINK_TYPE is non zero, then this field holds the partition number of the linked partition.                                                                                                                                                                                                                                                                                                  |
+| 0x00000180u | 'P'       | FLAGS_ACCEPTS_NUM_EXTRA_FAMILIES_BITS                                                                                                                                                                                                                                                                                                                                                          |
+|             |           | 0-3 the number of extra non-standard UF2 family ids the partition accepts.                                                                                                                                                                                                                                                                                                                     |
+| 0x00000200u | 'P'       | FLAGS_NOT_BOOTABLE_ARM_BITS                                                                                                                                                                                                                                                                                                                                                                    |
+|             |           | If set then this partition is marked non-bootable on Arm, and will be ignored during Arm boot.<br>Setting this for non Arm bootable partitions can improve boot performance.                                                                                                                                                                                                                   |
+| 0x00000400u | 'P'       | FLAGS_NOT_BOOTABLE_RISCV_BITS                                                                                                                                                                                                                                                                                                                                                                  |
+|             |           | If set then this partition is marked non-bootable on RISC-V, and will be ignored during RISC-V<br>boot. Setting this for non RISC-V bootable partitions can improve boot performance.                                                                                                                                                                                                          |
+| 0x00000800u | 'P'       | FLAGS_UF2_DOWNLOAD_AB_NON_BOOTABLE_OWNER_AFFINITY                                                                                                                                                                                                                                                                                                                                              |
+| 0x00001000u | 'P'       | FLAGS_HAS_NAME_BITS                                                                                                                                                                                                                                                                                                                                                                            |
+|             |           | If set, the partition has a name.                                                                                                                                                                                                                                                                                                                                                              |
+| 0x00002000u | 'P' 'U'   | FLAGS_UF2_DOWNLOAD_NO_REBOOT_BITS                                                                                                                                                                                                                                                                                                                                                              |
+|             |           | If set, the RP2350 will not reboot after dragging a UF2 into this partition.                                                                                                                                                                                                                                                                                                                   |
+| 0x00004000u | 'P' 'U'   | FLAGS_ACCEPTS_DEFAULT_FAMILY_RP2040_BITS                                                                                                                                                                                                                                                                                                                                                       |
+|             |           | If set, a UF2 with the RP2040 family id 0xe48bff56 may be downloaded into this partition.                                                                                                                                                                                                                                                                                                      |
+| 0x00008000u | 'U'       | FLAGS_ACCEPTS_DEFAULT_FAMILY_ABSOLUTE_BITS                                                                                                                                                                                                                                                                                                                                                     |
+|             |           | If set for un-partitioned spaced, a UF2 with the ABSOLUTE family id 0xe48bff57 may be<br>downloaded onto the RP2350 and will be written at the addresses specified in the UF2 without<br>regard to partition locations. Partition-defined flash access permissions will however still be<br>respected (i.e. the UF2 download will fail if it needs to write over a read-only region of flash). |
+| 0x00010000u | 'P' 'U'   | FLAGS_ACCEPTS_DEFAULT_FAMILY_DATA_BITS                                                                                                                                                                                                                                                                                                                                                         |
+|             |           | If set, a UF2 with the DATA family id 0xe48bff58 may be downloaded into this partition.                                                                                                                                                                                                                                                                                                        |
+| 0x00020000u | 'P' 'U'   | FLAGS_ACCEPTS_DEFAULT_FAMILY_RP2350_ARM_S_BITS                                                                                                                                                                                                                                                                                                                                                 |
+|             |           | If set, a UF2 with the RP2350_ARM_S family id 0xe48bff59 may be downloaded into this partition.                                                                                                                                                                                                                                                                                                |
+| 0x00040000u | 'P' 'U'   | FLAGS_ACCEPTS_DEFAULT_FAMILY_RP2350_RISCV_BITS                                                                                                                                                                                                                                                                                                                                                 |
+|             |           | If set, a UF2 with the RP2350_RISC_V family id 0xe48bff5a may be downloaded into this partition.                                                                                                                                                                                                                                                                                               |
+
+| Mask        | AppliesTo | Description                                                                                      |  |
+|-------------|-----------|--------------------------------------------------------------------------------------------------|--|
+| 0x00080000u | 'P' 'U'   | FLAGS_ACCEPTS_DEFAULT_FAMILY_RP2350_ARM_NS_BITS                                                  |  |
+|             |           | If set, a UF2 with the RP2350_ARM_NS family id 0xe48bff5b may be downloaded into this partition. |  |
+| 0x03f00000u | 'P' 'U'   | reserved; should be 0                                                                            |  |
+
+## <span id="page-426-0"></span>**5.9.5. Minimum Viable Image Metadata**
+
+A minimum amount of metadata (i.e. a valid IMAGE\_DEF block) must be embedded in any binary for the bootrom to recognise it as a valid program image, as opposed to, for example, blank flash contents or a disconnected flash device. This must appear within the first 4 kB of a flash image, or anywhere in a RAM or OTP image.
+
+Unlike RP2040, there is no requirement for flash binaries to have a checksummed "boot2" flash setup function at flash address 0. The RP2350 bootrom performs a simple best-effort XIP setup during flash scanning, and a flash-resident program can continue executing in this state, or can choose to reconfigure the QSPI interface at a later time for best performance.
+
+#### **5.9.5.1. Minimum Arm IMAGE\_DEF**
+
+Assuming [CRIT1](#page-1304-0).SECURE\_BOOT\_ENABLE is clear, the minimum valid IMAGE\_DEF is the following 20-byte sequence:
+
+| Word | LE Value   | Bytes  | Description                                                                                                                                                                                                    |
+|------|------------|--------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 0    | 0xffffded3 | 4      | PICOBIN_BLOCK_MARKER_START                                                                                                                                                                                     |
+| 1    | 0x10210142 | 1      | 0x42(item_type == PICOBIN_BLOCK_ITEM_1BS_IMAGE_TYPE)                                                                                                                                                           |
+|      |            | 1      | 0x01 (Item is 1 word in size)                                                                                                                                                                                  |
+|      |            | 2      | 0x1021<br>(PICOBIN_IMAGE_TYPE_IMAGE_TYPE_AS_BITS(EXE)<br> <br>PICOBIN_IMAGE_TYPE_EXE_SECURITY_AS_BITS(S)<br> <br>PICOBIN_IMAGE_TYPE_EXE_CPU_AS_BITS(Arm)<br> <br>PICOBIN_IMAGE_TYPE_EXE_CHIP_AS_BITS(RP23500)) |
+| 2    | 0x000001ff | 1<br>2 | 0xff(size_type == 1, item_type_ == PICOBIN_BLOCK_ITEM_2BS_LAST)<br>0x0001 (size)                                                                                                                               |
+| 3    | 0x00000000 | 1<br>4 | 0x00 (pad)<br>Relative pointer to next block in block loop - 0x00000000 means link to self, i.e. a<br>loop containing just this block                                                                          |
+| 4    | 0xab123579 | 4      | PICOBIN_BLOCK_MARKER_END                                                                                                                                                                                       |
+
+The *LE Value* column indicates a 32-bit little-endian value that should appear verbatim in your program image.
+
+Since the above block does not specify an explicit entry point, the bootrom will assume the binary starts with a Cortex-M vector table, and enter via the reset handler and initial stack pointer specified in that table (offsets +4 and +0 bytes into the table). An explicit vector table pointer can be provided by a PICOBIN\_BLOCK\_ITEM\_1BS\_VECTOR\_TABLE item, or the entry point can be specified directly by a PICOBIN\_BLOCK\_ITEM\_1BS\_ENTRY\_POINT item.
+
+#### **5.9.5.2. Minimum RISC-V IMAGE\_DEF**
+
+The minimum valid IMAGE\_DEF is the following 20-byte sequence:
+
+| Word | LE Value   | Bytes | Description                                                                                                                                                   |
+|------|------------|-------|---------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 0    | 0xffffded3 | 4     | PICOBIN_BLOCK_MARKER_START                                                                                                                                    |
+| 1    | 0x11010142 | 1     | 0x42(item_type == PICOBIN_BLOCK_ITEM_1BS_IMAGE_TYPE)                                                                                                          |
+|      |            | 1     | 0x01 (Item is 1 word in size)                                                                                                                                 |
+|      |            | 2     | 0x1101<br>(PICOBIN_IMAGE_TYPE_IMAGE_TYPE_AS_BITS(EXE)<br> <br>PICOBIN_IMAGE_TYPE_EXE_CPU_AS_BITS(RISCV)<br> <br>PICOBIN_IMAGE_TYPE_EXE_CHIP_AS_BITS(RP23500)) |
+| 2    | 0x000001ff | 1     | 0xff(size_type == 1, item_type_ == PICOBIN_BLOCK_ITEM_2BS_LAST)                                                                                               |
+|      |            | 2     | 0x0001 (size)                                                                                                                                                 |
+|      |            | 1     | 0x00 (pad)                                                                                                                                                    |
+| 3    | 0x00000000 | 4     | Relative pointer to next block in block loop - 0x00000000 means link to self, i.e. a<br>loop containing just this block                                       |
+| 4    | 0xab123579 | 4     | PICOBIN_BLOCK_MARKER_END                                                                                                                                      |
+
+The *LE Value* column indicates a 32-bit little-endian value that should appear verbatim in your program image.
+
+Since the above block does not specify an explicit entry point, the bootrom will enter the binary at its lowest address, which is the default behaviour on RISC-V. This default entry point can be overridden by a PICOBIN\_BLOCK\_ITEM\_1BS\_ENTRY\_POINT item. Note that PICOBIN\_BLOCK\_ITEM\_1BS\_VECTOR\_TABLE is not valid on RISC-V, as unlike Cortex-M the RISC-V vector table does not define the program entry point.
+

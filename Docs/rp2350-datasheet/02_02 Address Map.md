@@ -1,0 +1,22 @@
+﻿# 2.2 Address Map
+
+The address map for the device is split into sections as shown in [Table 7](#page-30-4). Details are shown in the following sections. Unmapped address ranges raise a bus error when accessed.
+
+Each link in the left-hand column of [Table 7](#page-30-4) goes to a detailed address map for that address range. The detailed address maps have a link for each address to the relevant documentation for that address.
+
+Rough address decode is first performed on bits 31:28 of the address:
+
+*Table 7. Address Map Summary*
+
+<span id="page-30-4"></span>
+
+| Bus Segment                  | Base Address |
+|------------------------------|--------------|
+| ROM                          | 0x00000000   |
+| XIP                          | 0x10000000   |
+| SRAM                         | 0x20000000   |
+| APB Peripherals              | 0x40000000   |
+| AHB Peripherals              | 0x50000000   |
+| Core-local Peripherals (SIO) | 0xd0000000   |
+| Cortex-M33 private registers | 0xe0000000   |
+

@@ -1,0 +1,12 @@
+﻿# 3.7 Cortex-M33 Processor
+
+#### **Arm Documentation**
+
+Much of the following is excerpted from the [Cortex-M33 Technical Reference Manual.](https://developer.arm.com/documentation/100230/0100/) Used with permission.
+
+The Arm Cortex-M33 processor is a low gate count, highly energy-efficient processor intended for microcontroller and embedded applications. The processor is based on the Armv8-M architecture and is primarily for use in environments where security is an important consideration.
+
+# **NOTE**
+
+Full details of the Arm Cortex-M33 processor can be found in the [Technical Reference Manual](https://developer.arm.com/documentation/100230/0100/).
+

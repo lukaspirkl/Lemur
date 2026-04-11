@@ -1,0 +1,91 @@
+﻿# 11.5.7 Forced and EXEC'd Instructions
+
+Besides the instruction memory, state machines can execute instructions from 3 other sources:
+
+- MOV EXEC which executes an instruction from some register Source
+- OUT EXEC which executes data shifted out from the OSR
+- The SMx\_INSTR control registers, to which the system can write instructions for immediate execution
+
+```
+ 1 .program exec_example
+ 2 
+ 3 hang:
+ 4 jmp hang
+ 5 execute:
+ 6 out exec, 32
+ 7 jmp execute
+ 8 
+ 9 .program instructions_to_push
+10 
+11 out x, 32
+12 in x, 32
+13 push
+```
+
+```
+ 1 #include "tb.h" // TODO this is built against existing sw tree, so that we get printf etc
+ 2 
+ 3 #include "platform.h"
+ 4 #include "pio_regs.h"
+ 5 #include "system.h"
+ 6 #include "hardware.h"
+ 7 
+ 8 #include "exec_example.pio.h"
+ 9 
+10 int main()
+11 {
+12 tb_init();
+13 
+14 for (int i = 0; i < count_of(exec_example_program); ++i)
+15 mm_pio->instr_mem[i] = exec_example_program[i];
+16 
+17 // Enable autopull, threshold of 32
+18 mm_pio->sm[0].shiftctrl = (1u << PIO_SM0_SHIFTCTRL_AUTOPULL_LSB);
+19 
+20 // Start state machine 0 -- will sit in "hang" loop
+21 hw_set_bits(&mm_pio->ctrl, 1u << (PIO_CTRL_SM_ENABLE_LSB + 0));
+22 
+23 // Force a jump to program location 1
+24 mm_pio->sm[0].instr = 0x0000 | 0x1; // jmp execute
+25 
+26 // Feed a mixture of instructions and data into FIFO
+27 mm_pio->txf[0] = instructions_to_push_program[0]; // out x, 32
+28 mm_pio->txf[0] = 12345678; // data to be OUTed
+29 mm_pio->txf[0] = instructions_to_push_program[1]; // in x, 32
+30 mm_pio->txf[0] = instructions_to_push_program[2]; // push
+31 
+32 // The program pushed into TX FIFO will return some data in RX FIFO
+33 while (mm_pio->fstat & (1u << PIO_FSTAT_RXEMPTY_LSB))
+34 ;
+35 
+36 printf("%d\n", mm_pio->rxf[0]);
+37 
+38 return 0;
+39 }
+```
+
+Here we load an example program into the state machine, which does two things:
+
+- Enters an infinite loop
+- Enters a loop which repeatedly pulls 32 bits of data from the TX FIFO, and executes the lower 16 bits as an instruction
+
+The C program sets the state machine running, at which point it enters the hang loop. While the state machine is still running, the C program forces in a jmp instruction, which causes the state machine to break out of the loop.
+
+When an instruction is written to the INSTR register, the state machine immediately decodes and executes that instruction, rather than the instruction it would have fetched from the PIO's instruction memory. The program counter does not advance, so on the next cycle (assuming the instruction forced into the INSTR interface did not stall) the state machine continues to execute its current program from the point where it left off, unless the written instruction itself manipulated PC.
+
+Delay cycles are ignored on instructions written to the INSTR register, and execute immediately, ignoring the state machine clock divider. This interface is provided for performing initial setup and effecting control flow changes, so it executes instructions in a timely manner, no matter how the state machine is configured.
+
+Instructions written to the INSTR register are permitted to stall, in which case the state machine will latch this instruction internally until it completes. This is signified by the EXECCTRL\_EXEC\_STALLED flag. This can be cleared by restarting the state
+
+machine, or writing a NOP to INSTR.
+
+In the second phase of the example state machine program, the OUT EXEC instruction is used. The OUT itself occupies one execution cycle, and the instruction which the OUT executes is on the next execution cycle. Note that one of the instructions we execute is also an OUT — the state machine is only capable of executing one OUT instruction on any given cycle.
+
+OUT EXEC works by writing the OUT shift data to an internal instruction latch. On the next cycle, the state machine remembers it must execute from this latch rather than the instruction memory, and also knows to not advance PC on this second cycle.
+
+This program will print "12345678" when run.
+
+![](_page_912_Figure_5.jpeg)
+
+If an instruction written to INSTR stalls, it is stored in the same instruction latch used by OUT EXEC and MOV EXEC, and will overwrite an in-progress instruction there. If EXEC instructions are used, instructions written to INSTR must not stall.
+

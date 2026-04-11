@@ -1,0 +1,25 @@
+﻿# 7.2 Changes from RP2040
+
+RP2350 retains all RP2040 chip-level reset features.
+
+RP2350 adds the following features:
+
+- new chip reset sources:
+  - glitch detector
+  - watchdog
+  - debugger
+- new destinations:
+  - new power management components
+
+RP2350 makes the following modifications to existing features:
+
+- Modified the CHIP\_RESET register, which records the source of the last chip level reset. In RP2040, CHIP\_RESET was stored in the LDO\_POR register block. In RP2350, CHIP\_RESET was extended and moved to the POWMAN register block, which is in the new always-on power domain (AON).
+- Renamed the brownout reset (BOR) registers to brownout detect (BOD), added functionality, and moved them to the new POWlMAN register block.
+- Added more system reset stages. To support this, added additional Power-on State Machine fields and rearranged the existing fields.
+- Added additional RESETS registers and rearranged the existing fields.
+- Extended watchdog options to enable triggers for new resets.
+
+# **NOTE**
+
+Watchdog scratch registers are not preserved when the watchdog triggers a chip-level reset. However, watchdog scratch registers *are* preserved after a system or subsystem reset. For general purpose scratch registers that do *not* reset after a chip-level reset, see the POWMAN register block [Section 6.4, "Power Management \(POWMAN\) Registers"](#page-454-1).
+

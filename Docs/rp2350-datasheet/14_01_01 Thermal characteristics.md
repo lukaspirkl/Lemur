@@ -1,0 +1,13 @@
+﻿# 14.1.1 Thermal characteristics
+
+The thermal characteristics of the QFN-60 package are shown in [Table 1422](#page-1324-3).
+
+*Table 1422. Thermal data for the QFN-60 package.*
+
+<span id="page-1324-3"></span>
+
+| Device  | θJA (°C/W) - Still<br>Air | θJA (°C/W) - 1m/s<br>Forced Air | θJA (°C/W) - 2m/s<br>Forced Air | θJB (°C/W) | θJC (°C/W) |
+|---------|---------------------------|---------------------------------|---------------------------------|------------|------------|
+| RP2350A | 40.542                    | 31.99                           | 30.264                          | 12.588     | 14.315     |
+| RP2354A | TBD                       | TBD                             | TBD                             | TBD        | TBD        |
+

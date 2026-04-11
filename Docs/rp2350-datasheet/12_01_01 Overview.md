@@ -1,0 +1,29 @@
+﻿# 12.1.1 Overview
+
+The UART performs:
+
+- Serial-to-parallel conversion on data received from a peripheral device
+- Parallel-to-serial conversion on data transmitted to the peripheral device
+
+The CPU reads and writes data and control/status information through the AMBA APB interface. The transmit and receive paths are buffered with internal FIFO memories that store up to 32 bytes independently in both transmit and receive modes.
+
+#### The UART:
+
+- Includes a programmable baud rate generator that generates a common transmit and receive internal clock from the UART internal reference clock input, UARTCLK
+- Offers similar functionality to the industry-standard 16C650 UART device
+- Supports a maximum baud rate of UARTCLK / 16 in UART mode (7.8 Mbaud at 125MHz)
+
+The UART operation and baud rate values are controlled by the Line Control Register (UARTLCR\_H) and the baud rate divisor registers: Integer Baud Rate Register (UARTIBRD), and Fractional Baud Rate Register (UARTFBRD).
+
+The UART can generate:
+
+- Individually maskable interrupts from the receive (including timeout), transmit, modem status and error conditions
+- A single combined interrupt so that the output is asserted if any of the individual interrupts are asserted and unmasked
+- DMA request signals for interfacing with a Direct Memory Access (DMA) controller
+
+If a framing, parity, or break error occurs during reception, the appropriate error bit is set and stored in the FIFO. If an overrun condition occurs, the overrun register bit is set immediately and FIFO data is prevented from being overwritten.
+
+You can program the FIFOs to be 1-byte deep providing a conventional double-buffered UART interface.
+
+There is a programmable hardware flow control feature that uses the nUARTCTS input and the nUARTRTS output to automatically control the serial data flow.
+

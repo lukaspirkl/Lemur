@@ -1,0 +1,41 @@
+﻿# 5.1.18 UF2 Targeting
+
+[Section 5.5](#page-398-0) describes the USB Mass Storage drive, and the ability to download UF2 files to that drive to store and/or execute code/data on the RP2350.
+
+Since RP2350 supports multiple processor architectures, and partition tables with multiple partitions, some information on the device must be used to determine what to do with a flash-addressed UF2. Depending on the context, the flash addresses in the UF2 may be absolute flash storage addresses (as was always the case on RP2040), or runtime addresses of code and data within a flash partition. **UF2 targeting** refers to the rules the bootrom applies to interpret flash addresses in a UF2 file.
+
+UF2 supports a 32-bit family ID embedded in the file. This enables the device to recognise firmware that targets it specifically, as opposed to firmware intended for some other device. The RP2350 bootrom recognises some standard UF2 family IDs (rp2040, rp2350-arm-s, rp2350-arm-ns, rp2350-riscv, data and absolute) defined in [Table 454](#page-400-1). You may define your own family IDs in the partition table for more refined targeting.
+
+The UF2 family ID is used as follows:
+
+1. A UF2 with the absolute family ID is downloaded without regard to partition boundaries. A partition table (if present) or OTP configuration define whether absolute family ID downloads are allowed. The default factory settings do allow for absolute family ID downloads.
+
+- 2. If there is no partition table, then the data, rp2350-arm-s (if Arm is enabled) and rp2350-riscv (if RISC-V is enabled) family IDs are allowed by default. The UF2 is always downloaded to the start of flash.
+- 3. If there is a partition table, then non-absolute family IDs target a single partition under the control of the partition table:
+  - a. A UF2 will not be downloaded to a partition that doesn't have BL-write flash permissions
+  - b. Each partition lists which family IDs it accepts (both RP2350 standard and user defined)
+  - c. With A/B partitions; the A partition indicates the family IDs supported, and the UF2 goes to the partition that isn't the currently booting one (strictly the one that won't be the one chosen if the device were rebooted now).
+  - d. Further refinement with A/B is allowed to support secondary A/B partitions containing data/executables used (owned) by the main partitions; see [Section 5.1.18.1](#page-363-1) for detailed information.
+
+For details of the exact rules used when picking a UF2 target partition, see [Section 5.5.3.](#page-400-0)
+
+![](_page_363_Figure_8.jpeg)
+
+UF2 family ids are used for partition targeting when copying UF2s to the USB drive, or when using picotool load -p. When using picotool load without the -p flag images can be written anywhere in flash that has BL-write permissions.
+
+#### <span id="page-363-1"></span>**5.1.18.1. Owned Partitions**
+
+An executable may require data from another partition (e.g. Wi-Fi firmware). When the main executable is stored in [A/B](#page-357-1) [partitions,](#page-357-1) for safe upgrades, it may be desirable to associate two other partitions C and D with the primary A and B partitions, such that:
+
+- the data in partition C is used for executable in partition A, and
+- the data in partition D is used for the executable in partition B.
+
+In this scenario A is marked as the **owner** of C in the partition table, and C is A's **owned partition**. This affects UF2 image downloads which (due to their UF2 family ID) target partitions C and D.
+
+When a UF2 download targets the C/D partition pair, the bootrom checks the state of the A and B owning partitions to determine which of the owned partitions (C and D) receives the download. By default:
+
+- If B would be the target partition for a UF2 with an A/B-compatible family ID, then D is the target for a UF2 with the C/D compatible family ID.
+- Conversely, when A is the target partition for A/B downloads, C is the target partition for C/D downloads.
+
+The FLAGS\_UF2\_DOWNLOAD\_AB\_NON\_BOOTABLE\_OWNER\_AFFINITY flag in the partition table reverses this mapping.
+

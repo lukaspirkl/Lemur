@@ -1,0 +1,147 @@
+﻿# 4.4.5 List of XIP\_CTRL Registers
+
+The XIP control registers start at a base address of 0x400c8000 (defined as [XIP\\_CTRL\\_BASE](#page-30-3) in SDK).
+
+*Table 438. List of XIP registers*
+
+<span id="page-346-3"></span>
+
+| Offset | Name        | Info                                                         |
+|--------|-------------|--------------------------------------------------------------|
+| 0x00   | CTRL        | Cache control register. Read-only from a Non-secure context. |
+| 0x08   | STAT        |                                                              |
+| 0x0c   | CTR_HIT     | Cache Hit counter                                            |
+| 0x10   | CTR_ACC     | Cache Access counter                                         |
+| 0x14   | STREAM_ADDR | FIFO stream address                                          |
+| 0x18   | STREAM_CTR  | FIFO stream control                                          |
+| 0x1c   | STREAM_FIFO | FIFO stream data                                             |
+
+#### <span id="page-346-2"></span>**[XIP:](#page-346-3) CTRL Register**
+
+**Offset**: 0x00
+
+#### **Description**
+
+Cache control register. Read-only from a Non-secure context.
+
+*Table 439. CTRL Register*
+
+| Bits  | Description                                                                                                                                                                                                                                                                                                                                                             | Type | Reset |
+|-------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|-------|
+| 31:12 | Reserved.                                                                                                                                                                                                                                                                                                                                                               | -    | -     |
+| 11    | WRITABLE_M1: If 1, enable writes to XIP memory window 1 (addresses<br>0x11000000 through 0x11ffffff, and their uncached mirrors). If 0, this region is<br>read-only.                                                                                                                                                                                                    | RW   | 0x0   |
+|       | XIP memory is read-only by default. This bit must be set to enable writes if a<br>RAM device is attached on QSPI chip select 1.                                                                                                                                                                                                                                         |      |       |
+|       | The default read-only behaviour avoids two issues with writing to a read-only<br>QSPI device (e.g. flash). First, a write will initially appear to succeed due to<br>caching, but the data will eventually be lost when the written line is evicted,<br>causing unpredictable behaviour.                                                                                |      |       |
+|       | Second, when a written line is evicted, it will cause a write command to be<br>issued to the flash, which can break the flash out of its continuous read mode.<br>After this point, flash reads will return garbage. This is a security concern, as it<br>allows Non-secure software to break Secure flash reads if it has permission to<br>write to any flash address. |      |       |
+|       | Note the read-only behaviour is implemented by downgrading writes to reads,<br>so writes will still cause allocation of an address, but have no other effect.                                                                                                                                                                                                           |      |       |
+| 10    | WRITABLE_M0: If 1, enable writes to XIP memory window 0 (addresses<br>0x10000000 through 0x10ffffff, and their uncached mirrors). If 0, this region is<br>read-only.                                                                                                                                                                                                    | RW   | 0x0   |
+|       | XIP memory is read-only by default. This bit must be set to enable writes if a<br>RAM device is attached on QSPI chip select 0.                                                                                                                                                                                                                                         |      |       |
+|       | The default read-only behaviour avoids two issues with writing to a read-only<br>QSPI device (e.g. flash). First, a write will initially appear to succeed due to<br>caching, but the data will eventually be lost when the written line is evicted,<br>causing unpredictable behaviour.                                                                                |      |       |
+|       | Second, when a written line is evicted, it will cause a write command to be<br>issued to the flash, which can break the flash out of its continuous read mode.<br>After this point, flash reads will return garbage. This is a security concern, as it<br>allows Non-secure software to break Secure flash reads if it has permission to<br>write to any flash address. |      |       |
+|       | Note the read-only behaviour is implemented by downgrading writes to reads,<br>so writes will still cause allocation of an address, but have no other effect.                                                                                                                                                                                                           |      |       |
+| 9     | SPLIT_WAYS: When 1, route all cached+Secure accesses to way 0 of the<br>cache, and route all cached+Non-secure accesses to way 1 of the cache.                                                                                                                                                                                                                          | RW   | 0x0   |
+|       | This partitions the cache into two half-sized direct-mapped regions, such that<br>Non-secure code can not observe cache line state changes caused by Secure<br>execution.                                                                                                                                                                                               |      |       |
+|       | A full cache flush is required when changing the value of SPLIT_WAYS. The<br>flush should be performed whilst SPLIT_WAYS is 0, so that both cache ways<br>are accessible for invalidation.                                                                                                                                                                              |      |       |
+
+| Bits | Description                                                                                                                                                                                                                                                                                                                                           | Type | Reset |
+|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|-------|
+| 8    | MAINT_NONSEC: When 0, Non-secure accesses to the cache maintenance<br>address window (addr[27] == 1, addr[26] == 0) will generate a bus error. When<br>1, Non-secure accesses can perform cache maintenance operations by writing<br>to the cache maintenance address window.                                                                         | RW   | 0x0   |
+|      | Cache maintenance operations may be used to corrupt Secure data by<br>invalidating cache lines inappropriately, or map Secure content into a Non<br>secure region by pinning cache lines. Therefore this bit should generally be set<br>to 0, unless Secure code is not using the cache.                                                              |      |       |
+|      | Care should also be taken to clear the cache data memory and tag memory<br>before granting maintenance operations to Non-secure code.                                                                                                                                                                                                                 |      |       |
+| 7    | NO_UNTRANSLATED_NONSEC: When 1, Non-secure accesses to the<br>uncached, untranslated window (addr[27:26] == 3) will generate a bus error.                                                                                                                                                                                                             | RW   | 0x1   |
+| 6    | NO_UNTRANSLATED_SEC: When 1, Secure accesses to the uncached,<br>untranslated window (addr[27:26] == 3) will generate a bus error.                                                                                                                                                                                                                    | RW   | 0x0   |
+| 5    | NO_UNCACHED_NONSEC: When 1, Non-secure accesses to the uncached<br>window (addr[27:26] == 1) will generate a bus error. This may reduce the<br>number of SAU/MPU/PMP regions required to protect flash contents.                                                                                                                                      | RW   | 0x0   |
+|      | Note this does not disable access to the uncached, untranslated<br>window — see NO_UNTRANSLATED_SEC.                                                                                                                                                                                                                                                  |      |       |
+| 4    | NO_UNCACHED_SEC: When 1, Secure accesses to the uncached window<br>(addr[27:26] == 1) will generate a bus error. This may reduce the number of<br>SAU/MPU/PMP regions required to protect flash contents.                                                                                                                                             | RW   | 0x0   |
+|      | Note this does not disable access to the uncached, untranslated<br>window — see NO_UNTRANSLATED_SEC.                                                                                                                                                                                                                                                  |      |       |
+| 3    | POWER_DOWN: When 1, the cache memories are powered down. They retain<br>state, but can not be accessed. This reduces static power dissipation. Writing<br>1 to this bit forces CTRL_EN_SECURE and CTRL_EN_NONSECURE to 0, i.e. the<br>cache cannot be enabled when powered down.                                                                      | RW   | 0x0   |
+| 2    | Reserved.                                                                                                                                                                                                                                                                                                                                             | -    | -     |
+| 1    | EN_NONSECURE: When 1, enable the cache for Non-secure accesses. When<br>enabled, Non-secure XIP accesses to the cached (addr[26] == 0) window will<br>query the cache, and QSPI accesses are performed only if the requested data<br>is not present. When disabled, Secure access ignore the cache contents, and<br>always access the QSPI interface. | RW   | 0x1   |
+|      | Accesses to the uncached (addr[26] == 1) window will never query the cache,<br>irrespective of this bit.                                                                                                                                                                                                                                              |      |       |
+
+| Bits | Description                                                                                                                                                                                                                                                                                                                                | Type | Reset |
+|------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|-------|
+| 0    | EN_SECURE: When 1, enable the cache for Secure accesses. When enabled,<br>Secure XIP accesses to the cached (addr[26] == 0) window will query the<br>cache, and QSPI accesses are performed only if the requested data is not<br>present. When disabled, Secure access ignore the cache contents, and always<br>access the QSPI interface. | RW   | 0x1   |
+|      | Accesses to the uncached (addr[26] == 1) window will never query the cache,<br>irrespective of this bit.                                                                                                                                                                                                                                   |      |       |
+|      | There is no cache-as-SRAM address window. Cache lines are allocated for<br>SRAM-like use by individually pinning them, and keeping the cache enabled.                                                                                                                                                                                      |      |       |
+
+# <span id="page-349-1"></span>**[XIP:](#page-346-3) STAT Register**
+
+**Offset**: 0x08
+
+*Table 440. STAT Register*
+
+| Bits | Description                                                                                                                                                                       | Type | Reset |
+|------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|-------|
+| 31:3 | Reserved.                                                                                                                                                                         | -    | -     |
+| 2    | FIFO_FULL: When 1, indicates the XIP streaming FIFO is completely full.<br>The streaming FIFO is 2 entries deep, so the full and empty<br>flag allow its level to be ascertained. | RO   | 0x0   |
+| 1    | FIFO_EMPTY: When 1, indicates the XIP streaming FIFO is completely empty.                                                                                                         | RO   | 0x1   |
+| 0    | Reserved.                                                                                                                                                                         | -    | -     |
+
+# <span id="page-349-2"></span>**[XIP:](#page-346-3) CTR\_HIT Register**
+
+**Offset**: 0x0c **Description**
+
+Cache Hit counter
+
+*Table 441. CTR\_HIT Register*
+
+| Bits | Description                                                                                                                        | Type | Reset      |
+|------|------------------------------------------------------------------------------------------------------------------------------------|------|------------|
+| 31:0 | A 32 bit saturating counter that increments upon each cache hit,<br>i.e. when an XIP access is serviced directly from cached data. | WC   | 0x00000000 |
+|      | Write any value to clear.                                                                                                          |      |            |
+
+#### <span id="page-349-3"></span>**[XIP:](#page-346-3) CTR\_ACC Register**
+
+**Offset**: 0x10
+
+#### **Description**
+
+Cache Access counter
+
+*Table 442. CTR\_ACC Register*
+
+| Bits | Description                                                                                                                                                             | Type | Reset      |
+|------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|------------|
+| 31:0 | A 32 bit saturating counter that increments upon each XIP access,<br>whether the cache is hit or not. This includes noncacheable accesses.<br>Write any value to clear. | WC   | 0x00000000 |
+
+# <span id="page-349-0"></span>**[XIP:](#page-346-3) STREAM\_ADDR Register**
+
+**Offset**: 0x14
+
+FIFO stream address
+
+*Table 443. STREAM\_ADDR Register*
+
+| Bits | Description                                                                                                                                                                                                      | Type | Reset      |
+|------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|------------|
+| 31:2 | The address of the next word to be streamed from flash to the streaming<br>FIFO.<br>Increments automatically after each flash access.<br>Write the initial access address here before starting a streaming read. | RW   | 0x00000000 |
+| 1:0  | Reserved.                                                                                                                                                                                                        | -    | -          |
+
+# <span id="page-350-1"></span>**[XIP:](#page-346-3) STREAM\_CTR Register**
+
+**Offset**: 0x18 **Description**
+
+FIFO stream control
+
+*Table 444. STREAM\_CTR Register*
+
+| Bits  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | Type | Reset    |
+|-------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|----------|
+| 31:22 | Reserved.                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | -    | -        |
+| 21:0  | Write a nonzero value to start a streaming read. This will then<br>progress in the background, using flash idle cycles to transfer<br>a linear data block from flash to the streaming FIFO.<br>Decrements automatically (1 at a time) as the stream<br>progresses, and halts on reaching 0.<br>Write 0 to halt an in-progress stream, and discard any in-flight<br>read, so that a new stream can immediately be started (after<br>draining the FIFO and reinitialising STREAM_ADDR) | RW   | 0x000000 |
+
+## <span id="page-350-2"></span>**[XIP:](#page-346-3) STREAM\_FIFO Register**
+
+**Offset**: 0x1c
+
+#### **Description**
+
+FIFO stream data
+
+*Table 445. STREAM\_FIFO Register*
+
+| Bits | Description                                                                                                                                                                                       | Type | Reset      |
+|------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|------------|
+| 31:0 | Streamed data is buffered here, for retrieval by the system DMA.<br>This FIFO can also be accessed via the XIP_AUX slave, to avoid exposing<br>the DMA to bus stalls caused by other XIP traffic. | RF   | 0x00000000 |
+

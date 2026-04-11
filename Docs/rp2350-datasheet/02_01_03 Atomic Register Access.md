@@ -1,0 +1,96 @@
+﻿# 2.1.3 Atomic Register Access
+
+Each peripheral register block is allocated 4 kB of address space, with registers accessed using one of 4 methods, selected by address decode.
+
+- Addr + 0x0000 : normal read write access
+- Addr + 0x1000 : atomic XOR on write
+- Addr + 0x2000 : atomic bitmask set on write
+- Addr + 0x3000 : atomic bitmask clear on write
+
+This allows software to modify individual fields of a control register without performing a read-modify-write sequence. Instead, the peripheral itself modifies its contents in-place. Without this capability, it is difficult to safely access IO registers when an interrupt service routine is concurrent with code running in the foreground, or when the two processors run code in parallel.
+
+The four atomic access aliases occupy a total of 16 kB. Native atomic writes take the same number of clock cycles as normal writes. Most peripherals on RP2350 provide this functionality natively, but some peripherals (I2C, UART, SPI and SSI) add this functionality using a bus interposer. The bus interposer translates upstream atomic writes into downstream read-modify-write sequences at the boundary of the peripheral, at the cost of additional clock cycles. Atomic writes that use a bus interposer take two additional clock cycles compared to normal writes.
+
+The following registers do not support atomic register access:
+
+- SIO [\(Section 3.1\)](#page-36-0), though some individual registers (e.g. GPIO) have set, clear, and XOR aliases
+- Any register accessed through the self-hosted CoreSight window, including Arm Mem-APs and the RISC-V Debug Module
+- Standard Arm control registers on the Cortex-M33 private peripheral bus (PPB), except for Raspberry Pi-specific registers on the EPPB
+- OTP programming registers accessed through the SBPI bridge
+
+#### <span id="page-26-1"></span>**2.1.4. APB Bridge**
+
+The APB bridge provides an interface between the high-speed main AHB5 interconnect and the lower-bandwidth peripherals. Unlike the AHB5 fabric, which offers zero-wait-state accesses everywhere, APB accesses take a minimum of three cycles for a read, and four cycles for a write.
+
+As a result, the throughput of the APB portion of the bus fabric is lower than the AHB5 portion. However, there is more than sufficient bandwidth to saturate the APB serial peripherals.
+
+The following APB ports contain asynchronous bus crossings, which insert additional stall cycles on top of the typical cost of a read or write in the APB bridge:
+
+- ADC
+- HSTX\_CTRL
+- OTP
+- POWMAN
+
+The APB bridge implements a fixed timeout for stalled downstream transfers. The downstream bus may stall indefinitely, such as when accessing an asynchronous bus crossing when the destination clock is stopped, or deadlock conditions when accessing system APB registers through Mem-APs in the self-hosted debug window [\(Section 3.5.6](#page-87-2)). When an APB transfer exceeds 65,535 cycles the APB bridge abandons the transfer and returns a bus fault. This keeps the system bus available so that software or the debugger can diagnose the reason for the overly long transfer.
+
+### <span id="page-27-0"></span>**2.1.5. Narrow IO Register Writes**
+
+The majority of memory-mapped IO registers on RP2350 ignore the width of bus read/write accesses. They treat all writes as though they were 32 bits in size. This means software cannot use byte or halfword writes to modify part of an IO register: any write to an address where the 30 address MSBs match the register address affects the contents of the entire register.
+
+To update part of an IO register without a read-modify-write sequence, the best solution on RP2350 is atomic set/clear/XOR (see [Section 2.1.3\)](#page-26-0). This is more flexible than byte or halfword writes, as any combination of fields can be updated in one operation.
+
+Upon a 8-bit or 16-bit write (such as a strb instruction on the Cortex-M33), the narrow value is replicated multiple times across the 32-bit data bus, so that it is broadcast to all 8-bit or 16-bit segments of the destination register:
+
+*Pico Examples: [https://github.com/raspberrypi/pico-examples/blob/master/system/narrow\\_io\\_write/narrow\\_io\\_write.c](https://github.com/raspberrypi/pico-examples/blob/master/system/narrow_io_write/narrow_io_write.c#L19-L62) Lines 19 - 62*
+
+```
+19 int main() {
+20 stdio_init_all();
+21 
+22 // We'll use WATCHDOG_SCRATCH0 as a convenient 32 bit read/write register
+23 // that we can assign arbitrary values to
+24 io_rw_32 *scratch32 = &watchdog_hw->scratch[0];
+25 // Alias the scratch register as two halfwords at offsets +0x0 and +0x2
+26 volatile uint16_t *scratch16 = (volatile uint16_t *) scratch32;
+27 // Alias the scratch register as four bytes at offsets +0x0, +0x1, +0x2, +0x3:
+28 volatile uint8_t *scratch8 = (volatile uint8_t *) scratch32;
+29 
+30 // Show that we can read/write the scratch register as normal:
+31 printf("Writing 32 bit value\n");
+32 *scratch32 = 0xdeadbeef;
+33 printf("Should be 0xdeadbeef: 0x%08x\n", *scratch32);
+34 
+35 // We can do narrow reads just fine -- IO registers treat this as a 32 bit
+36 // read, and the processor/DMA will pick out the correct byte lanes based
+37 // on transfer size and address LSBs
+38 printf("\nReading back 1 byte at a time\n");
+39 // Little-endian!
+40 printf("Should be ef be ad de: %02x ", scratch8[0]);
+41 printf("%02x ", scratch8[1]);
+42 printf("%02x ", scratch8[2]);
+43 printf("%02x\n", scratch8[3]);
+44 
+45 // Byte writes are replicated four times across the 32-bit bus, and IO
+46 // registers usually sample the entire write bus.
+47 printf("\nWriting 8 bit value 0xa5 at offset 0\n");
+48 scratch8[0] = 0xa5;
+49 // Read back the whole scratch register in one go
+50 printf("Should be 0xa5a5a5a5: 0x%08x\n", *scratch32);
+51 
+52 // The IO register ignores the address LSBs [1:0] as well as the transfer
+53 // size, so it doesn't matter what byte offset we use
+54 printf("\nWriting 8 bit value at offset 1\n");
+55 scratch8[1] = 0x3c;
+56 printf("Should be 0x3c3c3c3c: 0x%08x\n", *scratch32);
+57 
+58 // Halfword writes are also replicated across the write data bus
+59 printf("\nWriting 16 bit value at offset 0\n");
+60 scratch16[0] = 0xf00d;
+61 printf("Should be 0xf00df00d: 0x%08x\n", *scratch32);
+62 }
+```
+
+To disable this behaviour on RP2350, set bit 14 of the address by accessing the peripheral at an offset of +0x4000. This
+
+causes invalid byte lanes to be driven to zero, rather than being driven with replicated data. In some situations, such as DMA of 8-bit values to the PWM peripheral, the default replication behaviour is not desirable.
+

@@ -1,0 +1,99 @@
+﻿# 10.6.2 Bus Access Control
+
+The bus access control registers define which combinations of Secure/Non-secure and Privileged/Unprivileged are permitted to access each downstream bus port. This mechanism also assigns peripherals to security domains. Additionally, the bus access control registers define which upstream sources (processor 0/1, DMA or debugger) are permitted.
+
+Hardware filters on the system bus ([Section 2.1\)](#page-24-1) check each access against the permission list for its destination. The filter shoots down accesses which do not meet the criteria specified in ACCESSCTRL register for that destination; the access does not reach its destination, and instead a bus error is returned directly from the bus fabric. There is no effect on the destination register, and no data is returned. Bus errors result in an exception on the offending processor, or an error flag raised on the offending DMA channel.
+
+There are 8 bits in each register (for example the [ADC](#page-846-0) register). The SP, SU, NSP and NSU bits correspond to the processor security state from which a bus transfer originated, or the security level of the originating DMA channel:
+
+- The SP bit allows access from:
+  - Privileged software running in the Secure domain on an Arm processor
+  - Machine-mode software on a RISC-V processor
+  - A DMA channel with a security level of SP (3)
+- The SU bit must be set, in addition to the SP bit, to allow access from:
+  - User (unprivileged) software running in the Secure domain on an Arm processor
+  - A DMA channel with a security level of SU (2)
+- The NSP bit allow access from:
+  - Privileged software running in the Non-secure domain on an Arm processor
+  - Privileged Arm software running in the Secure domain on core 1, when [FORCE\\_CORE\\_NS.](#page-827-0)CORE1 is set
+  - Machine-mode RISC-V software running on core 1, when [FORCE\\_CORE\\_NS](#page-827-0).CORE1 is set
+  - A DMA channel with a security level of NSP (1)
+
+- The NSU bit must be set, in addition to the NSP bit, to allow access from:
+  - User (unprivileged) software running in the Non-secure domain on an Arm processor
+  - User (unprivileged) Arm software running on core 1 when [FORCE\\_CORE\\_NS](#page-827-0).CORE1 is set
+  - User-mode software on a RISC-V processor
+  - A DMA channel with a security level of NSU (0)
+
+#### **NOTE**
+
+The security/privilege of AHB Mem-AP accesses are configurable, and have the same bus security/privilege level as load/stores from the corresponding security/privilege context on that processor. There is one AHB Mem-AP for each Arm processor.
+
+## **NOTE**
+
+RISC-V Debug-mode memory accesses have the same bus security/privilege level as Machine-mode software running on that processor, and RISC-V System Bus Access through the Debug Module has the same bus security/privilege level as Machine-mode software running on core 1.
+
+The DBG, DMA, CORE1 and CORE0 bits must be set in addition to the relevant security/privilege bits, in order to allow access from a particular bus manager. The DBG bit corresponds to any of:
+
+- Accesses from either Arm processor's AHB Mem-AP
+- Accesses from either RISC-V core in Debug mode
+- Accesses from RISC-V System Bus Access
+
+Separating debug access controls from software-driven processor access means that, even with software locked out of a register block, the developer may still be able to access that block from the debugger.
+
+Most bus access permission bits are Secure, Privileged-writable only. The sole exception is the NSU bit, which is also writable from a Non-secure, Privileged context if and only if the NSP bit in the same register is set. The intention is that once the Secure domain has granted Non-secure access, it is then up to Non-secure software to decide whether to grant Unprivileged access within the Non-secure domain.
+
+#### **10.6.2.1. Default Permissions**
+
+Most bus endpoints default to Secure access only, from any master, but there are exceptions. The following default to fully open access (any combination of security/privilege) from any master (for example, because they are expected to be divided up by the processors' internal memory protection hardware):
+
+- Boot ROM ([Section 4.1\)](#page-337-1)
+- XIP ([Section 4.4\)](#page-340-0)
+- SRAM ([Section 4.2](#page-337-2))
+- SYSINFO ([Section 12.15.1](#page-1246-1))
+
+The following default to Secure, Privileged access (SP) only, from any manager:
+
+- XIP\_AUX (DMA FIFOs) [\(Section 4.4.3\)](#page-345-1)
+- SHA-256 [\(Section 12.13\)](#page-1218-0)
+
+The following default to Secure, Privileged access (SP) only, with DMA access forbidden by default:
+
+- POWMAN [\(Chapter 6\)](#page-439-0), which includes power management and voltage regulator control registers
+- True random number generator ([Section 12.12\)](#page-1209-1)
+
+- Clock control registers ([Section 8.1](#page-510-1))
+- XOSC [\(Section 8.2\)](#page-552-0)
+- ROSC [\(Section 8.3\)](#page-558-0)
+- SYSCFG [\(Section 12.15.2](#page-1248-0))
+- PLLs [\(Section 8.6](#page-572-0))
+- Tick generators [\(Section 8.5\)](#page-567-3)
+- Watchdog ([Section 12.9](#page-1190-0))
+- PSM [\(Section 7.4](#page-494-0))
+- XIP control registers ([Section 4.4.5](#page-346-1))
+- QMI [\(Section 12.14](#page-1223-0))
+- CoreSight trace DMA FIFO
+- CoreSight self-hosted debug window
+
+Any bus endpoint not in any of the above lists defaults to Secure access only, from any manager,
+
+#### **10.6.2.2. Other Effects of Bus Permissions**
+
+To avoid contradictory configurations such as a Secure-only peripheral being selected on a Non-secure-accessible GPIO, and to improve portability between Secure and Non-secure software, the bus access permission lists propagate to certain other system-level hardware:
+
+- The reset controls for a given peripheral in the RESETS block ([Section 7.5](#page-500-0)) are Non-secure-accessible if and only if the peripheral itself is Non-secure-accessible.
+  - Non-secure access to the RESETS block itself must also be granted via the [RESETS](#page-842-0) bus access register.
+- Non-secure-inaccessible peripherals cannot be function-selected on Non-secure-accessible GPIOs. Attempting to do so selects the null GPIO function (0x1f).
+- PIO blocks which are accessible to Non-secure, and those which are not, can not perform cross-PIO operations such as observing each other's interrupt flags.
+- PIO blocks which are accessible to Non-secure can not read Secure-only GPIOs.
+- DMA channels below the least-set effective permission bit (ignoring SU when SP is clear, and ignoring NSU when NSP is clear) are disconnected from that peripheral's DREQ signals.
+
+#### **10.6.2.3. Blocks Without Bus Access Control**
+
+There are four memory-mapped blocks which do not have bus access control registers in ACCESSCTRL:
+
+- The Cortex-M PPB is internal to the processors, and is banked internally over Secure/Non-secure.
+- The SIO is also banked internally over Secure/Non-secure access.
+- ACCESSCTRL itself is always world-readable and has its own internal filtering for writes.
+- Boot RAM is hardwired for Secure access only.
+

@@ -1,0 +1,4 @@
+﻿# 6.5 Power Reduction Strategies
+
+RP2350 retains the SLEEP and DORMANT states for dynamic power control from RP2040. It extends these states by introducing power domains [\(Section 6.2.1\)](#page-441-2), which allow power to be removed from various components on chip, virtually eliminating the leakage currents, and allowing lower power modes to be supported.
+

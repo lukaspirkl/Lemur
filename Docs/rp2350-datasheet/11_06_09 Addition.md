@@ -1,0 +1,81 @@
+﻿# 11.6.9 Addition
+
+Although not designed for computation, PIO is quite likely Turing-complete, provided a long enough piece of tape can be found. It is conjectured that it could run DOOM, given a sufficiently high clock speed.
+
+*Pico Examples: [https://github.com/raspberrypi/pico-examples/blob/master/pio/addition/addition.pio](https://github.com/raspberrypi/pico-examples/blob/master/pio/addition/addition.pio#L7-L25) Lines 7 - 25*
+
+```
+ 7 .program addition
+ 8 
+ 9 ; Pop two 32 bit integers from the TX FIFO, add them together, and push the
+10 ; result to the TX FIFO. Autopush/pull should be disabled as we're using
+11 ; explicit push and pull instructions.
+12 ;
+13 ; This program uses the two's complement identity x + y == ~(~x - y)
+14 
+15 pull
+16 mov x, ~osr
+17 pull
+18 mov y, osr
+19 jmp test ; this loop is equivalent to the following C code:
+20 incr: ; while (y--)
+21 jmp x-- test ; x--;
+22 test: ; This has the effect of subtracting y from x, eventually.
+23 jmp y-- incr
+24 mov isr, ~x
+25 push
+```
+
+A full 32-bit addition takes only around one minute at 125 MHz. The program pulls two numbers from the TX FIFO and pushes their sum to the RX FIFO, which is perfect for use either with the system DMA, or directly by the processor:
+
+*Pico Examples: <https://github.com/raspberrypi/pico-examples/blob/master/pio/addition/addition.c>*
+
+```
+ 1 /**
+ 2 * Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+ 3 *
+ 4 * SPDX-License-Identifier: BSD-3-Clause
+ 5 */
+ 6 
+ 7 #include <stdlib.h>
+ 8 #include <stdio.h>
+ 9 
+10 #include "pico/stdlib.h"
+11 #include "hardware/pio.h"
+12 #include "addition.pio.h"
+13 
+14 // Pop quiz: how many additions does the processor do when calling this function
+15 uint32_t do_addition(PIO pio, uint sm, uint32_t a, uint32_t b) {
+16 pio_sm_put_blocking(pio, sm, a);
+17 pio_sm_put_blocking(pio, sm, b);
+18 return pio_sm_get_blocking(pio, sm);
+19 }
+20 
+21 int main() {
+22 stdio_init_all();
+23 
+24 PIO pio = pio0;
+25 uint sm = 0;
+26 uint offset = pio_add_program(pio, &addition_program);
+27 addition_program_init(pio, sm, offset);
+28 
+29 printf("Doing some random additions:\n");
+```
+
+```
+30 for (int i = 0; i < 10; ++i) {
+31 uint a = rand() % 100;
+32 uint b = rand() % 100;
+33 printf("%u + %u = %u\n", a, b, do_addition(pio, sm, a, b));
+34 }
+35 }
+```
+
+## <span id="page-936-0"></span>**11.6.10. Further Examples**
+
+**[Raspberry Pi Pico-series C/C++ SDK](https://datasheets.raspberrypi.com/pico/raspberry-pi-pico-c-sdk.pdf)** has a PIO chapter which goes into depth on some software-centric topics not presented here. It includes a PIO + DMA logic analyser example that can sample every GPIO on every cycle (a bandwidth of nearly 4Gbps at 125 MHz, although this does fill up RP2350's RAM somewhat quickly).
+
+There are also further examples in the pio/ directory in the [Pico Examples](https://github.com/raspberrypi/pico-examples) repository.
+
+Some of the more experimental example code, such as DPI and SD card support, is currently located in the [Pico Extras](https://github.com/raspberrypi/pico-extras) and [Pico Playground](https://github.com/raspberrypi/pico-playground) repositories. The PIO parts of these are functional, but the surrounding software stacks are still in an experimental state.
+

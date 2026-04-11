@@ -1,0 +1,21 @@
+﻿# 13.3.4 Power-up State Machine
+
+The OTP is the second item in the switched core domain's Power-On State Machine [\(Section 7.4\)](#page-494-0), after the processor cold reset. OTP does not release its rst\_done, or enable any debug interface (including the factory test JTAG described in [Section 10.10\)](#page-871-0), until the OTP PSM reads out OTP-resident hardware configuration. The rst\_done output to the system PSM holds the rest of the system in reset until the OTP PSM completes, so that no software runs until the OTP's contents are known.
+
+The OTP boot sequence runs from a local ring oscillator. This oscillator is dedicated to the OTP subsystem, and is separate from the main system ROSC used by the processors at boot. The sequence is:
+
+- 1. First, the PSM runs the Synopsys boot instruction. This has the following steps:
+  - a. Wait for the power supply to return a 'good' value.
+  - b. Read consistency check location until hardware sees the correct value for 16 successive reads.
+
+![](_page_1270_Figure_6.jpeg)
+
+Consistency checks use predefined words stored in mask ROM cells with similar analogue properties to OTP cells.
+
+- 2. Read critical flags (non-ECC): each critical bit is redundant across 8 OTP rows, with three-of-eight vote for each flag.
+- 3. Read hardware access keys via ECC read interface.
+- 4. Read valid bits for hardware access keys, including the debug keys [\(Section 3.5.9.2](#page-92-1))
+- 5. Initialise page lock registers from the lock page via raw read interface.
+- 6. Assert rst\_done signal to the system power-on state machine
+- <span id="page-1270-0"></span>7. The system reset sequence continues, starting with the system ROSC
+

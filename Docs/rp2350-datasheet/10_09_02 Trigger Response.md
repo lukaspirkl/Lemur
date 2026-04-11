@@ -1,0 +1,18 @@
+﻿# 10.9.2 Trigger Response
+
+When any of the detectors fires, the corresponding bit in the [TRIG\\_STATUS](#page-870-0) is set. If the glitch detector block is armed, this detector event also resets almost all logic in the switched core domain. The glitch detector is armed if:
+
+- The [DISARM](#page-869-1) register is not set to the disarming bit pattern, *and at least one of the following is true*:
+  - The GLITCH\_DETECTOR\_EN OTP flag was programmed some time before the most recent reset of the OTP block
+  - The [ARM](#page-868-1) register is set to an arming bit pattern
+
+This holds the majority of the switched core domain in reset for approximately 120 microseconds before releasing the reset. Specifically, this resets the PSM ([Section 7.3](#page-492-0)), which resets all PSM-controlled resets starting with the processor cold reset domain, in addition to all blocks reset by the RESETS block, which is itself reset by the PSM. The detector circuits are also reset, as is the system watchdog including the watchdog scratch registers.
+
+After a glitch detector-initiated reset, the [CHIP\\_RESET](#page-467-0).HAD\_GLITCH\_DETECT flag is set so that software can diagnose that the last reset was caused by a glitch detector trigger. Check the [TRIG\\_STATUS](#page-870-0) register to see which detector fired. This can be useful for tuning the thresholds of individual detectors.
+
+The only way to clear the detector circuits is to reset them, either via a full switched core domain reset (such as the RUN pin, the SW-DP reset request, a PoR/BoR reset, or a reset of the switched core domain configured by POWMAN controls), or by arming the glitch detector block so that the detectors reset along with the PSM.
+
+Recovering from the glitch detector firing requires the low-power oscillator to be running ([Section 8.4](#page-566-0)). Allowing the
+
+glitch detectors to fire when the LPOSC is disabled results in the chip holding itself in reset indefinitely until an external reset such as the RUN pin resets the detectors.
+

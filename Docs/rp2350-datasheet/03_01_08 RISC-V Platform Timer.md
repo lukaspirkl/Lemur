@@ -1,0 +1,22 @@
+﻿# 3.1.8 RISC-V Platform Timer
+
+This 64-bit timer is a standard peripheral described in the RISC-V privileged specification, usable equally by the Arm and RISC-V processors on RP2350. It drives the per-core SIO\_IRQ\_MTIMECMP system-level interrupt [\(Section 3.2](#page-82-0)), as well as the mip.mtip timer interrupt on the RISC-V processors.
+
+There is a single 64-bit counter, shared between both cores. The low and high half can be accessed through the [MTIME](#page-78-0) and [MTIMEH](#page-78-1) SIO registers. Use the following procedure to safely read the 64-bit time using 32-bit register accesses:
+
+- 1. Read the upper half, [MTIMEH.](#page-78-1)
+- 2. Read the lower half, [MTIME](#page-78-0).
+- 3. Read the upper half again.
+- 4. Loop if the two upper-half reads returned different values.
+
+This is similar to the procedure for reading RP2350 system timers [\(Section 12.8](#page-1179-0)). The loop should only happen once, when the timer is read at exactly the instant of a 32-bit rollover, and even this is only occasional. If you require constanttime operation, you can instead zero the lower half when the two upper-half reads differ.
+
+Timer interrupts are generated based on a per-core 64-bit time comparison value, accessed through the [MTIMECMP](#page-78-2) and [MTIMECMPH](#page-78-3) SIO registers. Each core gets its own copy of these registers, accessed at the same address. The percore interrupt is asserted whenever the current time indicated in the [MTIME](#page-78-0) registers is greater than or equal to that core's [MTIMECMP](#page-78-2). Use the following sequence to write a new 64-bit timer comparison value without causing spurious interrupts:
+
+- 1. Write all-ones to [MTIMECMP](#page-78-2) (guaranteed greater than or equal to the old value, *and* the lower half of the target value).
+- 2. Write the upper half of the target value to [MTIMECMPH](#page-78-3) (combined 64-bit value is still greater than or equal to the target value).
+
+3. Write the lower half of the target value to [MTIMECMP.](#page-78-2)
+
+The RISC-V timer can count either ticks from the system-level tick generator [\(Section 8.5](#page-567-3)), or system clock cycles, selected by the [MTIME\\_CTRL](#page-77-0) register. Use a 1 microsecond time base for compatibility with most RISC-V software.
+

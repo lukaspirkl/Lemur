@@ -1,0 +1,10 @@
+﻿# 6.1.2 QSPI IO Supply (QSPI\_IOVDD)
+
+QSPI\_IOVDD provides the IO supply for the chip's QSPI interface, and should be powered at a nominal voltage between 1.8 V and 3.3 V. The supply voltage sets the external signal level for the QSPI interface, and should be chosen based on the level required, see [Section 14.9](#page-1334-0) for details. In most applications the QSPI interface will be connected to an external flash device, which will determine the required signal level.
+
+If the QSPI interface is powered at a nominal 1.8 V, the IO input thresholds should be adjusted by setting the [VOLTAGE\\_SELECT](#page-809-1) register to 1. [VOLTAGE\\_SELECT](#page-809-1) is set to 0 by default, which results in input thresholds that are valid for a nominal IO voltage between 2.5 V and 3.3 V. See [Chapter 9](#page-584-0) for details.
+
+#### **CAUTION**
+
+Powering the IOVDD at 1.8 V with input thresholds set for a 2.5 V to 3.3 V supply is a safe operating mode, but will result in input thresholds that do not meet specification. Powering the IO at voltages greater than 1.8 V with input thresholds set for a 1.8 V supply may result in damage to the chip.
+

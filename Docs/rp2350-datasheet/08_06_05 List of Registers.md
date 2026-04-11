@@ -1,0 +1,168 @@
+﻿# 8.6.5 List of Registers
+
+<span id="page-580-1"></span>The PLL\_SYS and PLL\_USB registers start at base addresses of 0x40050000 and 0x40058000 respectively (defined as [PLL\\_SYS\\_BASE](#page-31-1) and [PLL\\_USB\\_BASE](#page-31-1) in SDK).
+
+*Table 635. List of PLL registers*
+
+| Offset | Name      | Info                                                  |
+|--------|-----------|-------------------------------------------------------|
+| 0x00   | CS        | Control and Status                                    |
+| 0x04   | PWR       | Controls the PLL power modes.                         |
+| 0x08   | FBDIV_INT | Feedback divisor                                      |
+| 0x0c   | PRIM      | Controls the PLL post dividers for the primary output |
+| 0x10   | INTR      | Raw Interrupts                                        |
+| 0x14   | INTE      | Interrupt Enable                                      |
+| 0x18   | INTF      | Interrupt Force                                       |
+| 0x1c   | INTS      | Interrupt status after masking & forcing              |
+
+# <span id="page-581-0"></span>**[PLL:](#page-580-1) CS Register**
+
+**Offset**: 0x00
+
+#### **Description**
+
+Control and Status
+
+GENERAL CONSTRAINTS:
+
+Reference clock frequency min=5MHz, max=800MHz
+
+Feedback divider min=16, max=320
+
+VCO frequency min=400MHz, max=1600MHz
+
+| Table 636. CS Register | Bits | Description                                                                                                                                                                                                                  | Type | Reset |
+|------------------------|------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------|-------|
+|                        | 31   | LOCK: PLL is locked                                                                                                                                                                                                          | RO   | 0x0   |
+|                        | 30   | LOCK_N: PLL is not locked<br>Ideally this is cleared when PLL lock is seen and this should never normally be<br>set                                                                                                          | WC   | 0x0   |
+|                        | 29:9 | Reserved.                                                                                                                                                                                                                    | -    | -     |
+|                        | 8    | BYPASS: Passes the reference clock to the output instead of the divided VCO.<br>The VCO continues to run so the user can switch between the reference clock<br>and the divided VCO but the output will glitch when doing so. | RW   | 0x0   |
+|                        | 7:6  | Reserved.                                                                                                                                                                                                                    | -    | -     |
+|                        | 5:0  | REFDIV: Divides the PLL input reference clock.<br>Behaviour is undefined for div=0.<br>PLL output will be unpredictable during refdiv changes, wait for lock=1 before<br>using it.                                           | RW   | 0x01  |
+
+#### <span id="page-581-1"></span>**[PLL:](#page-580-1) PWR Register**
+
+**Offset**: 0x04
+
+#### **Description**
+
+Controls the PLL power modes.
+
+*Table 637. PWR Register*
+
+| Bits | Description                                                                                  | Type | Reset |
+|------|----------------------------------------------------------------------------------------------|------|-------|
+| 31:6 | Reserved.                                                                                    | -    | -     |
+| 5    | VCOPD: PLL VCO powerdown<br>To save power set high when PLL output not required or bypass=1. | RW   | 0x1   |
+| 4    | Reserved.                                                                                    | -    | -     |
+
+| Bits | Description                                                                                               | Type | Reset |
+|------|-----------------------------------------------------------------------------------------------------------|------|-------|
+| 3    | POSTDIVPD: PLL post divider powerdown<br>To save power set high when PLL output not required or bypass=1. | RW   | 0x1   |
+| 2    | DSMPD: PLL DSM powerdown<br>RW<br>0x1<br>Nothing is achieved by setting this low.                         |      |       |
+| 1    | Reserved.                                                                                                 | -    | -     |
+| 0    | PD: PLL powerdown<br>To save power set high when PLL output not required.                                 | RW   | 0x1   |
+
+# <span id="page-582-0"></span>**[PLL:](#page-580-1) FBDIV\_INT Register**
+
+**Offset**: 0x08
+
+#### **Description**
+
+Feedback divisor
+
+(note: this PLL does not support fractional division)
+
+*Table 638. FBDIV\_INT Register*
+
+| Bits  | Description                              | Type | Reset |
+|-------|------------------------------------------|------|-------|
+| 31:12 | Reserved.                                | -    | -     |
+| 11:0  | see ctrl reg description for constraints | RW   | 0x000 |
+
+## <span id="page-582-1"></span>**[PLL:](#page-580-1) PRIM Register**
+
+**Offset**: 0x0c
+
+#### **Description**
+
+Controls the PLL post dividers for the primary output (note: this PLL does not have a secondary output)
+
+the primary output is driven from VCO divided by postdiv1\*postdiv2
+
+*Table 639. PRIM Register*
+
+| Bits  | Description             | Type | Reset |
+|-------|-------------------------|------|-------|
+| 31:19 | Reserved.               | -    | -     |
+| 18:16 | POSTDIV1: divide by 1-7 | RW   | 0x7   |
+| 15    | Reserved.               | -    | -     |
+| 14:12 | POSTDIV2: divide by 1-7 | RW   | 0x7   |
+| 11:0  | Reserved.               | -    | -     |
+
+#### <span id="page-582-2"></span>**[PLL:](#page-580-1) INTR Register**
+
+**Offset**: 0x10
+
+#### **Description**
+
+Raw Interrupts
+
+*Table 640. INTR Register*
+
+| Bits | Description   | Type | Reset |
+|------|---------------|------|-------|
+| 31:1 | Reserved.     | -    | -     |
+| 0    | LOCK_N_STICKY | WC   | 0x0   |
+
+# <span id="page-583-0"></span>**[PLL:](#page-580-1) INTE Register**
+
+**Offset**: 0x14
+
+#### **Description**
+
+Interrupt Enable
+
+*Table 641. INTE Register*
+
+| Bits | Description   | Type | Reset |
+|------|---------------|------|-------|
+| 31:1 | Reserved.     | -    | -     |
+| 0    | LOCK_N_STICKY | RW   | 0x0   |
+
+# <span id="page-583-1"></span>**[PLL:](#page-580-1) INTF Register**
+
+**Offset**: 0x18
+
+#### **Description**
+
+Interrupt Force
+
+*Table 642. INTF Register*
+
+| Bits | Description   | Type | Reset |
+|------|---------------|------|-------|
+| 31:1 | Reserved.     | -    | -     |
+| 0    | LOCK_N_STICKY | RW   | 0x0   |
+
+# <span id="page-583-2"></span>**[PLL:](#page-580-1) INTS Register**
+
+**Offset**: 0x1c
+
+#### **Description**
+
+Interrupt status after masking & forcing
+
+*Table 643. INTS Register*
+
+| Bits | Description   | Type | Reset |
+|------|---------------|------|-------|
+| 31:1 | Reserved.     | -    | -     |
+| 0    | LOCK_N_STICKY | RO   | 0x0   |
+
+# <span id="page-584-0"></span>**Chapter 9. GPIO**
+
+# **CAUTION**
+
+Under certain conditions, pull-down does not function as expected. For more information, see [RP2350-E9](#page-1357-1).
+

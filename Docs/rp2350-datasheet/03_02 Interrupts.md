@@ -1,0 +1,40 @@
+﻿# 3.2 Interrupts
+
+Each core is equipped with an internal interrupt controller, with 52 interrupt inputs. For the most part each core has exactly the same interrupts routed to it, though there are some exceptions, referred to as *core-local interrupts*, where there is an individual per-core interrupt source mapped to the same interrupt number on each core:
+
+- Cross-core FIFO interrupts: SIO\_IRQ\_FIFO and SIO\_IRQ\_FIFO\_NS [\(Section 3.1.5](#page-42-0))
+- Cross-core doorbell interrupts: SIO\_IRQ\_BELL and SIO\_IRQ\_BELL\_NS [\(Section 3.1.6\)](#page-42-1)
+- RISC-V platform timer (also usable by Arm cores): SIO\_IRQ\_MTIMECMP [\(Section 3.1.8\)](#page-43-1)
+- GPIO interrupts: IO\_IRQ\_BANK0, IRQ\_IO\_BANK0\_NS, IO\_IRQ\_QSPI, IO\_IRQ\_QSPI\_NS ([Section 9.5](#page-591-0))
+
+The remaining interrupt inputs have the same interrupt source mirrored identically on both cores. Non-core-local interrupts should only be enabled in the interrupt controller of a single core at a time, and will be serviced by the core whose interrupt controller they are enabled in.
+
+*Table 94. System-level interrupt numbering. All interrupts are routed to both processors.*
+
+<span id="page-82-3"></span>
+
+| IRQ | Interrupt Source | IRQ | Interrupt Source | IRQ | Interrupt Source | IRQ | Interrupt Source | IRQ | Interrupt Source |
+|-----|------------------|-----|------------------|-----|------------------|-----|------------------|-----|------------------|
+| 0   | TIMER0_IRQ_0     | 11  | DMA_IRQ_1        | 22  | IO_IRQ_BANK0_NS  | 33  | UART0_IRQ        | 44  | POWMAN_IRQ_POW   |
+| 1   | TIMER0_IRQ_1     | 12  | DMA_IRQ_2        | 23  | IO_IRQ_QSPI      | 34  | UART1_IRQ        | 45  | POWMAN_IRQ_TIMER |
+| 2   | TIMER0_IRQ_2     | 13  | DMA_IRQ_3        | 24  | IO_IRQ_QSPI_NS   | 35  | ADC_IRQ_FIFO     | 46  | SPAREIRQ_IRQ_0   |
+
+3.2. Interrupts **82**
+
+| IRQ | Interrupt Source | IRQ | Interrupt Source | IRQ | Interrupt Source | IRQ | Interrupt Source | IRQ | Interrupt Source |
+|-----|------------------|-----|------------------|-----|------------------|-----|------------------|-----|------------------|
+| 3   | TIMER0_IRQ_3     | 14  | USBCTRL_IRQ      | 25  | SIO_IRQ_FIFO     | 36  | I2C0_IRQ         | 47  | SPAREIRQ_IRQ_1   |
+| 4   | TIMER1_IRQ_0     | 15  | PIO0_IRQ_0       | 26  | SIO_IRQ_BELL     | 37  | I2C1_IRQ         | 48  | SPAREIRQ_IRQ_2   |
+| 5   | TIMER1_IRQ_1     | 16  | PIO0_IRQ_1       | 27  | SIO_IRQ_FIFO_NS  | 38  | OTP_IRQ          | 49  | SPAREIRQ_IRQ_3   |
+| 6   | TIMER1_IRQ_2     | 17  | PIO1_IRQ_0       | 28  | SIO_IRQ_BELL_NS  | 39  | TRNG_IRQ         | 50  | SPAREIRQ_IRQ_4   |
+| 7   | TIMER1_IRQ_3     | 18  | PIO1_IRQ_1       | 29  | SIO_IRQ_MTIMECMP | 40  | PROC0_IRQ_CTI    | 51  | SPAREIRQ_IRQ_5   |
+| 8   | PWM_IRQ_WRAP_0   | 19  | PIO2_IRQ_0       | 30  | CLOCKS_IRQ       | 41  | PROC1_IRQ_CTI    |     |                  |
+| 9   | PWM_IRQ_WRAP_1   | 20  | PIO2_IRQ_1       | 31  | SPI0_IRQ         | 42  | PLL_SYS_IRQ      |     |                  |
+| 10  | DMA_IRQ_0        | 21  | IO_IRQ_BANK0     | 32  | SPI1_IRQ         | 43  | PLL_USB_IRQ      |     |                  |
+
+On RP2350, only the lower 46 IRQ signals are connected to system-level interrupt sources, and IRQs 46 to 51 are hardwired to zero (never firing). These six spare interrupts, referred to as SPAREIRQ\_IRQ\_0 through SPAREIRQ\_IRQ\_5 in the table, are deliberately reserved for the cores to interrupt themselves (via the Arm [NVIC\\_ISPR0](#page-179-0) registers or the Hazard3 [MEIFA](#page-330-0) CSR), for example, when an interrupt handler wants to schedule a "bottom half" handler for work that must be done after exiting the interrupt handler, but before returning to the code running in the foreground.
+
+Nested interrupts are supported in hardware: a lower-priority interrupt can be pre-empted by a higher-priority interrupt or fault, and will resume once the higher-priority handler returns. The pre-emption priority order is determined by the interrupt priority registers starting from [NVIC\\_IPR0](#page-180-1) (Cortex-M33) or the [MEIPRA](#page-330-1) interrupt priority array CSR (Hazard3).
+
+When there is a choice of multiple interrupts to be entered at the same dynamic priority, the interrupt with the lowest IRQ number is chosen as a tie-breaker. The system-level IRQ numbering has been chosen to generally put higher-priority interrupts at lower IRQ numbers for this reason, though the true priority is often dependent on the specific application.
+

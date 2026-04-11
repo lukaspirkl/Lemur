@@ -73,6 +73,7 @@ internal class Program
     {
         collection.AddSingletonViewModel<MainWindowViewModel, MainWindowView>();
         collection.AddSingletonViewModel<BinaryInfoViewModel, BinaryInfoView>();
+        collection.AddSingletonViewModel<PinDevicesViewModel, PinDevicesView>();
         collection.AddSingletonViewModel<PinsViewModel, PinsView>();
         collection.AddSingletonViewModel<UserBankIOViewModel, UserBankIOView>();
         collection.AddSingletonViewModel<UARTViewModel, UARTView>();

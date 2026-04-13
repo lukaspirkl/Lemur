@@ -216,9 +216,17 @@ public class TerminalView : Control
         ResizeEmulator();
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        InvalidateVisual();
+    }
+
     private void ResizeEmulator()
     {
         if (Emulator == null || _cellWidth == 0 || _cellHeight == 0)
+            return;
+        if (Bounds.Width == 0 || Bounds.Height == 0)
             return;
 
         int cols = Math.Max(1, (int)(Bounds.Width / _cellWidth));

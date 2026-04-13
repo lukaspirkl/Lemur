@@ -1,3 +1,4 @@
+using System.Numerics;
 using Venture.Processor;
 
 namespace Venture;
@@ -148,9 +149,205 @@ public class IrqController
     private ulong m_Pending;
     private readonly Hazard3Processor m_Processor;
 
+    // -------------------------------------------------------------------------
+    // Xh3irq — Hazard3 external interrupt controller CSRs
+    // Spec: RP2350 Datasheet §3.8.6.1 — "Xh3irq: Hazard3 interrupt controller"
+    //
+    // MEIEA (0xBE0) — External interrupt enable array.
+    //   Each bit gates whether the corresponding IRQ signal can reach the core.
+    //   Accessed via a windowed interface: the lower 5 bits of the write data select
+    //   which 16-IRQ window is exposed/updated in bits [31:16] of the same instruction.
+    //   e.g. csrs 0xbe0, (window | (bit << 16)) enables IRQ (window*16 + bit).
+    //
+    // MEIPA (0xBE1) — External interrupt pending array (read-only mirror of m_Pending).
+    //   Same windowed interface as MEIEA; bits reflect whether the peripheral's IRQ
+    //   line is currently asserted, regardless of enable state.
+    //
+    // MEINEXT (0xBE4) — Next IRQ to service.
+    //   Returns IRQ_number << 2 for the lowest-numbered IRQ that is both pending
+    //   (m_Pending bit set), enabled (m_MeieaEnables bit set), and has priority
+    //   >= MEICONTEXT.PPREEMPT (to avoid re-entering in-progress handlers).
+    //   Bit 31 (NOIRQ) is set when no such IRQ exists.
+    //   Writing bit 0 (UPDATE) atomically updates MEICONTEXT (NOIRQ, IRQ, PREEMPT).
+    //
+    // MEICONTEXT (0xBE5) — External interrupt context register.
+    //   Manages the three-level preemption priority stack (PPPREEMPT/PPREEMPT/PREEMPT),
+    //   current IRQ/NOIRQ tracking, and MRETEIRQ/CLEARTS/MTIESAVE/MSIESAVE.
+    // -------------------------------------------------------------------------
+
+    // 64-bit enable mask: bit N is set when IRQ N is enabled via MEIEA.
+    private ulong m_MeieaEnables;
+
+    // Currently selected 16-IRQ window for MEIEA/MEIPA reads (bits [4:0]).
+    // Set by any write to the MEIEA or MEIPA CSR addresses.
+    private int m_MeiaWindow;
+
     public IrqController(Hazard3Processor processor)
     {
         m_Processor = processor;
+
+        processor.CSR.AddGetter(0xBE0, ReadMeiea);
+        processor.CSR.AddSetter(0xBE0, WriteMeiea);
+        processor.CSR.AddGetter(0xBE1, ReadMeipa);
+        // MEIPA is read-only; writes update the window selector but not the pending bits.
+        processor.CSR.AddSetter(0xBE1, v => m_MeiaWindow = (int)(v & 0x1F));
+        processor.CSR.AddGetter(0xBE4, ReadMeinext);
+        processor.CSR.AddSetter(0xBE4, WriteMeinext);
+        processor.CSR.AddGetter(CSR.MEICONTEXT, ReadMeicontext);
+        processor.CSR.AddSetter(CSR.MEICONTEXT, WriteMeicontext);
+    }
+
+    // -------------------------------------------------------------------------
+    // MEIEA / MEIPA windowed CSR read helpers
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Reads the MEIEA CSR.
+    /// Bits [31:16] contain the 16-bit enable window for <see cref="m_MeiaWindow"/>.
+    /// Bits [4:0] contain the current window index.
+    ///
+    /// Note on windowed-CSR read ordering: the Hazard3 spec says "the window is indexed
+    /// by the LSBs of the write data for the same CSR instruction". In practice the
+    /// pico-sdk always writes the correct window index before (or in the same instruction
+    /// as) a read, so returning the currently-stored window index here is correct for all
+    /// SDK-generated access patterns.
+    /// </summary>
+    private uint ReadMeiea()
+    {
+        uint window16 = (uint)((m_MeieaEnables >> (m_MeiaWindow * 16)) & 0xFFFF);
+        return (uint)m_MeiaWindow | (window16 << 16);
+    }
+
+    /// <summary>
+    /// Writes the MEIEA CSR.
+    /// For CSRRS/CSRRC/CSRRW, the CPU calls <c>Set(computed_value)</c> where
+    /// <c>computed_value</c> already encodes the result of OR/AND-NOT/replace.
+    /// Bits [4:0] select the window; bits [31:16] replace the 16 enable bits for that window.
+    /// </summary>
+    private void WriteMeiea(uint value)
+    {
+        m_MeiaWindow = (int)(value & 0x1F);
+        uint enables = (value >> 16) & 0xFFFF;
+        ulong mask = 0xFFFFUL << (m_MeiaWindow * 16);
+        m_MeieaEnables = (m_MeieaEnables & ~mask) | ((ulong)enables << (m_MeiaWindow * 16));
+    }
+
+    /// <summary>
+    /// Reads the MEIPA CSR (read-only mirror of <see cref="m_Pending"/>).
+    /// Same windowed layout as MEIEA; the window is selected by <see cref="m_MeiaWindow"/>.
+    /// </summary>
+    private uint ReadMeipa()
+    {
+        uint window16 = (uint)((m_Pending >> (m_MeiaWindow * 16)) & 0xFFFF);
+        return (uint)m_MeiaWindow | (window16 << 16);
+    }
+
+    /// <summary>
+    /// Reads the MEINEXT CSR.
+    /// Returns the IRQ number of the lowest-numbered IRQ that is pending, enabled,
+    /// and has priority >= MEICONTEXT.PPREEMPT (so a preempted handler is not re-entered).
+    /// The value is the IRQ number left-shifted by 2, usable as a byte offset into
+    /// the soft vector table (each entry is 4 bytes).
+    /// Bit 31 (NOIRQ) is set when no eligible IRQ exists.
+    /// Spec §3.8.6.1.3: "the IRQ number … left-shifted by two".
+    /// </summary>
+    private uint ReadMeinext()
+    {
+        ulong pendingAndEnabled = m_Pending & m_MeieaEnables;
+        if (pendingAndEnabled == 0)
+            return 0x8000_0000u; // NOIRQ
+
+        // Rule 3 (§3.8.6.1.2): IRQ must have priority >= PPREEMPT.
+        // All IRQ priorities are 0 (MEIPRA not implemented); only eligible when PPREEMPT == 0.
+        var meicontext = m_Processor.CSR.RawGet(CSR.MEICONTEXT);
+        uint ppreempt = (meicontext >> 24) & 0xFu;
+        if (ppreempt > 0)
+            return 0x8000_0000u; // NOIRQ: all IRQs blocked by PPREEMPT gate
+
+        int irq = BitOperations.TrailingZeroCount(pendingAndEnabled);
+        return (uint)(irq << 2);
+    }
+
+    /// <summary>
+    /// Handles writes to the MEINEXT CSR.
+    /// When bit 0 (UPDATE) is set, atomically updates MEICONTEXT with the IRQ number,
+    /// NOIRQ flag, and new PREEMPT value for the interrupt about to be dispatched.
+    /// Spec §3.8.6.1.5: "Writing 1 to MEINEXT.UPDATE updates MEICONTEXT as follows…"
+    /// </summary>
+    private void WriteMeinext(uint value)
+    {
+        if ((value & 1u) == 0) return; // UPDATE bit not set — no-op
+
+        // The written value is (old MEINEXT | UPDATE). Extract IRQ state from it.
+        bool noirq = (value & 0x8000_0000u) != 0;
+        uint irq   = (value >> 2) & 0x1FFu; // MEINEXT bits[10:2] = IRQ number
+
+        var meicontext = m_Processor.CSR.RawGet(CSR.MEICONTEXT);
+
+        // Clear PREEMPT[20:16], NOIRQ[15], IRQ[12:4]
+        meicontext &= ~0x001F_9FF0u;
+
+        if (noirq)
+        {
+            // No eligible IRQ: set NOIRQ, set PREEMPT to 0x10 (blocks all future preemption).
+            meicontext |= (1u << 15);           // NOIRQ = 1
+            meicontext |= (0x10u << 16);        // PREEMPT = 0x10
+        }
+        else
+        {
+            // IRQ present: store IRQ number and set PREEMPT = irq_priority + 1.
+            // All priorities are 0 (MEIPRA not implemented), so PREEMPT = 1.
+            meicontext |= (irq << 4);           // IRQ bits[12:4]
+            meicontext |= (1u << 16);           // PREEMPT = 0 + 1 = 1
+        }
+
+        m_Processor.CSR.RawSet(CSR.MEICONTEXT, meicontext);
+    }
+
+    /// <summary>
+    /// Reads the MEICONTEXT CSR.
+    /// MTIESAVE (bit 3) and MSIESAVE (bit 2) always reflect the current MIE.MTIE/MSIE
+    /// values so that a <c>csrrsi a2, meicontext, CLEARTS</c> captures the live MIE state
+    /// for later restoration.
+    /// Spec §3.8.9 Table 421.
+    /// </summary>
+    private uint ReadMeicontext()
+    {
+        var stored = m_Processor.CSR.RawGet(CSR.MEICONTEXT);
+        // Overlay live MIE.MTIE/MSIE into bits 3:2
+        stored &= ~0b1100u;
+        var mie = m_Processor.CSR.RawGet(CSR.MIE);
+        if ((mie & (1u << CSR.MxP_MTIP_BIT)) != 0) stored |= (1u << 3); // MTIESAVE
+        if ((mie & (1u << CSR.MxP_MSIP_BIT)) != 0) stored |= (1u << 2); // MSIESAVE
+        return stored;
+    }
+
+    /// <summary>
+    /// Handles writes to the MEICONTEXT CSR.
+    /// CLEARTS (bit 1): clears MIE.MTIE and MIE.MSIE (takes precedence over MTIESAVE/MSIESAVE).
+    /// MTIESAVE (bit 3) / MSIESAVE (bit 2): ORed into MIE.MTIE / MIE.MSIE respectively.
+    /// CLEARTS is self-clearing and not stored in the backing register.
+    /// Spec §3.8.9 Table 421.
+    /// </summary>
+    private void WriteMeicontext(uint value)
+    {
+        var mie = m_Processor.CSR.RawGet(CSR.MIE);
+
+        // Apply MTIESAVE/MSIESAVE restores first…
+        if ((value & (1u << 3)) != 0) mie |= (1u << CSR.MxP_MTIP_BIT);  // MTIESAVE → MIE.MTIE
+        if ((value & (1u << 2)) != 0) mie |= (1u << CSR.MxP_MSIP_BIT);  // MSIESAVE → MIE.MSIE
+
+        // …then CLEARTS takes precedence (clears MTIE/MSIE even if MTIESAVE was also set).
+        if ((value & (1u << 1)) != 0)
+        {
+            mie &= ~(1u << CSR.MxP_MTIP_BIT);
+            mie &= ~(1u << CSR.MxP_MSIP_BIT);
+        }
+
+        m_Processor.CSR.RawSet(CSR.MIE, mie);
+
+        // Store MEICONTEXT; CLEARTS is self-clearing so strip it from the backing value.
+        m_Processor.CSR.RawSet(CSR.MEICONTEXT, value & ~(1u << 1));
     }
 
     // ---------------------------------------------------------------------------

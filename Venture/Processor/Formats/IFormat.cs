@@ -347,6 +347,8 @@ public class IFormat : FormatBase
                 // 2. Restore MSTATUS:
                 //    - MIE  = MPIE  (re-enable interrupts as they were before the trap)
                 //    - MPIE = 1     (spec: "MPIE is set to 1" after mret)
+                // 3. Xh3irq: if MEICONTEXT.MRETEIRQ is set, pop the preemption priority stack.
+                //    Spec §3.8.6.1.5: "A trap exit where MEICONTEXT.MRETEIRQ is set…"
                 {
                     var mstatus = e.CSR.RawGet(CSR.MSTATUS);
                     var mpie = (mstatus >> CSR.MSTATUS_MPIE_BIT) & 1u;
@@ -359,6 +361,24 @@ public class IFormat : FormatBase
 
                     e.CSR.RawSet(CSR.MSTATUS, mstatus);
                     e.PC = e.CSR.RawGet(CSR.MEPC);
+
+                    // Pop Xh3irq preemption priority stack if MRETEIRQ is set.
+                    //   PREEMPT  ← PPREEMPT
+                    //   PPREEMPT ← PPPREEMPT
+                    //   PPPREEMPT ← 0
+                    //   MRETEIRQ ← 0
+                    var meicontext = e.CSR.RawGet(CSR.MEICONTEXT);
+                    if ((meicontext & 1u) != 0)
+                    {
+                        uint ppreempt  = (meicontext >> 24) & 0xFu;
+                        uint pppreempt = (meicontext >> 28) & 0xFu;
+                        meicontext &= 0x0000_FFFFu;          // clear bits[31:16]
+                        meicontext |= (pppreempt << 24);      // PPREEMPT  ← PPPREEMPT
+                        meicontext |= (ppreempt  << 16);      // PREEMPT   ← PPREEMPT
+                        // PPPREEMPT = 0 (already cleared above)
+                        meicontext &= ~1u;                    // MRETEIRQ  = 0
+                        e.CSR.RawSet(CSR.MEICONTEXT, meicontext);
+                    }
                 }
                 return;
 

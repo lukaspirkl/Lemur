@@ -167,11 +167,20 @@ public class Hazard3Processor
 
         // Select highest-priority pending interrupt.
         // Spec Table 3.7: MEI(11) > MSI(3) > MTI(7)
-        int cause;
-        if      ((pending & (1u << CSR.MxP_MEIP_BIT)) != 0) cause = CSR.MxP_MEIP_BIT; // External (11)
-        else if ((pending & (1u << CSR.MxP_MSIP_BIT)) != 0) cause = CSR.MxP_MSIP_BIT; // Software  (3)
-        else if ((pending & (1u << CSR.MxP_MTIP_BIT)) != 0) cause = CSR.MxP_MTIP_BIT; // Timer     (7)
-        else return;
+        //
+        // For MEI (external): gate on MEICONTEXT.PREEMPT — only take the interrupt if
+        // there is an eligible IRQ (priority >= PREEMPT). Since all IRQ priorities are 0,
+        // the external interrupt is only taken when PREEMPT == 0.
+        // Spec §3.8.6.1.4: "must be greater than or equal to MEICONTEXT.PREEMPT".
+        int cause = -1;
+        if ((pending & (1u << CSR.MxP_MEIP_BIT)) != 0)
+        {
+            uint preempt = (CSR.RawGet(CSR.MEICONTEXT) >> 16) & 0x1Fu;
+            if (preempt == 0) cause = CSR.MxP_MEIP_BIT;
+        }
+        if (cause < 0 && (pending & (1u << CSR.MxP_MSIP_BIT)) != 0) cause = CSR.MxP_MSIP_BIT;
+        if (cause < 0 && (pending & (1u << CSR.MxP_MTIP_BIT)) != 0) cause = CSR.MxP_MTIP_BIT;
+        if (cause < 0) return;
 
         // Spec Section 8.2: interrupt entry clears the LR/SC reservation.
         Reservation = null;
@@ -208,6 +217,31 @@ public class Hazard3Processor
                 | (mie << CSR.MSTATUS_MPIE_BIT);               // write old MIE into MPIE
         mstatus &= ~(1u << CSR.MSTATUS_MIE_BIT);               // clear MIE
         CSR.RawSet(CSR.MSTATUS, mstatus);
+
+        // Xh3irq: update MEICONTEXT on any trap entry.
+        // Spec §3.8.6.1.5: "When entering the MIP.MEIP vector, hardware atomically performs…"
+        var meicontext = CSR.RawGet(CSR.MEICONTEXT);
+        if (isInterrupt && (cause & 0x7FFF_FFFFu) == CSR.MxP_MEIP_BIT)
+        {
+            // MEIP trap: push the preemption priority stack and set MRETEIRQ.
+            //   PPPREEMPT ← PPREEMPT, PPREEMPT ← PREEMPT, PREEMPT ← (irq_priority + 1)
+            // All IRQ priorities are 0 (MEIPRA not implemented), so PREEMPT ← 1.
+            uint pppreempt = (meicontext >> 28) & 0xFu;
+            uint ppreempt  = (meicontext >> 24) & 0xFu;
+            uint preempt   = (meicontext >> 16) & 0x1Fu;
+            meicontext &= 0x0000_FFFFu;             // clear bits[31:16]
+            meicontext |= (ppreempt  << 28);         // PPPREEMPT ← old PPREEMPT
+            meicontext |= (preempt   << 24);         // PPREEMPT  ← old PREEMPT
+            meicontext |= (1u        << 16);         // PREEMPT   = 1 (priority 0 + 1)
+            meicontext |= 1u;                        // MRETEIRQ  = 1
+            CSR.RawSet(CSR.MEICONTEXT, meicontext);
+        }
+        else if (isInterrupt)
+        {
+            // Non-MEIP interrupt (MTIP/MSIP): clear MRETEIRQ so MRET won't pop the stack.
+            CSR.RawSet(CSR.MEICONTEXT, meicontext & ~1u);
+        }
+        // Synchronous exceptions do not modify MEICONTEXT.
 
         // Compute trap handler PC from MTVEC.
         // Bits [1:0] = mode; bits [31:2] = BASE (guaranteed 4-byte aligned by hardware).

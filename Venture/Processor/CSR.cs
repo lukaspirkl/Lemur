@@ -60,6 +60,21 @@ public class CSR
     public const ushort MINSTRETH = 0xB82;
 
     // -------------------------------------------------------------------------
+    // Xh3irq — Hazard3 custom external interrupt controller CSRs
+    // Spec: RP2350 Datasheet §3.8.6.1 — "Xh3irq: Hazard3 interrupt controller"
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// 0xBE5 — External interrupt context register.
+    /// Manages the three-level preemption priority stack (PPPREEMPT/PPREEMPT/PREEMPT),
+    /// the current IRQ number and NOIRQ flag, and MRETEIRQ / CLEARTS / MTIESAVE / MSIESAVE.
+    /// Updated atomically by hardware on MEIP trap entry, MRET (when MRETEIRQ=1), and
+    /// when MEINEXT.UPDATE is written.
+    /// Reset value: 0x00008000 (NOIRQ=1, all other fields 0).
+    /// </summary>
+    public const ushort MEICONTEXT = 0xBE5;
+
+    // -------------------------------------------------------------------------
     // MSTATUS bit positions — Section 3.1.6
     // -------------------------------------------------------------------------
 

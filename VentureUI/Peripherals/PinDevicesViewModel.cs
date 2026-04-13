@@ -18,6 +18,8 @@ public class PinDevicesViewModelForPreviewer : PinDevicesViewModel
     {
         Leds.Add(new LedViewModel("Status", [25], null, Colors.Orange));
         Leds.Add(new LedViewModel("Power", [26], null, Color.FromRgb(0x22, 0xDD, 0x55)) { IsOn = true });
+        Buttons.Add(new ButtonViewModel("User Button", [15], null));
+        Switches.Add(new SwitchViewModel("Mode Select", [14], null));
         OtherPins.Add(new UnrecognizedPinViewModel([0, 1], "UART TX/RX"));
     }
 }
@@ -28,12 +30,16 @@ public partial class PinDevicesViewModel : ObservableObject, IPeripheralTab
 
     private readonly UserBankIO? m_UserBankIO;
 
-    public ObservableCollection<LedViewModel> Leds { get; } = [];
+    public ObservableCollection<LedViewModel>    Leds      { get; } = [];
+    public ObservableCollection<ButtonViewModel> Buttons   { get; } = [];
+    public ObservableCollection<SwitchViewModel> Switches  { get; } = [];
     public ObservableCollection<UnrecognizedPinViewModel> OtherPins { get; } = [];
 
-    public bool HasLeds => Leds.Count > 0;
+    public bool HasLeds      => Leds.Count > 0;
+    public bool HasButtons   => Buttons.Count > 0;
+    public bool HasSwitches  => Switches.Count > 0;
     public bool HasOtherPins => OtherPins.Count > 0;
-    public bool HasAnyPins => HasLeds || HasOtherPins;
+    public bool HasAnyPins   => HasLeds || HasButtons || HasSwitches || HasOtherPins;
 
     // Matches:  Some Label [KEYWORD]  or  Some Label [KEYWORD(option)]
     private static readonly Regex s_DeviceTag =
@@ -61,11 +67,15 @@ public partial class PinDevicesViewModel : ObservableObject, IPeripheralTab
         void NotifyCollectionDerived(object? s, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             OnPropertyChanged(nameof(HasLeds));
+            OnPropertyChanged(nameof(HasButtons));
+            OnPropertyChanged(nameof(HasSwitches));
             OnPropertyChanged(nameof(HasOtherPins));
             OnPropertyChanged(nameof(HasAnyPins));
         }
 
-        Leds.CollectionChanged += NotifyCollectionDerived;
+        Leds.CollectionChanged     += NotifyCollectionDerived;
+        Buttons.CollectionChanged  += NotifyCollectionDerived;
+        Switches.CollectionChanged += NotifyCollectionDerived;
         OtherPins.CollectionChanged += NotifyCollectionDerived;
 
         if (binaryInfoService != null)
@@ -76,6 +86,8 @@ public partial class PinDevicesViewModel : ObservableObject, IPeripheralTab
     private void Apply(BinaryInfo? info)
     {
         Leds.Clear();
+        Buttons.Clear();
+        Switches.Clear();
         OtherPins.Clear();
         if (info == null || m_UserBankIO == null) return;
 
@@ -98,12 +110,21 @@ public partial class PinDevicesViewModel : ObservableObject, IPeripheralTab
             switch (keyword.ToUpperInvariant())
             {
                 case "LED":
-                    var color = ParseColor(option);
-                    var line  = m_UserBankIO.GetGpioLine(pin.Pins[0]);
-                    Leds.Add(new LedViewModel(displayName, pin.Pins, line, color));
+                    var (color, activeLow) = ParseColorOption(option);
+                    var ledLine = m_UserBankIO.GetGpioLine(pin.Pins[0]);
+                    Leds.Add(new LedViewModel(displayName, pin.Pins, ledLine, color, activeLow));
                     break;
 
-                // TODO: BUTTON, SWITCH — see TODO-PinDevices.md
+                case "BUTTON":
+                    var btnLine = m_UserBankIO.GetManualInputLine(pin.Pins[0]);
+                    Buttons.Add(new ButtonViewModel(displayName, pin.Pins, btnLine));
+                    break;
+
+                case "SWITCH":
+                    var swLine = m_UserBankIO.GetManualInputLine(pin.Pins[0]);
+                    Switches.Add(new SwitchViewModel(displayName, pin.Pins, swLine));
+                    break;
+
                 default:
                     OtherPins.Add(new UnrecognizedPinViewModel(pin.Pins, pin.Label));
                     break;
@@ -111,10 +132,25 @@ public partial class PinDevicesViewModel : ObservableObject, IPeripheralTab
         }
     }
 
-    private static Color ParseColor(string? name)
+    /// <summary>
+    /// Parses an LED option string (the part inside parentheses, e.g. "red" or "red-" or "-").
+    /// Returns the LED color and whether the LED is active-low.
+    /// Active-low is indicated by a trailing '-' (e.g. "[LED(-)]" or "[LED(red-)]").
+    /// </summary>
+    private static (Color color, bool activeLow) ParseColorOption(string? option)
     {
-        if (name == null) return Color.FromRgb(0x22, 0xDD, 0x55);
-        name = name.Trim();
+        if (option == null) return (Color.FromRgb(0x22, 0xDD, 0x55), false);
+        option = option.Trim();
+
+        bool activeLow = option.EndsWith('-');
+        var colorPart = activeLow ? option[..^1].TrimEnd() : option;
+
+        return (ParseColorName(colorPart), activeLow);
+    }
+
+    private static Color ParseColorName(string? name)
+    {
+        if (string.IsNullOrEmpty(name)) return Color.FromRgb(0x22, 0xDD, 0x55);
         if (name.StartsWith('#') && Color.TryParse(name, out var hex)) return hex;
         return s_NamedColors.TryGetValue(name, out var named) ? named : Color.FromRgb(0x22, 0xDD, 0x55);
     }
@@ -125,10 +161,11 @@ public partial class PinDevicesViewModel : ObservableObject, IPeripheralTab
 
 public partial class LedViewModel : ObservableObject
 {
-    public string Label   { get; }
+    public string Label    { get; }
     public string PinLabel { get; }
 
     private readonly Color m_LedColor;
+    private readonly bool  m_ActiveLow;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(LedBrush))]
@@ -141,17 +178,71 @@ public partial class LedViewModel : ObservableObject
             (byte)(m_LedColor.G >> 3),
             (byte)(m_LedColor.B >> 3)));
 
-    public LedViewModel(string label, IReadOnlyList<int> pins, IGpioLine? line, Color ledColor)
+    public LedViewModel(string label, IReadOnlyList<int> pins, IGpioLine? line, Color ledColor, bool activeLow = false)
     {
-        Label    = label;
-        PinLabel = PinDevicesViewModel.FormatPinLabel(pins);
+        Label      = label;
+        PinLabel   = PinDevicesViewModel.FormatPinLabel(pins);
         m_LedColor = ledColor;
+        m_ActiveLow = activeLow;
 
         if (line != null)
         {
-            IsOn = line.Value == GpioValue.High;
-            line.Changed += v => Dispatcher.UIThread.Post(() => IsOn = v == GpioValue.High);
+            IsOn = IsOnFromValue(line.Value);
+            line.Changed += v => Dispatcher.UIThread.Post(() => IsOn = IsOnFromValue(v));
         }
+    }
+
+    private bool IsOnFromValue(GpioValue v) =>
+        m_ActiveLow ? v == GpioValue.Low : v == GpioValue.High;
+}
+
+public partial class ButtonViewModel : ObservableObject
+{
+    public string Label    { get; }
+    public string PinLabel { get; }
+
+    private readonly ManualGpioLine? m_Line;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PressLabel))]
+    private bool m_IsPressed;
+
+    public string PressLabel => IsPressed ? "Release" : "Press";
+
+    partial void OnIsPressedChanged(bool value) =>
+        m_Line?.Set(value ? GpioValue.Low : GpioValue.High); // active-low
+
+    public ButtonViewModel(string label, IReadOnlyList<int> pins, ManualGpioLine? line)
+    {
+        Label    = label;
+        PinLabel = PinDevicesViewModel.FormatPinLabel(pins);
+        m_Line   = line;
+        line?.Set(GpioValue.High); // default: released (active-low)
+    }
+}
+
+public partial class SwitchViewModel : ObservableObject
+{
+    public string Label    { get; }
+    public string PinLabel { get; }
+
+    private readonly ManualGpioLine? m_Line;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ToggleLabel))]
+    private bool m_IsOn;
+
+    public string ToggleLabel => IsOn ? "ON" : "OFF";
+
+    partial void OnIsOnChanged(bool value) =>
+        m_Line?.Set(value ? GpioValue.High : GpioValue.HiZ); // active-high: ON drives High, OFF floats
+
+    public SwitchViewModel(string label, IReadOnlyList<int> pins, ManualGpioLine? line)
+    {
+        Label    = label;
+        PinLabel = PinDevicesViewModel.FormatPinLabel(pins);
+        m_Line   = line;
+        // Leave line at HiZ (default) — reads as LOW in GPIO_IN, matching "not asserted" state.
     }
 }
 

@@ -19,7 +19,13 @@ public static class RP2350Builder
         services.AddTransient(typeof(ILogger<>), typeof(FakeLogger<>));
         services.AddTransient(typeof(IEmuLogger<>), typeof(ConsoleEmuLogger<>));
         services.AddRP2350Emulator();
-        var sp = services.BuildServiceProvider();
+        
+        var sp = services.BuildServiceProvider(new ServiceProviderOptions
+        {
+            ValidateOnBuild = true,
+            ValidateScopes = true
+        });
+
         return sp.GetRequiredService<IDebuggable>();
     }
 

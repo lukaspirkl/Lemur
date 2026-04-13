@@ -74,7 +74,8 @@ public class RISCVCompliance
         var csr = new CSR(new ConsoleEmuLogger<CSR>());
 
         var r = new Registers(new ConsoleEmuLogger<Registers>());
-        var e = new Hazard3Processor(m, new ConsoleEmuLogger<Hazard3Processor>(), r, csr);
+        var e = new Hazard3Processor(new ConsoleEmuLogger<Hazard3Processor>(), r, csr);
+        e.Memory = m;
 
         // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.
         // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/csrs/mip.html#mip-MTIP-def

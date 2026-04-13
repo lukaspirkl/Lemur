@@ -5,14 +5,16 @@ namespace Venture.Peripherals;
 
 public class UART0 : UART
 {
-    public UART0(uint baseAddress, string name, ILogger<UART0> logger) : base(baseAddress, name, logger)
+    public UART0(uint baseAddress, string name, ILogger<UART0> logger, IrqController irqController)
+        : base(baseAddress, name, logger, irqController, IrqController.UART0_IRQ)
     {
     }
 }
 
 public class UART1 : UART
 {
-    public UART1(uint baseAddress, string name, ILogger<UART1> logger) : base(baseAddress, name, logger)
+    public UART1(uint baseAddress, string name, ILogger<UART1> logger, IrqController irqController)
+        : base(baseAddress, name, logger, irqController, IrqController.UART1_IRQ)
     {
     }
 }
@@ -32,13 +34,14 @@ public class UART1 : UART
 ///   - No serial line error simulation. The framing/parity/break/overrun error
 ///     bits in UARTDR and UARTRSR are always 0.
 ///   - Interrupt register state (UARTRIS, UARTMIS, UARTICR) is maintained
-///     correctly and readable by software. However, no interrupt is actually
-///     delivered to the CPU because the emulator has no NVIC or CPU interrupt
-///     infrastructure yet.
-///     TODO: Wire UARTINTR to CPU MIP.MEIP when CPU interrupt support lands.
+///     correctly and UARTINTR is wired to the IrqController (IRQ 33 for UART0,
+///     IRQ 34 for UART1) so firmware interrupt handlers run correctly.
+///   - Receive timeout (RTIM) is approximated with a System.Threading.Timer.
+///     Real hardware uses 32 bit periods; the emulator uses a fixed ~50 ms
+///     window so most SDK drivers behave correctly.
 ///   - Hardware flow control (RTS/CTS) requires GPIO wiring through UserBankIO.
 ///     The CTSEN/RTSEN bits are stored but have no behavioural effect yet.
-///     TODO: Connect nUARTRTS output and nUARTCTS input via UserBankIO mux.
+///     TODO (3.2): Connect nUARTRTS output and nUARTCTS input via UserBankIO mux.
 ///   - IrDA SIR mode (SIREN/SIRLP) is not supported on RP2350 and is ignored.
 ///   - Modem signals (RI, DCD, DSR, CTS status in UARTFR) are not connected;
 ///     they always read as 0.
@@ -49,6 +52,8 @@ public class UART1 : UART
 ///   <see cref="EnqueueRxByte"/> path, because those represent internal
 ///   peripheral monitoring (e.g., the UI terminal), not physical pin activity.
 ///   A future pin-connected implementation should gate on these bits.
+///
+/// Spec: RP2350 Datasheet §12.1 — "UART"; ARM PrimeCell UART (PL011) r1p5 TRM.
 /// </summary>
 public class UART : PeripheralBase
 {
@@ -82,7 +87,32 @@ public class UART : PeripheralBase
 
         m_RxFifo.Enqueue(b);
         UpdateRxInterruptStatus();
+        // Receive timeout: reset the idle timer whenever a new byte arrives.
+        // RTIM fires when the RX FIFO is non-empty and no new character arrives
+        // for 32 bit periods (≈ 0.28 ms at 115200 baud). We approximate with a
+        // fixed timeout; restarting on each byte mirrors the hardware behaviour.
+        RestartRtimTimer();
     }
+
+    // ─── IRQ wiring ───────────────────────────────────────────────────────────
+
+    private readonly IrqController m_IrqController;
+    // IRQ number for this UART instance: 33 = UART0, 34 = UART1 (Table 94, §3.2).
+    private readonly int m_IrqNumber;
+
+    // ─── Receive timeout (RTIM) ───────────────────────────────────────────────
+
+    // Approximate 32 bit-period idle timeout. At 115200 baud, 32 bits ≈ 0.28 ms.
+    // We use 50 ms so the emulator doesn't fire spurious timeouts under scheduler jitter.
+    // Spec: §12.1.6 — "the receive timeout interrupt is asserted when the receive
+    //        FIFO is not empty, and no further data is received over a 32-bit period."
+    private const int RtimTimeoutMs = 50;
+    private System.Threading.Timer? m_RtimTimer;
+
+    // RTRIS (UARTRIS bit 6): receive timeout interrupt raw status latch.
+    // Set by the RTIM timer callback; cleared by writing UARTICR.RTIC (bit 6)
+    // or when the RX FIFO is drained to empty.
+    private bool m_RtimRis;
 
     // ─── LCR_H fields (Line Control Register) ────────────────────────────────
 
@@ -135,13 +165,13 @@ public class UART : PeripheralBase
     // CTSEN (bit 15): CTS hardware flow control enable.
     //   When set, TX only proceeds while nUARTCTS is asserted.
     // Both stored but have no effect until GPIO wiring is implemented.
-    // TODO: On RTSEN change, assert/de-assert the nUARTRTS GPIO line via UserBankIO.
-    // TODO: On TX, gate transmission on the nUARTCTS GPIO input line when CTSEN=1.
+    // TODO (3.2): On RTSEN change, assert/de-assert the nUARTRTS GPIO line via UserBankIO.
+    // TODO (3.2): On TX, gate transmission on the nUARTCTS GPIO input line when CTSEN=1.
     private bool m_Rtsen, m_Ctsen;
 
     // RTS (bit 11), DTR (bit 10), OUT1 (bit 12), OUT2 (bit 13): modem outputs.
     // Stored for readback.
-    // TODO: Drive the corresponding GPIO pins via UserBankIO mux.
+    // TODO (3.2): Drive the corresponding GPIO pins via UserBankIO mux.
     private bool m_Rts, m_Dtr, m_Out1, m_Out2;
 
     // ─── IFLS fields (Interrupt FIFO Level Select) ────────────────────────────
@@ -178,20 +208,6 @@ public class UART : PeripheralBase
     //   above the threshold, it will re-assert on the very next status check.
     private bool m_RxRis;
 
-    // RTRIS (UARTRIS bit 6): receive timeout interrupt.
-    //   Fires when the RX FIFO is non-empty and no new data has arrived for
-    //   32 bit periods. This requires a background timer or cycle-accurate
-    //   emulation, neither of which is available.
-    //   TODO: Implement when emulation timing infrastructure is in place.
-
-    // Error interrupt bits (UARTRIS bits 10:7 — OERIS/BERIS/PERIS/FERIS):
-    //   Overrun, break, parity, framing errors on the serial line.
-    //   The emulator never generates real serial errors, so always 0.
-
-    // Modem status interrupt bits (UARTRIS bits 3:0):
-    //   Triggered by changes on nUARTCTS/DCD/DSR/RI.
-    //   RP2350 does not support modem mode; always 0.
-
     // ─── Baud rate registers ─────────────────────────────────────────────────
 
     // UARTIBRD (bits 15:0): integer baud rate divisor.
@@ -223,8 +239,12 @@ public class UART : PeripheralBase
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    public UART(uint baseAddress, string name, ILogger<UART> logger) : base(baseAddress, name, logger)
+    public UART(uint baseAddress, string name, ILogger<UART> logger, IrqController irqController, int irqNumber)
+        : base(baseAddress, name, logger)
     {
+        m_IrqController = irqController;
+        m_IrqNumber = irqNumber;
+
         // UARTDR (0x000) — Data Register
         //   Write (TX): bits 7:0 carry the byte to transmit. Upper bits reserved.
         //   Read  (RX): bits 7:0 = received data from the RX FIFO.
@@ -310,12 +330,12 @@ public class UART : PeripheralBase
         //   Bit 7  LBE:    loopback — routes TX back into RX FIFO internally.
         //   Bit 8  TXE:    transmit section enable.
         //   Bit 9  RXE:    receive section enable.
-        //   Bit 10 DTR:    modem output. TODO: drive GPIO pin.
-        //   Bit 11 RTS:    modem output. TODO: drive GPIO pin.
-        //   Bit 12 OUT1:   modem output. TODO: drive GPIO pin.
-        //   Bit 13 OUT2:   modem output. TODO: drive GPIO pin.
-        //   Bit 14 RTSEN:  RTS flow control. TODO: wire nUARTRTS GPIO line.
-        //   Bit 15 CTSEN:  CTS flow control. TODO: gate TX on nUARTCTS GPIO line.
+        //   Bit 10 DTR:    modem output. TODO (3.2): drive GPIO pin.
+        //   Bit 11 RTS:    modem output. TODO (3.2): drive GPIO pin.
+        //   Bit 12 OUT1:   modem output. TODO (3.2): drive GPIO pin.
+        //   Bit 13 OUT2:   modem output. TODO (3.2): drive GPIO pin.
+        //   Bit 14 RTSEN:  RTS flow control. TODO (3.2): wire nUARTRTS GPIO line.
+        //   Bit 15 CTSEN:  CTS flow control. TODO (3.2): gate TX on nUARTCTS GPIO line.
         AddRegister(0x030, "UARTCR", resetValue: (1u << 8) | (1u << 9)) // TXE=1, RXE=1
             .Field(lsb:  0, getter: () => m_Uarten, setter: v => m_Uarten = v)
             .Field(lsb:  7, getter: () => m_Lbe,    setter: v => m_Lbe    = v)
@@ -346,22 +366,23 @@ public class UART : PeripheralBase
         //   Bits 3:0  — modem interrupts (always 0 in emulator, masking has no effect)
         //   Bit  4    — RXIM:  RX FIFO at threshold
         //   Bit  5    — TXIM:  TX FIFO below threshold (transition-based)
-        //   Bit  6    — RTIM:  receive timeout (TODO: not implemented)
+        //   Bit  6    — RTIM:  receive timeout
         //   Bit  7    — FEIM:  framing error (always 0 in emulator)
         //   Bit  8    — PEIM:  parity error  (always 0 in emulator)
         //   Bit  9    — BEIM:  break error   (always 0 in emulator)
         //   Bit  10   — OEIM:  overrun error (always 0 in emulator)
+        //
+        // When IMSC changes the masked status (UARTMIS) may change, so we re-evaluate
+        // the IRQ line. Spec: §12.1.6.
         AddRegister(0x038, "UARTIMSC")
-            .Field(0, 11, () => m_Imsc, v => m_Imsc = v);
+            .Field(0, 11, () => m_Imsc, v => m_Imsc = v)
+            .OnWrite(_ => UpdateUartIrq());
 
         // UARTRIS (0x03C) — Raw Interrupt Status (read-only)
         //   Same bit layout as UARTIMSC. Reflects interrupt source state before
         //   masking. Fully recomputed on every read.
-        //   NOTE: In real hardware UARTINTR (the ORed masked output) is wired to
-        //   the platform interrupt controller (NVIC). The emulator maintains this
-        //   register correctly for polling, but no CPU interrupt is generated.
-        //   TODO: Assert CPU MIP.MEIP when any bit in UARTMIS is set, once the
-        //         CPU interrupt infrastructure is available.
+        //   UARTINTR = UARTMIS ≠ 0 — drives IRQ line to the processor's interrupt
+        //   controller (IrqController.RaiseIrq/ClearIrq). Spec: §12.1.6.
         AddRegister(0x03C, "UARTRIS")
             .OnRead(ComputeRawInterruptStatus);
 
@@ -377,7 +398,7 @@ public class UART : PeripheralBase
         //     above the threshold — RXRIS re-asserts immediately on the next check.
         //   TXIC (bit 5): clears the TX transition latch (m_TxRis). TXRIS can only
         //     re-assert after the next TransmitData call.
-        //   RTIC (bit 6): TODO when receive timeout is implemented.
+        //   RTIC (bit 6): clears the receive timeout latch (m_RtimRis).
         //   Bits 7–10 (error clears): no-op, error bits are always 0 here.
         AddRegister(0x044, "UARTICR")
             .OnRead(() => 0u)
@@ -432,6 +453,7 @@ public class UART : PeripheralBase
             {
                 m_RxFifo.Enqueue(b);
                 UpdateRxInterruptStatus();
+                RestartRtimTimer();
             }
         }
         else
@@ -446,6 +468,7 @@ public class UART : PeripheralBase
         // TXRIS starts at 0 and only sets after the first transmission (i.e., it is
         // not pre-asserted just because the FIFO happens to be empty at boot).
         m_TxRis = true;
+        UpdateUartIrq();
     }
 
     /// <summary>
@@ -460,6 +483,15 @@ public class UART : PeripheralBase
             // After a dequeue the FIFO level may have dropped below the threshold,
             // which would de-assert RXRIS.
             UpdateRxInterruptStatus();
+            // If the FIFO is now empty, the receive timeout is no longer relevant.
+            // Cancel the RTIM timer and clear RTRIS (hardware also clears RTRIS when
+            // the FIFO drains to empty — the timeout is only active while there is data).
+            if (m_RxFifo.IsEmpty)
+            {
+                CancelRtimTimer();
+                m_RtimRis = false;
+                UpdateUartIrq();
+            }
             // Error bits 11:8 (OE/BE/PE/FE) are always 0 in the emulator because
             // we don't simulate serial line signal integrity.
             return b;
@@ -473,6 +505,7 @@ public class UART : PeripheralBase
     /// <summary>
     /// Returns the current raw interrupt status word (UARTRIS).
     /// Called on every read of UARTRIS and UARTMIS.
+    /// Spec: §12.1.6.
     /// </summary>
     private uint ComputeRawInterruptStatus()
     {
@@ -484,14 +517,37 @@ public class UART : PeripheralBase
         // Bit 5: TXRIS — transition-based latch set after each TX drains the FIFO.
         if (m_TxRis) ris |= 1u << 5;
 
-        // Bit 6: RTRIS — receive timeout (32 bit periods of RX idle while FIFO non-empty).
-        // TODO: implement with a timer. Always 0 for now.
+        // Bit 6: RTRIS — receive timeout. Set when RX FIFO is non-empty and no new
+        // character has arrived for 32 bit periods (approximated by RtimTimeoutMs).
+        if (m_RtimRis) ris |= 1u << 6;
 
         // Bits 7–10: error interrupts (FERIS/PERIS/BERIS/OERIS). Always 0 — no serial errors.
 
         // Bits 3–0: modem status interrupts. Always 0 — RP2350 has no modem signals.
 
         return ris;
+    }
+
+    /// <summary>
+    /// Re-evaluates the UARTINTR output (UARTMIS = UARTRIS &amp; UARTIMSC) and drives
+    /// the IRQ controller line accordingly.
+    ///
+    /// Must be called after every state change that can affect UARTMIS:
+    ///   - UARTIMSC written (mask changed)
+    ///   - UARTICR written (bits cleared)
+    ///   - TX FIFO drains (m_TxRis set)
+    ///   - RX FIFO crosses threshold (m_RxRis changes)
+    ///   - RTIM timeout fires (m_RtimRis set)
+    ///
+    /// Spec: §12.1.6 — "UARTMIS is the AND of UARTRIS and UARTIMSC. UARTINTR = (UARTMIS != 0)."
+    /// </summary>
+    private void UpdateUartIrq()
+    {
+        uint mis = ComputeRawInterruptStatus() & m_Imsc;
+        if (mis != 0)
+            m_IrqController.RaiseIrq(m_IrqNumber);
+        else
+            m_IrqController.ClearIrq(m_IrqNumber);
     }
 
     /// <summary>
@@ -515,9 +571,24 @@ public class UART : PeripheralBase
             m_TxRis = false;
         }
 
-        // RTIC (bit 6): TODO when receive timeout is implemented.
+        if ((icr & (1u << 6)) != 0)
+        {
+            // RTIC: clear the receive timeout latch.
+            // If the FIFO is still non-empty, the timer will re-fire after the next
+            // RtimTimeoutMs idle period. This matches hardware: RTRIS can re-assert
+            // after being cleared if the FIFO remains non-empty and no new byte arrives.
+            m_RtimRis = false;
+            if (m_RxFifo.IsEmpty)
+            {
+                // FIFO drained — no point keeping the timer running.
+                CancelRtimTimer();
+            }
+        }
+
         // Bits 7–10 (error clears): no-op; errors are never set in the emulator.
         // Bits 3–0 (modem clears): no-op; modem signals not present on RP2350.
+
+        UpdateUartIrq();
     }
 
     /// <summary>
@@ -530,6 +601,35 @@ public class UART : PeripheralBase
         // In FIFO mode (FEN=1) the threshold is a fraction of the 32-entry FIFO.
         // In character mode (FEN=0) the threshold is 1 — any data triggers the interrupt.
         m_RxRis = m_RxFifo.Count >= RxFifoThreshold;
+        UpdateUartIrq();
+    }
+
+    // ─── Receive timeout (RTIM) timer ─────────────────────────────────────────
+
+    /// <summary>
+    /// Cancels any existing RTIM idle timer and starts a new one.
+    /// Called whenever a new byte is enqueued so the 32-bit-period window resets.
+    /// </summary>
+    private void RestartRtimTimer()
+    {
+        m_RtimTimer?.Dispose();
+        m_RtimTimer = new System.Threading.Timer(_ =>
+        {
+            // Timer fired: RX FIFO has been non-empty for ≥ RtimTimeoutMs with no
+            // new data. Set RTRIS if the FIFO still contains data.
+            if (!m_RxFifo.IsEmpty)
+            {
+                m_RtimRis = true;
+                UpdateUartIrq();
+            }
+        }, null, RtimTimeoutMs, System.Threading.Timeout.Infinite);
+    }
+
+    /// <summary>Cancels the RTIM idle timer without setting the RTRIS latch.</summary>
+    private void CancelRtimTimer()
+    {
+        m_RtimTimer?.Dispose();
+        m_RtimTimer = null;
     }
 
     // ─── FIFO helpers ─────────────────────────────────────────────────────────

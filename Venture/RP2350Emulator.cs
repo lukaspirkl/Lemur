@@ -21,9 +21,10 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         remove { m_Processor.EBreak -= value; }
     }
 
-    public RP2350Emulator(Hazard3Processor processor)
+    public RP2350Emulator(Hazard3Processor processor, IBusFabric busFabric)
     {
         m_Processor = processor;
+        m_Processor.Memory = busFabric;
         m_Registers = new RegistersWrapper(processor);
         Reset();
     }

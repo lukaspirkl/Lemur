@@ -19,7 +19,9 @@ public class AExtensionFormatFactory : FormatFactoryBase
         switch (funct5)
         {
             case 0b00010:
-                if (instruction.ExtractBits(20, 5) == 0b00000)
+                // LR.W: rs2 (bits 24:20) must be 0 per spec; treat non-zero encodings as illegal.
+                // Spec: RISC-V Unprivileged ISA Section 8.2
+                if (instruction.ExtractBits(20, 5) != 0b00000)
                 {
                     return null;
                 }
@@ -99,7 +101,52 @@ public class AExtensionFormat : FormatBase
 
         switch (Mnemonic)
         {
-            // TODO: Implement lr.w and sc.w
+            case LR_W:
+                {
+                    // LR.W — Load-Reserved Word
+                    // Spec: RISC-V Unprivileged ISA Section 8.2
+                    //
+                    // Loads a word from the address in rs1 into rd and places a reservation on
+                    // that address. The reservation is later consumed by a matching SC.W.
+                    //
+                    // aq/rl bits control memory-ordering (acquire/release). In the emulator there
+                    // is only a single thread of execution, so ordering constraints are always met.
+                    var addr = x[rs1];
+                    x[rd] = e.Memory.ReadWord(addr);
+                    e.Reservation = addr;
+                }
+                break;
+
+            case SC_W:
+                {
+                    // SC.W — Store-Conditional Word
+                    // Spec: RISC-V Unprivileged ISA Section 8.2
+                    //
+                    // Conditionally stores rs2 to the address in rs1 only if a valid reservation
+                    // on that exact address still exists (placed by a prior LR.W).
+                    //
+                    // On success: stores the word and writes 0 to rd.
+                    // On failure: does not store and writes 1 to rd.
+                    // The reservation is always cleared regardless of outcome.
+                    //
+                    // Typical use pattern (spinlock acquire):
+                    //   lr.w  t0, (a0)      ; load-reserved
+                    //   bnez  t0, retry     ; occupied — retry
+                    //   sc.w  t0, a1, (a0)  ; try to claim
+                    //   bnez  t0, retry     ; lost reservation — retry
+                    var addr = x[rs1];
+                    if (e.Reservation == addr)
+                    {
+                        e.Memory.WriteWord(addr, x[rs2]);
+                        x[rd] = 0; // success
+                    }
+                    else
+                    {
+                        x[rd] = 1; // failure — reservation was stolen or never set
+                    }
+                    e.Reservation = null; // always clear
+                }
+                break;
 
             case AMOSWAP_W:
                 {

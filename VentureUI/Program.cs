@@ -9,6 +9,7 @@ using Serilog.Events;
 using Serilog.Formatting.Compact;
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Runtime.Versioning;
@@ -29,6 +30,11 @@ internal class Program
     [SupportedOSPlatform("macos")]
     public static async Task Main(string[] args)
     {
+        if (File.Exists(m_LogFile))
+        {
+            File.Delete(m_LogFile);
+        }
+
         var builder = WebApplication.CreateSlimBuilder(args);
 
         builder.Configuration
@@ -46,17 +52,24 @@ internal class Program
 
 
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
-            .MinimumLevel.Is(LogEventLevel.Fatal)
+            //.MinimumLevel.Is(LogEventLevel.Fatal)
+            .MinimumLevel.Is(LogEventLevel.Verbose)
+            //.MinimumLevel.Is(LogEventLevel.Information)
             //.MinimumLevel.Override<GdbConnectionHandler>(LogEventLevel.Verbose)
             .MinimumLevel.Override<BinaryInfoService>(LogEventLevel.Verbose)
             .MinimumLevel.Override<SIO>(LogEventLevel.Verbose)
             .MinimumLevel.Override<UserBankIO>(LogEventLevel.Verbose)
             .MinimumLevel.Override<UserBankPadControl>(LogEventLevel.Verbose)
-            //.MinimumLevel.Override<UART0>(LogEventLevel.Verbose)
-            //.MinimumLevel.Override<UART1>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<Timer0>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<Timer1>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<Timer>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<UART0>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<UART1>(LogEventLevel.Verbose)
+            .MinimumLevel.Override<UART>(LogEventLevel.Verbose)
             .Enrich.FromLogContext()
             .WriteTo.Async(a => a.File(new CompactJsonFormatter(), m_LogFile))
-            .WriteTo.Console());
+            //.WriteTo.Console()
+        );
 
         builder.Services.AddTransient(typeof(IEmuLogger<>), typeof(EmuLogger<>));
         builder.Services.AddRP2350Emulator();

@@ -1,14 +1,11 @@
-/**
- * Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
- *
- * SPDX-License-Identifier: BSD-3-Clause
- */
-
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/gpio.h"
+#include "pico/binary_info.h"
 
 #define GPIO_WATCH_PIN 2
+
+bi_decl(bi_1pin_with_name(5, "Watch [SWITCH]"));
 
 static char event_str[128];
 
@@ -24,7 +21,7 @@ void gpio_callback(uint gpio, uint32_t events) {
 int main() {
     stdio_init_all();
 
-    printf("Hello GPIO IRQ\n");
+    printf("Hello GPIO IRQ\n\r");
     gpio_init(GPIO_WATCH_PIN);
     gpio_set_irq_enabled_with_callback(GPIO_WATCH_PIN, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true, &gpio_callback);
 

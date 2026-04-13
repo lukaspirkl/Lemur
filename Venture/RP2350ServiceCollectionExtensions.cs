@@ -16,11 +16,12 @@ public static class RP2350ServiceCollectionExtensions
 
         services.AddSingleton<BinaryInfoService>();
         services.AddSingleton<Hazard3Processor>();
+        services.AddSingleton<IrqController>();
         services.AddSingleton<IBusFabric, BusFabric>();
         services.AddSingleton<Registers>();
         services.AddSingleton<CSR>();
         services.AddSingleton<MemoryFactory>();
-        services.AddSingleton<UnimplementedPeripheralFactory>();        
+        services.AddSingleton<UnimplementedPeripheralFactory>();
 
         // 0x00000000 - ROM
         services.AddMemory("ROM", 0x00000000, 1024 * 32, m => 
@@ -49,7 +50,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddPeripheral(0x40018000, "PSM_BASE").Unimplemented();
         services.AddPeripheral(0x40020000, "RESETS_BASE").Implementation<Resets>();
         services.AddPeripheral(0x40028000, "IO_BANK0_BASE").Implementation<UserBankIO>();
-        services.AddPeripheral(0x40030000, "IO_QSPI_BASE").Unimplemented();
+        services.AddPeripheral(0x40030000, "IO_QSPI_BASE").Implementation<IoQSPI>();
         services.AddPeripheral(0x40038000, "PADS_BANK0_BASE").Implementation<UserBankPadControl>();
         services.AddPeripheral(0x40040000, "PADS_QSPI_BASE").Implementation<PadsQSPI>();
         services.AddPeripheral(0x40048000, "XOSC_BASE").Implementation<XOSC>();
@@ -70,7 +71,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddPeripheral(0x400c0000, "HSTX_CTRL_BASE").Unimplemented();
         services.AddPeripheral(0x400c8000, "XIP_CTRL_BASE").Unimplemented();
         services.AddPeripheral(0x400d0000, "XIP_QMI_BASE").Implementation<XIPQMI>();
-        services.AddPeripheral(0x400d8000, "WATCHDOG_BASE").Unimplemented();
+        services.AddPeripheral(0x400d8000, "WATCHDOG_BASE").Implementation<Watchdog>();
         services.AddPeripheral(0x400e0000, "BOOTRAM_BASE").Implementation<BootRAM>();
         services.AddPeripheral(0x400e8000, "ROSC_BASE").Unimplemented();
         services.AddPeripheral(0x400f0000, "TRNG_BASE").Unimplemented();

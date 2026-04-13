@@ -24,7 +24,8 @@
     <PackageReference Include="Irihi.Ursa.Themes.Semi" Version="1.15.0" />
     <PackageReference Include="Semi.Avalonia" Version="11.3.7.3" />
     <PackageReference Include="Semi.Avalonia.AvaloniaEdit" Version="11.2.0.2" />
-
+    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" /> <!-- Pinned transitive dependency of Avalonia as previous version is having vulnerability. -->
+    
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

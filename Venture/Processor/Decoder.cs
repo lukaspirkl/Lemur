@@ -40,6 +40,11 @@ public class Decoder : IDecoder
             }
         }
 
-        throw new NotImplementedException($"Unknown instruction format for opcode {opcode.ToBin(7)} (instruction {instruction.ToHex()})");
+        // Unrecognised instruction — raise an illegal-instruction exception so the CPU trap
+        // handler can deal with it gracefully. MTVAL receives the raw instruction word so that
+        // the handler (or a debugger) can inspect what was fetched.
+        // Spec: RISC-V Privileged ISA Section 3.1.15 — mtval for illegal instruction.
+        throw new RiscVException(ExceptionCause.IllegalInstruction, instruction,
+            $"Unknown instruction format for opcode {opcode.ToBin(7)} (instruction {instruction.ToHex()})");
     }
 }

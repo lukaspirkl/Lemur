@@ -7,6 +7,23 @@ public interface IBusFabric
     uint ReadInstruction(uint address);
 }
 
+public class NullBusFabric : IBusFabric
+{
+    public byte[] Read(uint address, int count)
+    {
+        return Enumerable.Repeat<byte>(0, count).ToArray();
+    }
+
+    public uint ReadInstruction(uint address)
+    {
+        return 0;
+    }
+
+    public void Write(uint address, byte[] data)
+    {
+    }
+}
+
 public static class BusFabricExtensions
 {
     public static void WriteByte(this IBusFabric memory, uint address, byte data)

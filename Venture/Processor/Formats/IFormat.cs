@@ -340,7 +340,26 @@ public class IFormat : FormatBase
                 return;
 
             case MRET:
-                e.PC = e.CSR.Get(0x341);
+                // MRET — return from machine-level trap handler.
+                // Spec: RISC-V Privileged ISA Section 3.3.2
+                //
+                // 1. Restore PC from MEPC.
+                // 2. Restore MSTATUS:
+                //    - MIE  = MPIE  (re-enable interrupts as they were before the trap)
+                //    - MPIE = 1     (spec: "MPIE is set to 1" after mret)
+                {
+                    var mstatus = e.CSR.RawGet(CSR.MSTATUS);
+                    var mpie = (mstatus >> CSR.MSTATUS_MPIE_BIT) & 1u;
+
+                    // MIE ← MPIE
+                    mstatus = (mstatus & ~(1u << CSR.MSTATUS_MIE_BIT))
+                            | (mpie << CSR.MSTATUS_MIE_BIT);
+                    // MPIE ← 1
+                    mstatus |= 1u << CSR.MSTATUS_MPIE_BIT;
+
+                    e.CSR.RawSet(CSR.MSTATUS, mstatus);
+                    e.PC = e.CSR.RawGet(CSR.MEPC);
+                }
                 return;
 
             case ECALL:

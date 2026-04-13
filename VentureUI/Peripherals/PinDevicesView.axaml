@@ -43,6 +43,68 @@
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
 
+            <!-- Buttons -->
+            <TextBlock Text="Buttons"
+                       FontWeight="Bold"
+                       IsVisible="{Binding HasButtons}"
+                       Margin="0,8,0,2" />
+
+            <ItemsControl ItemsSource="{Binding Buttons}" IsVisible="{Binding HasButtons}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ButtonViewModel">
+                        <Grid ColumnDefinitions="80,*,Auto" Margin="0,3">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding PinLabel}"
+                                       Foreground="Gray"
+                                       FontFamily="Cascadia Mono,Consolas,Courier New,monospace"
+                                       FontSize="11"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Label}"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,6,0" />
+                            <ToggleButton Grid.Column="2"
+                                          IsChecked="{Binding IsPressed, Mode=TwoWay}"
+                                          Content="{Binding PressLabel}"
+                                          Padding="10,4"
+                                          MinWidth="70" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <!-- Switches -->
+            <TextBlock Text="Switches"
+                       FontWeight="Bold"
+                       IsVisible="{Binding HasSwitches}"
+                       Margin="0,8,0,2" />
+
+            <ItemsControl ItemsSource="{Binding Switches}" IsVisible="{Binding HasSwitches}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:SwitchViewModel">
+                        <Grid ColumnDefinitions="80,*,Auto" Margin="0,3">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding PinLabel}"
+                                       Foreground="Gray"
+                                       FontFamily="Cascadia Mono,Consolas,Courier New,monospace"
+                                       FontSize="11"
+                                       VerticalAlignment="Center" />
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding Label}"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       Margin="0,0,6,0" />
+                            <ToggleButton Grid.Column="2"
+                                          IsChecked="{Binding IsOn, Mode=TwoWay}"
+                                          Content="{Binding ToggleLabel}"
+                                          Padding="10,4"
+                                          MinWidth="70" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
             <!-- Other Pins -->
             <TextBlock Text="Other Pins"
                        FontWeight="Bold"

@@ -11,7 +11,41 @@ public static class InstructionBuilder
 
     public static byte[] EBREAK()
     {
-        return BitConverter.GetBytes(0x00100073);
+        return BitConverter.GetBytes(0x00100073u);
+    }
+
+    /// <summary>
+    /// NOP — no operation. Encoded as ADDI x0, x0, 0.
+    /// Advances PC by 4 without touching any register or memory.
+    /// Useful in tests as a "do nothing" instruction to let CheckInterrupts() run.
+    /// </summary>
+    public static byte[] NOP()
+    {
+        return BitConverter.GetBytes(0x00000013u);
+    }
+
+    /// <summary>
+    /// ECALL — environment call. Raises a synchronous exception with cause 11
+    /// (EnvironmentCallFromMMode) when executing in M-mode. Used by firmware as
+    /// the system-call instruction to ask the operating environment for services.
+    /// </summary>
+    public static byte[] ECALL()
+    {
+        return BitConverter.GetBytes(0x00000073u);
+    }
+
+    /// <summary>
+    /// ADDI rd, rs1, imm — add immediate.
+    /// I-type format: rd = rs1 + sign_extend(imm[11:0]).
+    /// </summary>
+    public static byte[] ADDI(uint rd, uint rs1, int imm)
+    {
+        uint encoding = 0b0010011u
+            | (rd  & 0x1Fu) << 7
+            | 0b000u        << 12
+            | (rs1 & 0x1Fu) << 15
+            | ((uint)(imm & 0xFFF)) << 20;
+        return BitConverter.GetBytes(encoding);
     }
 
     public static byte[] LB(uint rd, uint rs1)

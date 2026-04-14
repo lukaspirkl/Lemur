@@ -207,7 +207,7 @@ public class Hazard3Processor
     {
         CSR.RawSet(CSR.MEPC,   epc);
         CSR.RawSet(CSR.MCAUSE, cause);
-        CSR.RawSet(CSR.MTVAL,  tval);
+        //CSR.RawSet(CSR.MTVAL,  tval); // Hazard3 has MTVAL hardwired to zero so we are not setting it here.
 
         // Save MIE → MPIE, then clear MIE.
         // Spec Section 3.1.6.1: "When a trap is taken ... MIE is set to 0, and MPIE = old MIE."

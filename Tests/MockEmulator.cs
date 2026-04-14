@@ -45,7 +45,12 @@ public class MockEmulator : IDebuggable
 
     public void Step()
     {
-        
+
+    }
+
+    public void RunTo(uint address)
+    {
+
     }
 
     public void Stop()

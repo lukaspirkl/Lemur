@@ -39,8 +39,7 @@ public class CSR
     /// 0x343 — Machine bad address or instruction.
     /// For load/store faults: the faulting virtual address.
     /// For illegal instruction: the instruction encoding.
-    /// Note: Hazard3 hardwires MTVAL to 0 in hardware, but the emulator populates it correctly
-    /// to allow firmware that reads MTVAL to behave as if running on a more capable core.
+    /// Note: Hazard3 hardwires MTVAL to 0 in hardware.
     /// </summary>
     public const ushort MTVAL     = 0x343;
 

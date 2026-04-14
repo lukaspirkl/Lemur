@@ -71,6 +71,12 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         });
     }
 
+    public void RunTo(uint address)
+    {
+        while (m_Processor.PC != address)
+            m_Processor.Step();
+    }
+
     public void Stop()
     {
         if (m_Run == null)

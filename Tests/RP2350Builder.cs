@@ -11,22 +11,33 @@ public static class RP2350Builder
     public static IDebuggable Create()
     {
         return CreateEmulator();
+        //return CreateOpenOCD();
     }
 
     public static IDebuggable CreateEmulator()
+    {
+        var sp = CreateServiceProvider();
+        return sp.GetRequiredService<IDebuggable>();
+    }
+
+    /// <summary>
+    /// Builds and returns the full DI container for the emulator.
+    /// Use this when a test needs access to internal services that are not
+    /// exposed through <see cref="IDebuggable"/>, such as <see cref="IrqController"/>.
+    /// Dispose the returned <see cref="ServiceProvider"/> at the end of the test.
+    /// </summary>
+    public static ServiceProvider CreateServiceProvider()
     {
         var services = new ServiceCollection();
         services.AddTransient(typeof(ILogger<>), typeof(FakeLogger<>));
         services.AddTransient(typeof(IEmuLogger<>), typeof(ConsoleEmuLogger<>));
         services.AddRP2350Emulator();
-        
-        var sp = services.BuildServiceProvider(new ServiceProviderOptions
+
+        return services.BuildServiceProvider(new ServiceProviderOptions
         {
             ValidateOnBuild = true,
             ValidateScopes = true
         });
-
-        return sp.GetRequiredService<IDebuggable>();
     }
 
     public static IDebuggable CreateOpenOCD()

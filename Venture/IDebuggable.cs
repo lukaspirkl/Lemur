@@ -16,6 +16,7 @@ public interface IDebuggable : IDisposable
     void MemoryWrite(uint address, byte[] data);
     void Run();
     void Step();
+    void RunTo(uint address);
     void Stop();
     void Reset();
 
@@ -74,6 +75,10 @@ public class NullDebuggable : IDebuggable
     }
 
     public void Run()
+    {
+    }
+
+    public void RunTo(uint address)
     {
     }
 

@@ -51,6 +51,13 @@ public class RP2350GDB : IDebuggable
         m_GdbClient.Step();
     }
 
+    public void RunTo(uint address)
+    {
+        m_GdbClient.SetHardwareBreakpoint(address);
+        try   { m_GdbClient.Continue(); }
+        finally { m_GdbClient.ClearHardwareBreakpoint(address); }
+    }
+
     public void Stop()
     {
         throw new NotImplementedException();
@@ -308,6 +315,23 @@ public class GdbClient : IDisposable
             // Ignore all messages and wait for information that the stub is not running.
             return r.StartsWith("T05");
         });
+    }
+
+    public void SetHardwareBreakpoint(uint address)
+    {
+        var response = SendCommand($"Z1,{address.ToHex(prefix: false)},4");
+        if (response != "OK")
+            throw new InvalidOperationException($"Failed to set hardware breakpoint at 0x{address:X8}: {response}");
+    }
+
+    public void ClearHardwareBreakpoint(uint address)
+    {
+        SendCommand($"z1,{address.ToHex(prefix: false)},4");
+    }
+
+    public void Continue()
+    {
+        SendCommand("vCont;c", r => r.StartsWith("T05"));
     }
 
     // TODO: This should be in some shared library

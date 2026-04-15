@@ -1,4 +1,0 @@
-﻿# 3.1.7 Integer Divider
-
-RP2040's memory-mapped integer divider peripheral is not present on RP2350, since the processors support divide instructions. The address space previously allocated for the divider registers is now reserved.
-

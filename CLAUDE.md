@@ -2,6 +2,10 @@
 
 A C# emulator of the Raspberry Pi RP2350 chip's RISC-V core (Hazard3). The CPU is nearly fully implemented. Peripherals use a shared framework but most are stubs or partially implemented. The Avalonia UI visualizes peripheral state and will host external devices (displays, buttons, etc.).
 
+Datasheets are available as markdown files organized in nested directories per chapters.
+- `Docs/hazard3/` — datasheet for Hazard3 RISC-V processor
+- `Docs/rp2350/` — datasheet for RP2350 chip
+
 ## Project Layout
 
 ```
@@ -224,33 +228,6 @@ public class MyPeripheralViewModel : IPeripheralTab
 
 3. Register the ViewModel with DI in `VentureUI` and add it to the tab collection in `MainWindowViewModel`.
 4. Create the corresponding Avalonia View (`MyPeripheralView.axaml`).
-
-### Existing UI Tabs
-
-- `UARTViewModel` — streams UART output text
-- `UserBankIOViewModel` / `PinsViewModel` — GPIO pin state grid
-- `MainWindowViewModel` — Run/Stop/Reset/Step, breakpoints, example programs
-
----
-
-## Implemented vs. Stub Peripherals
-
-### Meaningfully implemented
-
-| Peripheral | Notes |
-|---|---|
-| UART0 / UART1 | TX with `ReceivedData` event; no RX buffering yet |
-| Timer0 / Timer1 | System.Diagnostics.Stopwatch-based |
-| SIO | GPIO, atomic ops, FIFO stubs |
-| SHA-256 | Full digest with WDATA buffering |
-| Resets | RESET_DONE status |
-| UserBankIO | GPIO muxing, 48 lines |
-| BootRAM | 1 KB with bootlock |
-| Clocks / XOSC / PLLs | Register stubs (reads return sensible values) |
-
-### Unimplemented (`.Unimplemented()` stubs)
-
-SPI0/1, I2C0/1, ADC, PWM, DMA, PIO0/1/2, USB, HSTX, WATCHDOG, TRNG, ROSC, XIP_CTRL, ACCESSCTRL, BUSCTRL, SYSINFO, SYSCFG, PSM, IO_QSPI, CORESIGHT modules.
 
 ---
 

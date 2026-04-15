@@ -1,8 +1,0 @@
-﻿# 5.2.6 OTP Boot
-
-If OTP boot is enabled, then code from OTP is executed in preference to code from flash. Note that the OTP code is free to "chain" into an executable stored in flash.
-
-Code from OTP is copied into SRAM at the specified location, then execution proceeds similarly to RAM Image Boot. The SRAM with the data copied from OTP is searched for a valid (and correctly signed if necessary) IMAGE\_DEF. If found, it is booted; otherwise OTP boot falls through to Flash Boot (if enabled).
-
-OTP boot could, for example, be used to execute some hidden decryption code to decode a flash image on startup. The OTP boot code can hide itself (in OTP) even from Secure code, once it is done.
-

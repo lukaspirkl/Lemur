@@ -1,6 +1,0 @@
-﻿# 11.3.7 Pseudoinstructions
-
-pioasm provides aliases for certain instructions, as a convenience:
-
-**nop** Assembles to mov y, y. No side effect, but a useful vehicle for a side-set operation or an extra delay.
-

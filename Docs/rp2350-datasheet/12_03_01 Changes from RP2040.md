@@ -1,4 +1,0 @@
-﻿# 12.3.1 Changes from RP2040
-
-The output enable of the SSPTXD data output (connecting to pins listed as SPI0 TX and SPI1 TX in the GPIO function tables) is controlled by the SPI peripheral nSSPOE signal. The peripheral automatically tristates its output when deselected in slave mode. This makes software control of the output enable unnecessary even when multiple slaves share the data lines.
-

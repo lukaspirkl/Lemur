@@ -1,6 +1,0 @@
-﻿# 6.1 Power Supplies
-
-RP2350 requires five separate power supplies. However, in most applications, several of these can be combined and connected to a single power source. Typical applications only require a single 3.3 V supply. See [Figure 19](#page-449-1).
-
-The power supplies and a number of potential power supply schemes are described in the following sections. Detailed power supply parameters are provided in [Section 14.9.5](#page-1339-0).
-

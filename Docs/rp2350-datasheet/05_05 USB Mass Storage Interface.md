@@ -1,6 +1,0 @@
-﻿# 5.5 USB Mass Storage Interface
-
-The Bootrom provides a standard USB bootloader that makes a writeable drive available for copying code to the RP2350 using UF2 files (see [Section 5.5.2\)](#page-399-0).
-
-A suitable UF2 file copied to the drive is downloaded and written to Flash or RAM, and the device is automatically rebooted, making it trivial to download and run code on the RP2350 using only a USB connection.
-

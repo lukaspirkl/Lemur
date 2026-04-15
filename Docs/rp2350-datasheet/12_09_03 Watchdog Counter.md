@@ -1,4 +1,0 @@
-﻿# 12.9.3 Watchdog Counter
-
-The watchdog counter is loaded by the [LOAD](#page-1194-3) register. The current value can be seen in [CTRL.](#page-1193-1)TIME.
-

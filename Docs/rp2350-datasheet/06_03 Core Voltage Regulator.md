@@ -1,8 +1,0 @@
-﻿# 6.3 Core Voltage Regulator
-
-RP2350 provides an on-chip voltage regulator for its digital core supply (DVDD). The regulator requires a 2.7 V to 5.5 V input supply (VREG\_VIN), allowing DVDD to be generated directly from a single lithium ion cell, or a USB power supply. A separate, nominally 3.3 V, low noise supply (VREG\_AVDD) is required for the regulator's analogue control circuits. The regulator supports both switching and linear modes of regulation, allowing efficient operation at both high and low loads.
-
-To allow the chip to start up, the regulator is enabled by default, and will power-up as soon as its supplies are available. The regulator starts in switching mode, with a nominal 1.1 V output, but its operating mode and output voltage can be changed once the chip is out of reset. The output voltage can be set in the range 0.55 V to 3.30 V, and the regulator can supply up to 200mA.
-
-Although intended for the chip's digital core supply (DVDD), the regulator can be used for other purposes if DVDD is powered directly from an external power supply.
-

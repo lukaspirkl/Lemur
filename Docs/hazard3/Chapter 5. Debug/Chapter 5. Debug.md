@@ -1,0 +1,13 @@
+# <span id="page-48-0"></span>**Chapter 5. Debug**
+
+Hazard3, along with its external debug components, implements version 0.13.2 of the RISC-V debug specification. It supports the following:
+
+- Run/halt/reset control as required
+- Abstract GPR access as required
+- Program Buffer, 2 words plus impebreak
+- Automatic trigger of abstract command (abstractauto) on data0 or Program Buffer access for efficient memory block transfers from the host
+- Support for multiple harts (multiple Hazard3 cores) connected to a single Debug Module (DM)
+- The hart array mask registers, for applying run/halt/reset controls to multiple cores simultaneously
+- (Optional) System Bus Access, either through a dedicated AHB5 manager interface, or multiplexed with a processor load/store port
+- (Optional) An instruction address trigger unit (hardware breakpoints)
+

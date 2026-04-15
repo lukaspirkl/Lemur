@@ -1,6 +1,0 @@
-﻿# 14.1.2 Recommended PCB Footprint
-
-![](_page_1324_Figure_8.jpeg)
-
-![](_page_1324_Figure_9.jpeg)
-

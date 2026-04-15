@@ -64,12 +64,13 @@ public class Trap6IrqControllerTests
     [Fact]
     public void RaiseIrq_SetsMipMeip()
     {
-        // RaiseIrq() must set MIP bit 11 (MEIP) so CheckInterrupts() can see
-        // that an external interrupt is waiting to be serviced.
+        // RaiseIrq() on an IRQ enabled in MEIEA must set MIP bit 11 (MEIP) so
+        // CheckInterrupts() can see that an external interrupt is waiting.
         using var sp  = RP2350Builder.CreateServiceProvider();
         var emu = sp.GetRequiredService<IDebuggable>();
         var irq = sp.GetRequiredService<IrqController>();
 
+        emu.SetCSR(MEIEA_CSR, MeieaEnableValue(IrqController.IO_IRQ_BANK0));
         irq.RaiseIrq(IrqController.IO_IRQ_BANK0); // assert IRQ 21
 
         var mip = emu.GetCSR(MIP_CSR);
@@ -85,6 +86,7 @@ public class Trap6IrqControllerTests
         var emu = sp.GetRequiredService<IDebuggable>();
         var irq = sp.GetRequiredService<IrqController>();
 
+        emu.SetCSR(MEIEA_CSR, MeieaEnableValue(IrqController.IO_IRQ_BANK0));
         irq.RaiseIrq(IrqController.IO_IRQ_BANK0);
         irq.ClearIrq(IrqController.IO_IRQ_BANK0);
 
@@ -95,13 +97,17 @@ public class Trap6IrqControllerTests
     [Fact]
     public void ClearOneIrq_WithAnotherStillPending_MeipRemainsSet()
     {
-        // MEIP is an OR of all pending lines. Clearing one IRQ while another
-        // is still asserted must NOT lower MEIP — the other peripheral is still
-        // waiting for service.
+        // MEIP is an OR of all enabled pending lines. Clearing one IRQ while
+        // another is still asserted must NOT lower MEIP — the other peripheral
+        // is still waiting for service.
         using var sp  = RP2350Builder.CreateServiceProvider();
         var emu = sp.GetRequiredService<IDebuggable>();
         var irq = sp.GetRequiredService<IrqController>();
 
+        // Enable both IRQs (they live in different 16-bit windows, so we need
+        // two writes).
+        emu.SetCSR(MEIEA_CSR, MeieaEnableValue(IrqController.IO_IRQ_BANK0));
+        emu.SetCSR(MEIEA_CSR, MeieaEnableValue(IrqController.UART0_IRQ));
         irq.RaiseIrq(IrqController.IO_IRQ_BANK0); // GPIO (IRQ 21)
         irq.RaiseIrq(IrqController.UART0_IRQ);    // UART0 (IRQ 33)
 
@@ -109,6 +115,22 @@ public class Trap6IrqControllerTests
 
         var mip = emu.GetCSR(MIP_CSR);
         Assert.NotEqual(0u, mip & (1u << MEIP_BIT)); // MEIP must stay high
+    }
+
+    [Fact]
+    public void RaiseIrq_NotEnabledInMeiea_DoesNotSetMipMeip()
+    {
+        // Spec §3.8.2: MIP.MEIP is only asserted when an IRQ is both pending
+        // in MEIPA *and* enabled in MEIEA. Raising a disabled IRQ line should
+        // leave MEIP clear.
+        using var sp  = RP2350Builder.CreateServiceProvider();
+        var emu = sp.GetRequiredService<IDebuggable>();
+        var irq = sp.GetRequiredService<IrqController>();
+
+        irq.RaiseIrq(IrqController.IO_IRQ_BANK0);
+
+        var mip = emu.GetCSR(MIP_CSR);
+        Assert.Equal(0u, mip & (1u << MEIP_BIT));
     }
 
     // ── End-to-end trap path ─────────────────────────────────────────────────
@@ -133,6 +155,7 @@ public class Trap6IrqControllerTests
         emu.Registers[32] = SRAM;
 
         emu.SetCSR(MIE_CSR, 1u << MEIP_BIT); // software enables external interrupts
+        emu.SetCSR(MEIEA_CSR, MeieaEnableValue(IrqController.IO_IRQ_BANK0));
         irq.RaiseIrq(IrqController.IO_IRQ_BANK0);
 
         emu.Step();

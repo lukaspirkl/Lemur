@@ -43,6 +43,26 @@ public class Hazard3Processor
     public event Action? ECall;
     public void RaiseECall() => ECall?.Invoke();
 
+    // -------------------------------------------------------------------------
+    // IrqController callbacks (Hazard3 Xh3irq hooks)
+    //
+    // These delegates let the external interrupt controller (IrqController)
+    // supply priority-aware decisions that Hazard3Processor itself cannot
+    // make without knowing the MEIPRA/MEIFA state:
+    //
+    //   MeiTrapGate      — returns true if an IRQ with priority >= the given
+    //                      MEICONTEXT.PREEMPT value exists, i.e. CheckInterrupts
+    //                      should actually take the MEI trap. When null, we
+    //                      fall back to the simple "preempt == 0" approximation.
+    //
+    //   OnMeiVectorEntry — called immediately before jumping to the MEI vector.
+    //                      The hook pushes the preemption priority stack and
+    //                      sets PREEMPT to (incoming_irq_priority + 1).
+    //                      When null, we fall back to a priority-0 push.
+    // -------------------------------------------------------------------------
+    public Func<uint, bool>? MeiTrapGate      { get; set; }
+    public Action?           OnMeiVectorEntry { get; set; }
+
     public uint PC
     {
         get;
@@ -176,7 +196,8 @@ public class Hazard3Processor
         if ((pending & (1u << CSR.MxP_MEIP_BIT)) != 0)
         {
             uint preempt = (CSR.RawGet(CSR.MEICONTEXT) >> 16) & 0x1Fu;
-            if (preempt == 0) cause = CSR.MxP_MEIP_BIT;
+            bool eligible = MeiTrapGate != null ? MeiTrapGate(preempt) : preempt == 0;
+            if (eligible) cause = CSR.MxP_MEIP_BIT;
         }
         if (cause < 0 && (pending & (1u << CSR.MxP_MSIP_BIT)) != 0) cause = CSR.MxP_MSIP_BIT;
         if (cause < 0 && (pending & (1u << CSR.MxP_MTIP_BIT)) != 0) cause = CSR.MxP_MTIP_BIT;
@@ -218,30 +239,40 @@ public class Hazard3Processor
         mstatus &= ~(1u << CSR.MSTATUS_MIE_BIT);               // clear MIE
         CSR.RawSet(CSR.MSTATUS, mstatus);
 
-        // Xh3irq: update MEICONTEXT on any trap entry.
-        // Spec §3.8.6.1.5: "When entering the MIP.MEIP vector, hardware atomically performs…"
-        var meicontext = CSR.RawGet(CSR.MEICONTEXT);
+        // Xh3irq: update MEICONTEXT on trap entry.
+        // Spec §3.8.6: "mreteirq ... is set on entering the external interrupt
+        // vector, cleared by mret, and cleared upon taking any trap other than
+        // an external interrupt."
         if (isInterrupt && (cause & 0x7FFF_FFFFu) == CSR.MxP_MEIP_BIT)
         {
-            // MEIP trap: push the preemption priority stack and set MRETEIRQ.
-            //   PPPREEMPT ← PPREEMPT, PPREEMPT ← PREEMPT, PREEMPT ← (irq_priority + 1)
-            // All IRQ priorities are 0 (MEIPRA not implemented), so PREEMPT ← 1.
-            uint pppreempt = (meicontext >> 28) & 0xFu;
-            uint ppreempt  = (meicontext >> 24) & 0xFu;
-            uint preempt   = (meicontext >> 16) & 0x1Fu;
-            meicontext &= 0x0000_FFFFu;             // clear bits[31:16]
-            meicontext |= (ppreempt  << 28);         // PPPREEMPT ← old PPREEMPT
-            meicontext |= (preempt   << 24);         // PPREEMPT  ← old PREEMPT
-            meicontext |= (1u        << 16);         // PREEMPT   = 1 (priority 0 + 1)
-            meicontext |= 1u;                        // MRETEIRQ  = 1
-            CSR.RawSet(CSR.MEICONTEXT, meicontext);
+            // MEI trap: delegate the preemption-stack push to the IRQ
+            // controller, which knows the incoming IRQ's priority. Fall back
+            // to a priority-0 push when no controller is wired up.
+            if (OnMeiVectorEntry != null)
+            {
+                OnMeiVectorEntry();
+            }
+            else
+            {
+                var meicontext = CSR.RawGet(CSR.MEICONTEXT);
+                uint pppreempt = (meicontext >> 28) & 0xFu;
+                uint ppreempt  = (meicontext >> 24) & 0xFu;
+                uint preempt   = (meicontext >> 16) & 0x1Fu;
+                meicontext &= 0x0000_FFFFu;
+                meicontext |= (ppreempt << 28);
+                meicontext |= (preempt  << 24);
+                meicontext |= (1u       << 16); // PREEMPT = priority 0 + 1
+                meicontext |= 1u;               // MRETEIRQ = 1
+                CSR.RawSet(CSR.MEICONTEXT, meicontext);
+            }
         }
-        else if (isInterrupt)
+        else
         {
-            // Non-MEIP interrupt (MTIP/MSIP): clear MRETEIRQ so MRET won't pop the stack.
+            // Non-MEI trap (other interrupts or synchronous exceptions):
+            // clear MRETEIRQ so the matching MRET won't pop the preempt stack.
+            var meicontext = CSR.RawGet(CSR.MEICONTEXT);
             CSR.RawSet(CSR.MEICONTEXT, meicontext & ~1u);
         }
-        // Synchronous exceptions do not modify MEICONTEXT.
 
         // Compute trap handler PC from MTVEC.
         // Bits [1:0] = mode; bits [31:2] = BASE (guaranteed 4-byte aligned by hardware).
@@ -252,7 +283,10 @@ public class Hazard3Processor
         if (isInterrupt && mode == CSR.MTVEC_MODE_VECTORED)
         {
             // Vectored interrupt: BASE + 4 × interrupt_cause_number.
-            // Strip the interrupt flag (bit 31) to get the raw cause number.
+            // The `cause` argument has bit 31 set to mark it as an interrupt
+            // (MCAUSE layout), so we mask it off to get the raw cause number
+            // (e.g. MEI=11 → offset 0x2C, MTI=7 → offset 0x1C, MSI=3 → 0x0C).
+            // Synchronous exceptions still go to BASE even in vectored mode.
             PC = baseAddr + 4u * (cause & 0x7FFF_FFFFu);
         }
         else

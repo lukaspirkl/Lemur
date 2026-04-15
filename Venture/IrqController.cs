@@ -178,9 +178,23 @@ public class IrqController
     // 64-bit enable mask: bit N is set when IRQ N is enabled via MEIEA.
     private ulong m_MeieaEnables;
 
-    // Currently selected 16-IRQ window for MEIEA/MEIPA reads (bits [4:0]).
-    // Set by any write to the MEIEA or MEIPA CSR addresses.
+    // 64-bit software-force mask: bit N is set when IRQ N is forced via MEIFA.
+    // Forced bits are ORed into the effective pending set used by MEIPA / MEINEXT /
+    // MIP.MEIP. A forced bit is cleared automatically by hardware when a MEINEXT
+    // read returns that IRQ number (§3.8.3).
+    private ulong m_MeifaForce;
+
+    // Currently selected 16-IRQ window for MEIEA/MEIPA/MEIFA reads (bits [4:0]).
+    // Set by any write to those CSR addresses.
     private int m_MeiaWindow;
+
+    // Per-IRQ priority array, 4 bits per IRQ, 512 IRQs total (§3.8.4).
+    // Bit-width matches Hazard3's max of 16 preemption priority levels.
+    // Reset value is 0 so all IRQs have the lowest priority until configured.
+    private readonly byte[] m_MeipraPriorities = new byte[512];
+
+    // Currently selected 4-IRQ window for MEIPRA reads (bits [6:0]).
+    private int m_MeipraWindow;
 
     public IrqController(Hazard3Processor processor)
     {
@@ -191,10 +205,39 @@ public class IrqController
         processor.CSR.AddGetter(0xBE1, ReadMeipa);
         // MEIPA is read-only; writes update the window selector but not the pending bits.
         processor.CSR.AddSetter(0xBE1, v => m_MeiaWindow = (int)(v & 0x1F));
+        processor.CSR.AddGetter(0xBE2, ReadMeifa);
+        processor.CSR.AddSetter(0xBE2, WriteMeifa);
+        processor.CSR.AddGetter(0xBE3, ReadMeipra);
+        processor.CSR.AddSetter(0xBE3, WriteMeipra);
         processor.CSR.AddGetter(0xBE4, ReadMeinext);
         processor.CSR.AddSetter(0xBE4, WriteMeinext);
         processor.CSR.AddGetter(CSR.MEICONTEXT, ReadMeicontext);
         processor.CSR.AddSetter(CSR.MEICONTEXT, WriteMeicontext);
+
+        // Register MEI trap hooks so Hazard3Processor can delegate priority-aware
+        // decisions (trap gating, vector-entry stack push) to us.
+        processor.MeiTrapGate       = HasEligibleMeiAtOrAbove;
+        processor.OnMeiVectorEntry  = PushPreemptStackOnVectorEntry;
+    }
+
+    /// <summary>
+    /// Effective pending mask seen by MEIPA / MEINEXT / MIP.MEIP:
+    /// the OR of hardware-asserted pending lines and software-forced bits.
+    /// </summary>
+    private ulong EffectivePending => m_Pending | m_MeifaForce;
+
+    /// <summary>
+    /// Effective enabled+pending mask (gated by MEIEA).
+    /// </summary>
+    private ulong EffectiveEnabledPending => EffectivePending & m_MeieaEnables;
+
+    /// <summary>
+    /// Recomputes MIP.MEIP from the effective enabled+pending mask.
+    /// Called whenever pending/force/enable state changes.
+    /// </summary>
+    private void RecomputeMeip()
+    {
+        m_Processor.SetMip(CSR.MxP_MEIP_BIT, EffectiveEnabledPending != 0);
     }
 
     // -------------------------------------------------------------------------
@@ -230,6 +273,7 @@ public class IrqController
         uint enables = (value >> 16) & 0xFFFF;
         ulong mask = 0xFFFFUL << (m_MeiaWindow * 16);
         m_MeieaEnables = (m_MeieaEnables & ~mask) | ((ulong)enables << (m_MeiaWindow * 16));
+        RecomputeMeip();
     }
 
     /// <summary>
@@ -238,8 +282,79 @@ public class IrqController
     /// </summary>
     private uint ReadMeipa()
     {
-        uint window16 = (uint)((m_Pending >> (m_MeiaWindow * 16)) & 0xFFFF);
+        // Forced bits appear pending in MEIPA (§3.8.3 — MEIFA writes make the
+        // corresponding bits "become pending in meipa").
+        uint window16 = (uint)((EffectivePending >> (m_MeiaWindow * 16)) & 0xFFFF);
         return (uint)m_MeiaWindow | (window16 << 16);
+    }
+
+    // -------------------------------------------------------------------------
+    // MEIFA — External interrupt force array (0xBE2)
+    // Spec §3.8.3
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Reads the MEIFA CSR. Bits [31:16] hold the current force-array window;
+    /// bits [4:0] hold the current window index.
+    /// </summary>
+    private uint ReadMeifa()
+    {
+        uint window16 = (uint)((m_MeifaForce >> (m_MeiaWindow * 16)) & 0xFFFF);
+        return (uint)m_MeiaWindow | (window16 << 16);
+    }
+
+    /// <summary>
+    /// Writes the MEIFA CSR. Updates the selected 16-bit window of the force
+    /// array. Setting a bit "causes the corresponding bit to become pending in
+    /// meipa" and asserts MIP.MEIP (subject to enable+priority filtering);
+    /// clearing a bit removes the software-induced pending.
+    /// </summary>
+    private void WriteMeifa(uint value)
+    {
+        m_MeiaWindow = (int)(value & 0x1F);
+        uint force = (value >> 16) & 0xFFFF;
+        ulong mask = 0xFFFFUL << (m_MeiaWindow * 16);
+        m_MeifaForce = (m_MeifaForce & ~mask) | ((ulong)force << (m_MeiaWindow * 16));
+        RecomputeMeip();
+    }
+
+    // -------------------------------------------------------------------------
+    // MEIPRA — External interrupt priority array (0xBE3)
+    // Spec §3.8.4
+    //
+    // Each IRQ has a 4-bit priority (16 preemption levels). A 16-bit window
+    // covers 4 consecutive IRQs, so the window index is 7 bits (bits [6:0]).
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Reads the MEIPRA CSR. Bits [31:16] hold the current priority window
+    /// (four 4-bit priorities); bits [6:0] hold the current window index.
+    /// </summary>
+    private uint ReadMeipra()
+    {
+        int baseIrq = m_MeipraWindow * 4;
+        uint window16 = 0;
+        for (int i = 0; i < 4; i++)
+            window16 |= (uint)(m_MeipraPriorities[baseIrq + i] & 0xF) << (i * 4);
+        return (uint)m_MeipraWindow | (window16 << 16);
+    }
+
+    /// <summary>
+    /// Writes the MEIPRA CSR. Updates the four 4-bit priorities in the
+    /// selected window. Recomputes MIP.MEIP because a priority change may
+    /// allow or block a pending IRQ from asserting the external trap.
+    /// </summary>
+    private void WriteMeipra(uint value)
+    {
+        m_MeipraWindow = (int)(value & 0x7F);
+        uint window16 = (value >> 16) & 0xFFFF;
+        int baseIrq = m_MeipraWindow * 4;
+        if (baseIrq + 3 < m_MeipraPriorities.Length)
+        {
+            for (int i = 0; i < 4; i++)
+                m_MeipraPriorities[baseIrq + i] = (byte)((window16 >> (i * 4)) & 0xF);
+        }
+        RecomputeMeip();
     }
 
     /// <summary>
@@ -253,19 +368,94 @@ public class IrqController
     /// </summary>
     private uint ReadMeinext()
     {
-        ulong pendingAndEnabled = m_Pending & m_MeieaEnables;
-        if (pendingAndEnabled == 0)
-            return 0x8000_0000u; // NOIRQ
-
-        // Rule 3 (§3.8.6.1.2): IRQ must have priority >= PPREEMPT.
-        // All IRQ priorities are 0 (MEIPRA not implemented); only eligible when PPREEMPT == 0.
+        // §3.8.5: return the highest-priority interrupt that is pending+enabled
+        // and has priority >= PPREEMPT. Tie-break: lowest IRQ number wins.
         var meicontext = m_Processor.CSR.RawGet(CSR.MEICONTEXT);
         uint ppreempt = (meicontext >> 24) & 0xFu;
-        if (ppreempt > 0)
-            return 0x8000_0000u; // NOIRQ: all IRQs blocked by PPREEMPT gate
 
-        int irq = BitOperations.TrailingZeroCount(pendingAndEnabled);
-        return (uint)(irq << 2);
+        int bestIrq = SelectHighestPriorityIrq(ppreempt);
+        if (bestIrq < 0)
+            return 0x8000_0000u; // NOIRQ
+
+        // §3.8.3: a MEIFA bit is cleared automatically when a read of MEINEXT
+        // returns the corresponding IRQ number, regardless of whether
+        // MEINEXT.UPDATE is written.
+        ulong irqMask = 1UL << bestIrq;
+        if ((m_MeifaForce & irqMask) != 0)
+        {
+            m_MeifaForce &= ~irqMask;
+            RecomputeMeip();
+        }
+
+        return (uint)(bestIrq << 2);
+    }
+
+    /// <summary>
+    /// Scans the effective enabled+pending mask and returns the IRQ number of
+    /// the highest-priority entry whose priority is >= <paramref name="minPriority"/>,
+    /// or -1 if none exists. Ties on priority are broken by lowest IRQ number.
+    /// </summary>
+    private int SelectHighestPriorityIrq(uint minPriority)
+    {
+        ulong effective = EffectiveEnabledPending;
+        int bestIrq = -1;
+        int bestPrio = -1;
+        while (effective != 0)
+        {
+            int irq = BitOperations.TrailingZeroCount(effective);
+            effective &= effective - 1;
+            int prio = m_MeipraPriorities[irq] & 0xF;
+            if (prio < (int)minPriority) continue;
+            if (prio > bestPrio)
+            {
+                bestPrio = prio;
+                bestIrq  = irq;
+                // Lower IRQ numbers iterate first, so a later IRQ only wins
+                // on strictly higher priority — ties already go to the lower IRQ.
+            }
+        }
+        return bestIrq;
+    }
+
+    /// <summary>
+    /// MEI trap gate used by <see cref="Hazard3Processor.CheckInterrupts"/>.
+    /// Returns true when some IRQ is pending, enabled and has priority >= PREEMPT,
+    /// i.e. the core should actually take the external interrupt trap.
+    /// Spec §3.8.4: "an interrupt with priority lower than meicontext.preempt …
+    /// mip.meip will not [assert], so the processor will ignore this interrupt".
+    /// </summary>
+    private bool HasEligibleMeiAtOrAbove(uint preempt)
+        => SelectHighestPriorityIrq(preempt) >= 0;
+
+    /// <summary>
+    /// Called by <see cref="Hazard3Processor.EnterTrap"/> when entering the MEI
+    /// vector. Pushes the preemption priority stack and sets PREEMPT to one
+    /// level above the highest-priority eligible IRQ (or 0x10 if none is
+    /// present, which disables preemption). Also sets MRETEIRQ so the
+    /// matching MRET pops the stack. Spec §3.8.6, §3.8.6.1.5.
+    /// </summary>
+    private void PushPreemptStackOnVectorEntry()
+    {
+        var meicontext = m_Processor.CSR.RawGet(CSR.MEICONTEXT);
+        uint oldPpreempt = (meicontext >> 24) & 0xFu;
+        uint oldPreempt  = (meicontext >> 16) & 0x1Fu;
+
+        // Compute the new PREEMPT value from the highest-priority IRQ that
+        // is still visible after applying the outgoing ppreempt gate. This
+        // matches the hardware behaviour described in §3.8.6 for vector entry.
+        uint newPreempt;
+        int irq = SelectHighestPriorityIrq(oldPpreempt);
+        if (irq >= 0)
+            newPreempt = (uint)((m_MeipraPriorities[irq] & 0xF) + 1);
+        else
+            newPreempt = 0x10; // no visible IRQ — block all preemption
+
+        meicontext &= 0x0000_FFFFu;          // clear [31:16]
+        meicontext |= (oldPreempt  << 24);   // PPREEMPT  ← old PREEMPT
+        meicontext |= (oldPpreempt << 28);   // PPPREEMPT ← old PPREEMPT
+        meicontext |= (newPreempt  << 16);   // PREEMPT   ← irq_priority + 1
+        meicontext |= 1u;                    // MRETEIRQ  = 1
+        m_Processor.CSR.RawSet(CSR.MEICONTEXT, meicontext);
     }
 
     /// <summary>
@@ -295,10 +485,11 @@ public class IrqController
         }
         else
         {
-            // IRQ present: store IRQ number and set PREEMPT = irq_priority + 1.
-            // All priorities are 0 (MEIPRA not implemented), so PREEMPT = 1.
+            // IRQ present: store IRQ number and set PREEMPT = irq_priority + 1
+            // (read from MEIPRA). Clamp to the 5-bit field.
+            uint prio = (uint)(m_MeipraPriorities[irq & 0x1FF] & 0xF);
             meicontext |= (irq << 4);           // IRQ bits[12:4]
-            meicontext |= (1u << 16);           // PREEMPT = 0 + 1 = 1
+            meicontext |= ((prio + 1) & 0x1Fu) << 16;
         }
 
         m_Processor.CSR.RawSet(CSR.MEICONTEXT, meicontext);
@@ -363,8 +554,9 @@ public class IrqController
     {
         m_Pending |= 1UL << irqNumber;
         // Drive MIP.MEIP (bit 11) to signal an external interrupt is pending.
-        // The processor will check this after each instruction (CheckInterrupts).
-        m_Processor.SetMip(CSR.MxP_MEIP_BIT, true);
+        // RecomputeMeip only asserts when the new pending bit is also enabled
+        // in MEIEA. The processor will check this after each instruction.
+        RecomputeMeip();
     }
 
     /// <summary>

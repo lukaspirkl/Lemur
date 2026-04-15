@@ -128,6 +128,14 @@ public class CSR
     // Implementation
     // -------------------------------------------------------------------------
 
+    /// <summary>
+    /// Fired whenever a CSR value changes, via either software (<see cref="Set"/>) or
+    /// hardware-internal (<see cref="RawSet"/>) writes.
+    /// Arguments: (address, newValue). Raised on the CPU thread — subscribers must
+    /// marshal to the UI thread if needed.
+    /// </summary>
+    public event Action<ushort, uint>? Changed;
+
     private readonly Dictionary<ushort, uint>        m_Csr     = new();
     private readonly Dictionary<ushort, Func<uint>>  m_Getters = new();
     private readonly Dictionary<ushort, Action<uint>> m_Setters = new();
@@ -163,6 +171,7 @@ public class CSR
             setter(value);
         else
             m_Csr[key] = value;
+        Changed?.Invoke(key, value);
     }
 
     /// <summary>
@@ -179,6 +188,15 @@ public class CSR
     }
 
     /// <summary>
+    /// Observational read for debuggers and UI viewers.
+    /// Goes through getter hooks (so live counters like MCYCLE return current values)
+    /// but does not log, so it does not pollute the trace with viewer traffic.
+    /// </summary>
+    public uint Peek(ushort key) => m_Getters.TryGetValue(key, out var getter)
+        ? getter()
+        : m_Csr.GetValueOrDefault(key, 0u);
+
+    /// <summary>
     /// Hardware-internal read: reads the backing store directly, bypassing getter hooks.
     /// Used by trap-entry/MRET logic and interrupt checks where hook overhead is undesirable
     /// and the raw stored value is what matters.
@@ -191,5 +209,9 @@ public class CSR
     /// Also used by <see cref="Hazard3Processor.SetMip"/> so peripherals can drive interrupt lines
     /// without going through the software CSR path.
     /// </summary>
-    internal void RawSet(ushort key, uint value) => m_Csr[key] = value;
+    internal void RawSet(ushort key, uint value)
+    {
+        m_Csr[key] = value;
+        Changed?.Invoke(key, value);
+    }
 }

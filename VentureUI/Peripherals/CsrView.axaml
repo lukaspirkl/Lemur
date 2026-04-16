@@ -84,33 +84,27 @@
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
 
-                                            <!-- Windowed IRQ registers: Fetch All button + table -->
-                                            <StackPanel IsVisible="{Binding IsWindowed}" Margin="16,4,0,0">
-                                                <Button Content="Fetch all windows"
-                                                        Command="{Binding FetchAllWindowsCommand}"
-                                                        IsVisible="{Binding !HasWindowData}"
-                                                        HorizontalAlignment="Left" />
-
-                                                <ItemsControl ItemsSource="{Binding WindowRows}"
-                                                              IsVisible="{Binding HasWindowData}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate x:DataType="vm:WindowRowViewModel">
-                                                            <Grid ColumnDefinitions="160,80,*" Margin="0,1">
-                                                                <TextBlock Grid.Column="0"
-                                                                           Text="{Binding Label}"
-                                                                           FontFamily="Monospace"
-                                                                           Classes="Secondary" />
-                                                                <TextBlock Grid.Column="1"
-                                                                           Text="{Binding Bits}"
-                                                                           FontFamily="Monospace" />
-                                                                <TextBlock Grid.Column="2"
-                                                                           Text="{Binding Value}"
-                                                                           FontFamily="Monospace" />
-                                                            </Grid>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
+                                            <!-- Windowed IRQ registers: all windows shown immediately -->
+                                            <ItemsControl ItemsSource="{Binding WindowRows}"
+                                                          IsVisible="{Binding IsWindowed}"
+                                                          Margin="16,4,0,0">
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:WindowRowViewModel">
+                                                        <Grid ColumnDefinitions="160,80,*" Margin="0,1">
+                                                            <TextBlock Grid.Column="0"
+                                                                       Text="{Binding Label}"
+                                                                       FontFamily="Monospace"
+                                                                       Classes="Secondary" />
+                                                            <TextBlock Grid.Column="1"
+                                                                       Text="{Binding Bits}"
+                                                                       FontFamily="Monospace" />
+                                                            <TextBlock Grid.Column="2"
+                                                                       Text="{Binding Value}"
+                                                                       FontFamily="Monospace" />
+                                                        </Grid>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
 
                                         </StackPanel>
                                     </Border>

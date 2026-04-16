@@ -1,19 +1,20 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using Venture.Processor;
 
 namespace VentureUI;
 
 public partial class CsrFieldViewModel : ObservableObject
 {
-    private readonly CsrDefinitions.FieldDef m_Def;
+    private readonly CsrFieldDef m_Def;
 
-    public string Name  => m_Def.Name;
-    public string Bits  => m_Def.Bits;
+    public string Name => m_Def.Name;
+    public string Bits => m_Def.Bits;
 
     [ObservableProperty] private uint   m_Value;
-    [ObservableProperty] private string m_ValueHex = string.Empty;
+    [ObservableProperty] private string m_ValueHex      = string.Empty;
     [ObservableProperty] private string m_Interpretation = string.Empty;
 
-    public CsrFieldViewModel(CsrDefinitions.FieldDef def)
+    public CsrFieldViewModel(CsrFieldDef def)
     {
         m_Def = def;
     }

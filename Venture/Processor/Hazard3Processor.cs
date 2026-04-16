@@ -81,16 +81,20 @@ public class Hazard3Processor
 
         // MCYCLE / MCYCLEH (0xB00 / 0xB80) — cycle counter
         // Getter returns live value from m_Cycle; setter allows software to reset the counter.
-        csr.AddGetter(CSR.MCYCLE,    () => (uint)(m_Cycle & 0xFFFF_FFFFu));
-        csr.AddGetter(CSR.MCYCLEH,   () => (uint)(m_Cycle >> 32));
-        csr.AddSetter(CSR.MCYCLE,    v  => m_Cycle   = (m_Cycle   & 0xFFFF_FFFF_0000_0000UL) | v);
-        csr.AddSetter(CSR.MCYCLEH,   v  => m_Cycle   = (m_Cycle   & 0x0000_0000_FFFF_FFFFUL) | ((ulong)v << 32));
+        csr.GetEntry(CSR.MCYCLE)!.LiveValue(
+            getter: () => (uint)(m_Cycle & 0xFFFF_FFFFu),
+            setter: v  => m_Cycle = (m_Cycle & 0xFFFF_FFFF_0000_0000UL) | v);
+        csr.GetEntry(CSR.MCYCLEH)!.LiveValue(
+            getter: () => (uint)(m_Cycle >> 32),
+            setter: v  => m_Cycle = (m_Cycle & 0x0000_0000_FFFF_FFFFUL) | ((ulong)v << 32));
 
         // MINSTRET / MINSTRETH (0xB02 / 0xB82) — instructions-retired counter
-        csr.AddGetter(CSR.MINSTRET,  () => (uint)(m_Instret & 0xFFFF_FFFFu));
-        csr.AddGetter(CSR.MINSTRETH, () => (uint)(m_Instret >> 32));
-        csr.AddSetter(CSR.MINSTRET,  v  => m_Instret = (m_Instret & 0xFFFF_FFFF_0000_0000UL) | v);
-        csr.AddSetter(CSR.MINSTRETH, v  => m_Instret = (m_Instret & 0x0000_0000_FFFF_FFFFUL) | ((ulong)v << 32));
+        csr.GetEntry(CSR.MINSTRET)!.LiveValue(
+            getter: () => (uint)(m_Instret & 0xFFFF_FFFFu),
+            setter: v  => m_Instret = (m_Instret & 0xFFFF_FFFF_0000_0000UL) | v);
+        csr.GetEntry(CSR.MINSTRETH)!.LiveValue(
+            getter: () => (uint)(m_Instret >> 32),
+            setter: v  => m_Instret = (m_Instret & 0x0000_0000_FFFF_FFFFUL) | ((ulong)v << 32));
     }
 
     /// <summary>

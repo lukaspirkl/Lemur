@@ -1,7 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
-using System.Linq;
 using Venture;
 using Venture.Processor;
 
@@ -24,11 +23,9 @@ public partial class CsrViewModel : ObservableObject, IPeripheralTab
 
         var csr = processor.CSR;
 
-        foreach (var groupDef in CsrDefinitions.Groups)
+        foreach (var groupDef in csr.GetGroups())
             Groups.Add(new CsrGroupViewModel(groupDef, csr));
 
-        // Refresh all on stop — catches any CSRs changed while running that we
-        // might have missed if the Changed event fired before the tab was visible.
         system.Stopped += () =>
         {
             foreach (var group in Groups)

@@ -8,16 +8,16 @@ public class CsrGroupViewModel
     public string Name { get; }
     public ObservableCollection<CsrEntryViewModel> Registers { get; } = new();
 
-    public CsrGroupViewModel(CsrDefinitions.GroupDef def, CSR csr)
+    public CsrGroupViewModel(CsrGroupDef def, CSR csr)
     {
         Name = def.Name;
-        foreach (var csrDef in def.Registers)
-            Registers.Add(new CsrEntryViewModel(csrDef, csr));
+        foreach (var entry in def.Registers)
+            Registers.Add(new CsrEntryViewModel(entry, csr));
     }
 
     public void RefreshAll()
     {
         foreach (var reg in Registers)
-            reg.RefreshFromCsr();
+            reg.RefreshFromEntry();
     }
 }

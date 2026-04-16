@@ -3,7 +3,7 @@
 #include "hardware/gpio.h"
 #include "pico/binary_info.h"
 
-#define GPIO_WATCH_PIN 2
+#define GPIO_WATCH_PIN 5
 
 bi_decl(bi_1pin_with_name(5, "Watch [SWITCH]"));
 

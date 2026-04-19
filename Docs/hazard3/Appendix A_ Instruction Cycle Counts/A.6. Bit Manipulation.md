@@ -1,4 +1,4 @@
-## <span id="page-55-0"></span>**A.6. Bit Manipulation**
+## <span id="page-55-0"></span> A.6. Bit Manipulation
 
 | Cycles | Note                                         |
 |--------|----------------------------------------------|

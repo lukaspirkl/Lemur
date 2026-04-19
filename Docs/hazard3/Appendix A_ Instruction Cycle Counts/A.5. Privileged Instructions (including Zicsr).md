@@ -1,4 +1,4 @@
-## <span id="page-54-2"></span>**A.5. Privileged Instructions (including Zicsr)**
+## <span id="page-54-2"></span> A.5. Privileged Instructions (including Zicsr)
 
 | Instruction         | Cycles | Note |  |  |
 |---------------------|--------|------|--|--|

@@ -1,4 +1,4 @@
-## <span id="page-53-1"></span><span id="page-53-0"></span>**A.2. M Extension**
+## <span id="page-53-1"></span><span id="page-53-0"></span> A.2. M Extension
 
 Timings assume the core is configured with MULDIV_UNROLL = 2 and MUL_FAST = 1. I.e. the sequential multiply/divide circuit processes two bits per cycle, and a separate dedicated multiplier is present for the mul instruction.
 

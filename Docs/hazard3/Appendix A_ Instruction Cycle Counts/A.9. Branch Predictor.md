@@ -1,4 +1,4 @@
-## <span id="page-57-0"></span>**A.9. Branch Predictor**
+## <span id="page-57-0"></span> A.9. Branch Predictor
 
 Hazard3 includes a minimal branch predictor, to accelerate tight loops:
 

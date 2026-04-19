@@ -1,4 +1,4 @@
-## <span id="page-54-1"></span>**A.4. C Extension**
+## <span id="page-54-1"></span> A.4. C Extension
 
 All C extension 16-bit instructions are aliases of base RV32I instructions. On Hazard3, they perform identically to their 32-bit counterparts.
 

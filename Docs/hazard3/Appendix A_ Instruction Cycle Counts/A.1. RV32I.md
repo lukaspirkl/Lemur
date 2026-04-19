@@ -1,4 +1,4 @@
-## <span id="page-52-1"></span>**A.1. RV32I**
+## <span id="page-52-1"></span> A.1. RV32I
 
 <span id="page-52-2"></span>
 

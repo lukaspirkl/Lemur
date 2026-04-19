@@ -1,4 +1,4 @@
-## <span id="page-54-0"></span>**A.3. A Extension**
+## <span id="page-54-0"></span> A.3. A Extension
 
 <span id="page-54-4"></span><span id="page-54-3"></span>
 

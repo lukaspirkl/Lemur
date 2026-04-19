@@ -1,4 +1,4 @@
-## <span id="page-56-0"></span>**A.7. Zcb Extension**
+## <span id="page-56-0"></span> A.7. Zcb Extension
 
 Similarly to the C extension, this extension contains 16-bit variants of common 32-bit instructions:
 

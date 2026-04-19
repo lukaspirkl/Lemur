@@ -52,8 +52,7 @@ internal class Program
 
 
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
-            //.MinimumLevel.Is(LogEventLevel.Fatal)
-            .MinimumLevel.Is(LogEventLevel.Verbose)
+            .MinimumLevel.Is(LogEventLevel.Fatal)
             //.MinimumLevel.Is(LogEventLevel.Information)
             //.MinimumLevel.Override<GdbConnectionHandler>(LogEventLevel.Verbose)
             .MinimumLevel.Override<BinaryInfoService>(LogEventLevel.Verbose)
@@ -67,8 +66,8 @@ internal class Program
             .MinimumLevel.Override<UART1>(LogEventLevel.Verbose)
             .MinimumLevel.Override<UART>(LogEventLevel.Verbose)
             .Enrich.FromLogContext()
-            .WriteTo.Async(a => a.File(new CompactJsonFormatter(), m_LogFile))
-            //.WriteTo.Console()
+            //.WriteTo.Async(a => a.File(new CompactJsonFormatter(), m_LogFile))
+            .WriteTo.Console()
         );
 
         builder.Services.AddTransient(typeof(IEmuLogger<>), typeof(EmuLogger<>));

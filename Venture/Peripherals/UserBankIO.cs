@@ -1,4 +1,8 @@
 using Microsoft.Extensions.Logging;
+using Venture.Csr;
+
+
+
 // Alias to avoid ambiguity between the GpioControl class and the GpioControl[] property on UserBankIO.
 using GpioInOver = Venture.Peripherals.GpioControl.InOver;
 
@@ -60,12 +64,12 @@ public class UserBankIO : PeripheralBase, IGpioSource
     private readonly uint[] m_Proc1Inte = new uint[IntrRegCount];
     private readonly uint[] m_Proc1Intf = new uint[IntrRegCount];
 
-    private readonly IrqController m_IrqController;
+    private readonly CsrController m_CsrController;
 
-    public UserBankIO(uint baseAddress, string name, ILogger<UserBankIO> logger, SIO sio, IrqController irqController)
+    public UserBankIO(uint baseAddress, string name, ILogger<UserBankIO> logger, SIO sio, CsrController csrController)
         : base(baseAddress, name, logger)
     {
-        m_IrqController = irqController;
+        m_CsrController = csrController;
 
         for (int i = 0; i < 48; i++)
         {
@@ -323,10 +327,7 @@ public class UserBankIO : PeripheralBase, IGpioSource
         for (int i = 0; i < IntrRegCount && !anyPending; i++)
             anyPending = ReadProc0Ints(i) != 0;
 
-        if (anyPending)
-            m_IrqController.RaiseIrq(IrqController.IO_IRQ_BANK0);
-        else
-            m_IrqController.ClearIrq(IrqController.IO_IRQ_BANK0);
+        m_CsrController.Meipa.SetHardwarePending(CsrController.IO_IRQ_BANK0, anyPending);
     }
 }
 

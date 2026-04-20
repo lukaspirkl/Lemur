@@ -1,20 +1,21 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Logging;
+using Venture.Csr;
 
 namespace Venture.Peripherals;
 
 public class UART0 : UART
 {
-    public UART0(uint baseAddress, string name, ILogger<UART0> logger, IrqController irqController)
-        : base(baseAddress, name, logger, irqController, IrqController.UART0_IRQ)
+    public UART0(uint baseAddress, string name, ILogger<UART0> logger, CsrController csrController)
+        : base(baseAddress, name, logger, csrController, CsrController.UART0_IRQ)
     {
     }
 }
 
 public class UART1 : UART
 {
-    public UART1(uint baseAddress, string name, ILogger<UART1> logger, IrqController irqController)
-        : base(baseAddress, name, logger, irqController, IrqController.UART1_IRQ)
+    public UART1(uint baseAddress, string name, ILogger<UART1> logger, CsrController csrController)
+        : base(baseAddress, name, logger, csrController, CsrController.UART1_IRQ)
     {
     }
 }
@@ -96,7 +97,7 @@ public class UART : PeripheralBase
 
     // ─── IRQ wiring ───────────────────────────────────────────────────────────
 
-    private readonly IrqController m_IrqController;
+    private readonly CsrController m_CsrController;
     // IRQ number for this UART instance: 33 = UART0, 34 = UART1 (Table 94, §3.2).
     private readonly int m_IrqNumber;
 
@@ -106,7 +107,7 @@ public class UART : PeripheralBase
     // We use 50 ms so the emulator doesn't fire spurious timeouts under scheduler jitter.
     // Spec: §12.1.6 — "the receive timeout interrupt is asserted when the receive
     //        FIFO is not empty, and no further data is received over a 32-bit period."
-    private const int RtimTimeoutMs = 50;
+    private const int RTIM_TIMEOUT_MS = 50;
     private System.Threading.Timer? m_RtimTimer;
 
     // RTRIS (UARTRIS bit 6): receive timeout interrupt raw status latch.
@@ -239,10 +240,10 @@ public class UART : PeripheralBase
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    public UART(uint baseAddress, string name, ILogger<UART> logger, IrqController irqController, int irqNumber)
+    public UART(uint baseAddress, string name, ILogger<UART> logger, CsrController csrController, int irqNumber)
         : base(baseAddress, name, logger)
     {
-        m_IrqController = irqController;
+        m_CsrController = csrController;
         m_IrqNumber = irqNumber;
 
         // UARTDR (0x000) — Data Register
@@ -544,10 +545,7 @@ public class UART : PeripheralBase
     private void UpdateUartIrq()
     {
         uint mis = ComputeRawInterruptStatus() & m_Imsc;
-        if (mis != 0)
-            m_IrqController.RaiseIrq(m_IrqNumber);
-        else
-            m_IrqController.ClearIrq(m_IrqNumber);
+        m_CsrController.Meipa.SetHardwarePending(m_IrqNumber, mis != 0);
     }
 
     /// <summary>
@@ -622,7 +620,7 @@ public class UART : PeripheralBase
                 m_RtimRis = true;
                 UpdateUartIrq();
             }
-        }, null, RtimTimeoutMs, System.Threading.Timeout.Infinite);
+        }, null, RTIM_TIMEOUT_MS, System.Threading.Timeout.Infinite);
     }
 
     /// <summary>Cancels the RTIM idle timer without setting the RTRIS latch.</summary>

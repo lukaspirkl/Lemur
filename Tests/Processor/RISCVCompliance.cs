@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Logging.Testing;
 using Venture;
+using Venture.Csr;
 using Venture.Processor;
 
 namespace Tests.Processor;
@@ -71,7 +72,7 @@ public class RISCVCompliance
             }
         };
 
-        var csr = new CSR(new ConsoleEmuLogger<CSR>());
+        var csr = new CsrController();
 
         var r = new Registers(new ConsoleEmuLogger<Registers>());
         var e = new Hazard3Processor(new ConsoleEmuLogger<Hazard3Processor>(), r, csr);

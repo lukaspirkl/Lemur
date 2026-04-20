@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
+using Venture.Csr;
 
 namespace Venture.Peripherals;
 
@@ -74,7 +75,7 @@ public class SIO : PeripheralBase, IGpioSource
     private byte m_DoorbellIn;
     private byte m_DoorbellOut;
 
-    private readonly IrqController m_IrqController;
+    private readonly CsrController m_CsrController;
 
     // -------------------------------------------------------------------------
     // RISC-V Platform Timer (MTIME / MTIMECMP)
@@ -123,19 +124,19 @@ public class SIO : PeripheralBase, IGpioSource
 
         if (mtime >= mtimecmp)
         {
-            m_IrqController.SetTimerInterrupt(true);
+            m_CsrController.Mip.Mtip = true;
         }
         else
         {
             // Clear MTIP — the condition is no longer satisfied.
-            m_IrqController.SetTimerInterrupt(false);
+            m_CsrController.Mip.Mtip = false;
             ulong delayUs = mtimecmp - mtime;
             // Cap at ~49 days (uint.MaxValue µs) to stay within int range for the timer.
             int delayMs = delayUs > 2_000_000_000UL
                 ? int.MaxValue
                 : Math.Max(1, (int)((delayUs + 999UL) / 1000UL));
             m_MtimeTimer = new System.Threading.Timer(
-                _ => m_IrqController.SetTimerInterrupt(true),
+                _ => m_CsrController.Mip.Mtip = true,
                 null,
                 delayMs,
                 System.Threading.Timeout.Infinite);
@@ -160,10 +161,10 @@ public class SIO : PeripheralBase, IGpioSource
         return m_GpioLines[index];
     }
 
-    public SIO(uint baseAddress, string name, ILogger<SIO> logger, IrqController irqController)
+    public SIO(uint baseAddress, string name, ILogger<SIO> logger, CsrController csrController)
         : base(baseAddress, name, logger)
     {
-        m_IrqController = irqController;
+        m_CsrController = csrController;
 
         AddRegister(0x000, "CPUID", 0);
 
@@ -430,10 +431,7 @@ public class SIO : PeripheralBase, IGpioSource
     private void UpdateFifoIrq()
     {
         bool pending = m_Core1ToCore0Fifo.Count > 0 || m_FifoRoe || m_FifoWof;
-        if (pending)
-            m_IrqController.RaiseIrq(IrqController.SIO_IRQ_FIFO);
-        else
-            m_IrqController.ClearIrq(IrqController.SIO_IRQ_FIFO);
+        m_CsrController.Meipa.SetHardwarePending(CsrController.SIO_IRQ_FIFO, pending);
     }
 
     /// <summary>
@@ -469,10 +467,7 @@ public class SIO : PeripheralBase, IGpioSource
     /// </summary>
     private void UpdateDoorbellIrq()
     {
-        if (m_DoorbellIn != 0)
-            m_IrqController.RaiseIrq(IrqController.SIO_IRQ_BELL);
-        else
-            m_IrqController.ClearIrq(IrqController.SIO_IRQ_BELL);
+        m_CsrController.Meipa.SetHardwarePending(CsrController.SIO_IRQ_BELL, m_DoorbellIn != 0);
     }
 
     /// <summary>

@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics.CodeAnalysis;
+using Venture.Csr;
 using Venture.Peripherals;
 using Venture.Processor;
 
@@ -16,10 +17,9 @@ public static class RP2350ServiceCollectionExtensions
 
         services.AddSingleton<BinaryInfoService>();
         services.AddSingleton<Hazard3Processor>();
-        services.AddSingleton<IrqController>();
         services.AddSingleton<IBusFabric, BusFabric>();
         services.AddSingleton<Registers>();
-        services.AddSingleton<CSR>();
+        services.AddSingleton<CsrController>();
         services.AddSingleton<MemoryFactory>();
         services.AddSingleton<UnimplementedPeripheralFactory>();
 

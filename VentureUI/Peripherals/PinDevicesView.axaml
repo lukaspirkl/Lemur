@@ -130,14 +130,5 @@
 
         </StackPanel>
 
-        <!-- Help button floats top-right -->
-        <Button Content="?"
-                HorizontalAlignment="Right"
-                VerticalAlignment="Top"
-                Margin="0,4,4,0"
-                Padding="6,2"
-                ToolTip.Tip="How to define pin devices in firmware"
-                Click="OnHelpClick" />
-
     </Grid>
 </UserControl>

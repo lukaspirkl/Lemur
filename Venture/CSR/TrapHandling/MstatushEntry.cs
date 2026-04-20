@@ -1,0 +1,9 @@
+namespace Venture.Csr.TrapHandling;
+
+// mstatush — 0x310 — hardwired to 0
+public class MstatushEntry : CsrEntry
+{
+    public MstatushEntry() : base(0x310, "mstatush", "Trap") { }
+    public override uint Read()            => 0;
+    public override void Write(uint value) { }
+}

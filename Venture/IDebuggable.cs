@@ -48,9 +48,9 @@ public class NullDebuggable : IDebuggable
 
     public HashSet<uint> Brakpoints { get; } = new HashSet<uint>();
 
-    public event Action? Stopped;
+    public event Action? Stopped { add { } remove { } }
 
-    public event Action? EBreak;
+    public event Action? EBreak { add { } remove { } }
 
     public void Dispose()
     {

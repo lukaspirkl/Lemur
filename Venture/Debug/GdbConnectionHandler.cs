@@ -114,7 +114,7 @@ public partial class GdbConnectionHandler : ConnectionHandler
                         await output.WriteAsync(new byte[] { (byte)'+' });
 
 
-                        string packet = Encoding.ASCII.GetString(packetData);
+                        string packet = Encoding.ASCII.GetString(packetData!);
 
                         m_Logger.LogDebug("GDB>> {packet}", packet);
 
@@ -331,7 +331,7 @@ public partial class GdbConnectionHandler : ConnectionHandler
     }
 
     // Helper to find '$...#CC' in the buffer
-    private bool TryFindPacket(ReadOnlySequence<byte> buffer, out byte[] packetData, out SequencePosition consumedTo)
+    private bool TryFindPacket(ReadOnlySequence<byte> buffer, out byte[]? packetData, out SequencePosition consumedTo)
     {
         packetData = null;
         consumedTo = buffer.Start;

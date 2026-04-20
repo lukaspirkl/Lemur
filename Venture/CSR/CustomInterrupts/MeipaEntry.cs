@@ -26,9 +26,10 @@ public class MeipaEntry : CsrEntry, ICsrWindowed
     public uint GetWindow(int index) =>  ComputeWindow(index);
 
     /// <summary>Called by hardware peripherals to assert or deassert an IRQ line.</summary>
-    public void SetHardwarePending(int irq, bool pending)
+    public void SetHardwarePending(Irq irq, bool pending)
     {
-        if (pending) m_Hardware[irq >> 4] |=  (1u << (irq & 0xF));
-        else         m_Hardware[irq >> 4] &= ~(1u << (irq & 0xF));
+        int n = (int)irq;
+        if (pending) m_Hardware[n >> 4] |=  (1u << (n & 0xF));
+        else         m_Hardware[n >> 4] &= ~(1u << (n & 0xF));
     }
 }

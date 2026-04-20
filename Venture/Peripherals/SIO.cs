@@ -431,7 +431,7 @@ public class SIO : PeripheralBase, IGpioSource
     private void UpdateFifoIrq()
     {
         bool pending = m_Core1ToCore0Fifo.Count > 0 || m_FifoRoe || m_FifoWof;
-        m_CsrController.Meipa.SetHardwarePending(CsrController.SIO_IRQ_FIFO, pending);
+        m_CsrController.Meipa.SetHardwarePending(Irq.SIO_IRQ_FIFO, pending);
     }
 
     /// <summary>
@@ -467,7 +467,7 @@ public class SIO : PeripheralBase, IGpioSource
     /// </summary>
     private void UpdateDoorbellIrq()
     {
-        m_CsrController.Meipa.SetHardwarePending(CsrController.SIO_IRQ_BELL, m_DoorbellIn != 0);
+        m_CsrController.Meipa.SetHardwarePending(Irq.SIO_IRQ_BELL, m_DoorbellIn != 0);
     }
 
     /// <summary>

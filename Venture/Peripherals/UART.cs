@@ -7,7 +7,7 @@ namespace Venture.Peripherals;
 public class UART0 : UART
 {
     public UART0(uint baseAddress, string name, ILogger<UART0> logger, CsrController csrController)
-        : base(baseAddress, name, logger, csrController, CsrController.UART0_IRQ)
+        : base(baseAddress, name, logger, csrController, Irq.UART0_IRQ)
     {
     }
 }
@@ -15,7 +15,7 @@ public class UART0 : UART
 public class UART1 : UART
 {
     public UART1(uint baseAddress, string name, ILogger<UART1> logger, CsrController csrController)
-        : base(baseAddress, name, logger, csrController, CsrController.UART1_IRQ)
+        : base(baseAddress, name, logger, csrController, Irq.UART1_IRQ)
     {
     }
 }
@@ -99,7 +99,7 @@ public class UART : PeripheralBase
 
     private readonly CsrController m_CsrController;
     // IRQ number for this UART instance: 33 = UART0, 34 = UART1 (Table 94, §3.2).
-    private readonly int m_IrqNumber;
+    private readonly Irq m_IrqNumber;
 
     // ─── Receive timeout (RTIM) ───────────────────────────────────────────────
 
@@ -240,7 +240,7 @@ public class UART : PeripheralBase
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    public UART(uint baseAddress, string name, ILogger<UART> logger, CsrController csrController, int irqNumber)
+    public UART(uint baseAddress, string name, ILogger<UART> logger, CsrController csrController, Irq irqNumber)
         : base(baseAddress, name, logger)
     {
         m_CsrController = csrController;

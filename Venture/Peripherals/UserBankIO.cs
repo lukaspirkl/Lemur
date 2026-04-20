@@ -327,7 +327,7 @@ public class UserBankIO : PeripheralBase, IGpioSource
         for (int i = 0; i < IntrRegCount && !anyPending; i++)
             anyPending = ReadProc0Ints(i) != 0;
 
-        m_CsrController.Meipa.SetHardwarePending(CsrController.IO_IRQ_BANK0, anyPending);
+        m_CsrController.Meipa.SetHardwarePending(Irq.IO_IRQ_BANK0, anyPending);
     }
 }
 

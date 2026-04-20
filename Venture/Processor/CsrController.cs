@@ -1,6 +1,4 @@
-using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Metrics;
 using System.Reflection;
 
 namespace Venture.Processor.CsrExperiment;
@@ -972,7 +970,7 @@ public class MsleepEntry : CsrEntry
 // ═════════════════════════════════════════════════════════════════════════════
 
 [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicProperties)]
-public class CSR
+public class CsrController
 {
     // 3.1 — Standard M-mode Identification
     public MvendoridEntry        Mvendorid  { get; }
@@ -1032,7 +1030,7 @@ public class CSR
 
     public IEnumerable<CsrEntry> AllEntries => m_Entries.Values;
 
-    public CSR()
+    public CsrController()
     {
         // 3.1 — Identification (all read-only constants)
         Mvendorid  = new();

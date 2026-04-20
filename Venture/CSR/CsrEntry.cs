@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 
@@ -15,9 +16,26 @@ public abstract class CsrEntry
     protected CsrEntry(ushort address, string name, string group)
         => (Address, Name, Group) = (address, name, group);
 
-    public abstract uint Read();
-    public abstract void Write(uint value);
-    public virtual uint Peek() => Read();
+    public event Action? Changed;
+
+    protected abstract uint ReadCore();
+    protected abstract void WriteCore(uint value);
+    public virtual uint Peek() => ReadCore();
+
+    public uint Read() => ReadCore();
+
+    public void Write(uint value)
+    {
+        WriteCore(value);
+        Changed?.Invoke();
+    }
+
+    protected void Set<T>(ref T field, T value)
+    {
+        if (EqualityComparer<T>.Default.Equals(field, value)) return;
+        field = value;
+        Changed?.Invoke();
+    }
 
     public IEnumerable<EntryValue> GetValues()
     {

@@ -13,8 +13,8 @@ public class MeieaEntry : CsrEntry, ICsrWindowed
     public int  BitsPerItem   => 1;
     public uint PeekWindow(int index) => GetWindow(index);
 
-    public override uint Read()            => m_Windows[m_Index] << 16;
-    public override void Write(uint value) { m_Index = (int)(value & 0x1Fu); m_Windows[m_Index] = value >> 16 & 0xFFFF; }
+    protected override uint ReadCore()     => m_Windows[m_Index] << 16;
+    protected override void WriteCore(uint value) { m_Index = (int)(value & 0x1Fu); m_Windows[m_Index] = value >> 16 & 0xFFFF; }
 
     public bool IsEnabled(int irq)   => (m_Windows[irq >> 4] &  (1u << (irq & 0xF))) != 0;
     public uint GetWindow(int index) =>  m_Windows[index];

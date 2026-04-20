@@ -4,6 +4,6 @@ namespace Venture.Csr.TrapHandling;
 public class MstatushEntry : CsrEntry
 {
     public MstatushEntry() : base(0x310, "mstatush", "Trap") { }
-    public override uint Read()            => 0;
-    public override void Write(uint value) { }
+    protected override uint ReadCore()     => 0;
+    protected override void WriteCore(uint value) { }
 }

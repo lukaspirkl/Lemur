@@ -5,6 +5,6 @@ public class HardwiredZeroEntry : CsrEntry
 {
     public HardwiredZeroEntry(ushort address, string name, string group)
         : base(address, name, group) { }
-    public override uint Read()            => 0;
-    public override void Write(uint value) { }
+    protected override uint ReadCore()     => 0;
+    protected override void WriteCore(uint value) { }
 }

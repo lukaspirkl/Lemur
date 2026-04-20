@@ -5,7 +5,7 @@ public class UnimplementedCsrEntry : CsrEntry
 {
     public UnimplementedCsrEntry(ushort address, string name, string group = "Trap") : base(address, name, group) { }
     // Real emulator catches these and raises an illegal-instruction trap.
-    public override uint Read()            => throw new InvalidOperationException($"{Name}: illegal instruction");
-    public override void Write(uint value) => throw new InvalidOperationException($"{Name}: illegal instruction");
+    protected override uint ReadCore()     => throw new InvalidOperationException($"{Name}: illegal instruction");
+    protected override void WriteCore(uint value) => throw new InvalidOperationException($"{Name}: illegal instruction");
     public override uint Peek() => 0;
 }

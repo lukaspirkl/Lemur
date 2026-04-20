@@ -9,9 +9,9 @@ public class PmpcfgEntry : CsrEntry
     public PmpcfgEntry(ushort address, int index)
         : base(address, $"pmpcfg{index}", "Memory Protection") { }
 
-    public override uint Read() => m_Value;
+    protected override uint ReadCore() => m_Value;
 
-    public override void Write(uint value)
+    protected override void WriteCore(uint value)
     {
         uint result = 0;
         for (int i = 0; i < 4; i++)

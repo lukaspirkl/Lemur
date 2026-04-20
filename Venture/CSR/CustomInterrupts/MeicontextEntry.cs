@@ -12,23 +12,30 @@ public class MeicontextEntry : CsrEntry
     // preempt is 5 bits (bits 20:16); ppreempt/pppreempt are 4 bits each (bits 27:24, 31:28).
     // Values > 15 in preempt (e.g. 16 = "disable all") are truncated when shifted to ppreempt.
     // Software must save/restore meicontext to a memory stack for arbitrary nesting.
+    private byte m_Pppreempt;
+    private byte m_Ppreempt;
+    private byte m_Preempt;
+    private bool m_NoIrq;
+    private uint m_Irq;
+    private bool m_Mreteirq;
+
     [EntryValue("31:28", "previous-previous preemption priority")]
-    public byte Pppreempt { get; private set; }
+    public byte Pppreempt { get => m_Pppreempt; private set => Set(ref m_Pppreempt, value); }
 
     [EntryValue("27:24", "previous preemption priority")]
-    public byte Ppreempt  { get; private set; }
+    public byte Ppreempt  { get => m_Ppreempt;  private set => Set(ref m_Ppreempt,  value); }
 
     [EntryValue("20:16", "current preemption priority")]
-    public byte Preempt   { get; private set; }
+    public byte Preempt   { get => m_Preempt;   private set => Set(ref m_Preempt,   value); }
 
     [EntryValue("15",   "not in interrupt context")]
-    public bool NoIrq    { get; private set; }
+    public bool NoIrq    { get => m_NoIrq;    private set => Set(ref m_NoIrq,    value); }
 
     [EntryValue("12:4", "current IRQ number")]
-    public uint Irq      { get; private set; }
+    public uint Irq      { get => m_Irq;      private set => Set(ref m_Irq,      value); }
 
     [EntryValue("0",    "restore priority stack on mret")]
-    public bool Mreteirq { get; private set; }
+    public bool Mreteirq { get => m_Mreteirq; private set => Set(ref m_Mreteirq, value); }
 
     // mtiesave (bit 3) and msiesave (bit 2) are pass-through reads of mie.Mtie/Msie.
     // Because the emulator calls Get() before Set() in a csrrs, Read() captures the
@@ -36,33 +43,33 @@ public class MeicontextEntry : CsrEntry
 
     public MeicontextEntry(MieEntry mie) : base(0xBE5, "meicontext", "Custom IRQ")
     {
-        m_Mie = mie;
-        NoIrq = true; // reset value: not in interrupt
+        m_Mie   = mie;
+        m_NoIrq = true; // reset value: not in interrupt
     }
 
-    public override uint Read()
+    protected override uint ReadCore()
     {
         uint v = 0;
-        v |= (uint)(Pppreempt & 0xFu) << 28;
-        v |= (uint)(Ppreempt  & 0xFu) << 24;
-        v |= (uint)(Preempt  & 0x1Fu) << 16;
-        if (NoIrq)       v |= 1u << 15;
-        v |= (Irq & 0x1FFu) << 4;
+        v |= (uint)(m_Pppreempt & 0xFu) << 28;
+        v |= (uint)(m_Ppreempt  & 0xFu) << 24;
+        v |= (uint)(m_Preempt  & 0x1Fu) << 16;
+        if (m_NoIrq)     v |= 1u << 15;
+        v |= (m_Irq & 0x1FFu) << 4;
         if (m_Mie.Mtie)  v |= 1u << 3;  // mtiesave: live read of mie.Mtie
         if (m_Mie.Msie)  v |= 1u << 2;  // msiesave: live read of mie.Msie
         // bit 1 (clearts): always 0 on read (write-only self-clearing)
-        if (Mreteirq)    v |= 1u;
+        if (m_Mreteirq)  v |= 1u;
         return v;
     }
 
-    public override void Write(uint value)
+    protected override void WriteCore(uint value)
     {
-        Pppreempt = (byte)(value >> 28 & 0xFu);
-        Ppreempt  = (byte)(value >> 24 & 0xFu);
-        Preempt   = (byte)(value >> 16 & 0x1Fu);
-        NoIrq     = (value >> 15 & 1u) != 0;
-        Irq       =  value >>  4 & 0x1FFu;
-        Mreteirq  = (value        & 1u) != 0;
+        m_Pppreempt = (byte)(value >> 28 & 0xFu);
+        m_Ppreempt  = (byte)(value >> 24 & 0xFu);
+        m_Preempt   = (byte)(value >> 16 & 0x1Fu);
+        m_NoIrq     = (value >> 15 & 1u) != 0;
+        m_Irq       =  value >>  4 & 0x1FFu;
+        m_Mreteirq  = (value        & 1u) != 0;
 
         // mtiesave/msiesave writes are ORed into mie; clearts takes precedence if both written.
         if ((value >> 3 & 1u) != 0) m_Mie.Mtie = true;

@@ -10,6 +10,6 @@ public class MinstretEntry : CsrEntry
 
     public MinstretEntry() : base(0xb02, "minstret", "Performance") { }
 
-    public override uint Read()            => (uint)m_Counter.Value;
-    public override void Write(uint value) => m_Counter.Value = (m_Counter.Value & 0xFFFF_FFFF_0000_0000UL) | value;
+    protected override uint ReadCore()     => (uint)m_Counter.Value;
+    protected override void WriteCore(uint value) => m_Counter.Value = (m_Counter.Value & 0xFFFF_FFFF_0000_0000UL) | value;
 }

@@ -13,8 +13,8 @@ public class McauseEntry : CsrEntry
 
     public McauseEntry() : base(0x342, "mcause", "Trap") { }
 
-    public override uint Read()            => m_Value;
+    protected override uint ReadCore()     => m_Value;
 
     // Bit 31 + 5 LSBs cover all Hazard3 exception and interrupt causes.
-    public override void Write(uint value) => m_Value = value & 0x8000_001Fu;
+    protected override void WriteCore(uint value) => m_Value = value & 0x8000_001Fu;
 }

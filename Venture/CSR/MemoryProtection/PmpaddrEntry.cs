@@ -11,6 +11,6 @@ public class PmpaddrEntry : CsrEntry
     public PmpaddrEntry(ushort address, int index)
         : base(address, $"pmpaddr{index}", "Memory Protection") { }
 
-    public override uint Read()            => m_Value;
-    public override void Write(uint value) => m_Value = value & 0x3FFF_FFFFu;
+    protected override uint ReadCore()     => m_Value;
+    protected override void WriteCore(uint value) => m_Value = value & 0x3FFF_FFFFu;
 }

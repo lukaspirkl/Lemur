@@ -28,7 +28,7 @@ public class MisaEntry : CsrEntry
         U = hasUMode; M = hasMExt; C = hasCExt; A = hasAExt; X = hasCustom;
     }
 
-    public override uint Read()
+    protected override uint ReadCore()
     {
         uint v = 1u << 30; // MXL = 1
         if (X) v |= 1u << 23;
@@ -39,5 +39,5 @@ public class MisaEntry : CsrEntry
         return v;
     }
 
-    public override void Write(uint value) { }
+    protected override void WriteCore(uint value) { }
 }

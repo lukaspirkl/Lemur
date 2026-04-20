@@ -10,6 +10,6 @@ public class McycleEntry : CsrEntry
 
     public McycleEntry() : base(0xb00, "mcycle", "Performance") { }
 
-    public override uint Read()            => (uint)m_Counter.Value;
-    public override void Write(uint value) => m_Counter.Value = (m_Counter.Value & 0xFFFF_FFFF_0000_0000UL) | value;
+    protected override uint ReadCore()     => (uint)m_Counter.Value;
+    protected override void WriteCore(uint value) => m_Counter.Value = (m_Counter.Value & 0xFFFF_FFFF_0000_0000UL) | value;
 }

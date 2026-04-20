@@ -14,6 +14,6 @@ public class MvendoridEntry : CsrEntry
     public MvendoridEntry(uint value = 0) : base(0xf11, "mvendorid", "Identification")
         => m_Value = value;
 
-    public override uint Read()            => m_Value;
-    public override void Write(uint value) { }
+    protected override uint ReadCore()     => m_Value;
+    protected override void WriteCore(uint value) { }
 }

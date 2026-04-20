@@ -11,6 +11,6 @@ public class McyclehEntry : CsrEntry
     public McyclehEntry(McycleEntry mcycle) : base(0xb80, "mcycleh", "Performance")
         => m_Counter = mcycle.m_Counter;
 
-    public override uint Read()            => (uint)(m_Counter.Value >> 32);
-    public override void Write(uint value) => m_Counter.Value = ((ulong)value << 32) | (uint)m_Counter.Value;
+    protected override uint ReadCore()     => (uint)(m_Counter.Value >> 32);
+    protected override void WriteCore(uint value) => m_Counter.Value = ((ulong)value << 32) | (uint)m_Counter.Value;
 }

@@ -11,6 +11,6 @@ public class MconfigptrEntry : CsrEntry
     public MconfigptrEntry(uint value = 0) : base(0xf15, "mconfigptr", "Identification")
         => m_Value = value;
 
-    public override uint Read()            => m_Value;
-    public override void Write(uint value) { }
+    protected override uint ReadCore()     => m_Value;
+    protected override void WriteCore(uint value) { }
 }

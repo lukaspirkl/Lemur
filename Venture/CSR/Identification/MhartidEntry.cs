@@ -11,6 +11,6 @@ public class MhartidEntry : CsrEntry
     public MhartidEntry(uint hartId = 0) : base(0xf14, "mhartid", "Identification")
         => m_Value = hartId;
 
-    public override uint Read()            => m_Value;
-    public override void Write(uint value) { }
+    protected override uint ReadCore()     => m_Value;
+    protected override void WriteCore(uint value) { }
 }

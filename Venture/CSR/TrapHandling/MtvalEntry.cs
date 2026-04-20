@@ -4,6 +4,6 @@ namespace Venture.Csr.TrapHandling;
 public class MtvalEntry : CsrEntry
 {
     public MtvalEntry() : base(0x343, "mtval", "Trap") { }
-    public override uint Read()            => 0;
-    public override void Write(uint value) { }
+    protected override uint ReadCore()     => 0;
+    protected override void WriteCore(uint value) { }
 }

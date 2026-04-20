@@ -24,11 +24,14 @@ public class MipEntry : CsrEntry
         }
     }
 
+    private bool m_Mtip;
+    private bool m_Msip;
+
     [EntryValue("7",  "timer interrupt pending")]
-    public bool Mtip { get; set; }
+    public bool Mtip { get => m_Mtip; set => Set(ref m_Mtip, value); }
 
     [EntryValue("3",  "software interrupt pending")]
-    public bool Msip { get; set; }
+    public bool Msip { get => m_Msip; set => Set(ref m_Msip, value); }
 
     public MipEntry(MeicontextEntry meicontext, MeipaEntry meipa, MeieaEntry meiea, MeipraEntry meipra) : base(0x344, "mip", "Trap")
     {
@@ -38,7 +41,7 @@ public class MipEntry : CsrEntry
         m_Meipra = meipra;
     }
 
-    public override uint Read()
+    protected override uint ReadCore()
     {
         uint v = 0;
         if (Meip) v |= 1u << 11;
@@ -47,5 +50,5 @@ public class MipEntry : CsrEntry
         return v;
     }
 
-    public override void Write(uint value) { } // writable bits exist only for S/U modes
+    protected override void WriteCore(uint value) { } // writable bits exist only for S/U modes
 }

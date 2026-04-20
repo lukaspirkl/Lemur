@@ -14,8 +14,8 @@ public class MeipraEntry : CsrEntry, ICsrWindowed
     public int  BitsPerItem   => 4;
     public uint PeekWindow(int index) => m_Windows[index];
 
-    public override uint Read()            => m_Windows[m_Index] << 16;
-    public override void Write(uint value) { m_Index = (int)(value & 0x7Fu); m_Windows[m_Index] = value >> 16 & 0xFFFF; }
+    protected override uint ReadCore()     => m_Windows[m_Index] << 16;
+    protected override void WriteCore(uint value) { m_Index = (int)(value & 0x7Fu); m_Windows[m_Index] = value >> 16 & 0xFFFF; }
 
     public byte GetPriority(int irq) => (byte)(m_Windows[irq >> 2] >> ((irq & 3) << 2) & 0xF);
 }

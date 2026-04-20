@@ -19,8 +19,8 @@ public class MeipaEntry : CsrEntry, ICsrWindowed
 
     private uint ComputeWindow(int i) => m_Hardware[i] | m_Meifa.GetWindow(i);
 
-    public override uint Read()            => ComputeWindow(m_Index) << 16;
-    public override void Write(uint value) => m_Index = (int)(value & 0x1Fu); // index-only; window is read-only
+    protected override uint ReadCore()     => ComputeWindow(m_Index) << 16;
+    protected override void WriteCore(uint value) => m_Index = (int)(value & 0x1Fu); // index-only; window is read-only
 
     public bool IsPending(int irq)   => (ComputeWindow(irq >> 4) & (1u << (irq & 0xF))) != 0;
     public uint GetWindow(int index) =>  ComputeWindow(index);

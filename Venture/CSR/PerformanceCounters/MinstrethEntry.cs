@@ -11,6 +11,6 @@ public class MinstrethEntry : CsrEntry
     public MinstrethEntry(MinstretEntry minstret) : base(0xb82, "minstreth", "Performance")
         => m_Counter = minstret.m_Counter;
 
-    public override uint Read()            => (uint)(m_Counter.Value >> 32);
-    public override void Write(uint value) => m_Counter.Value = ((ulong)value << 32) | (uint)m_Counter.Value;
+    protected override uint ReadCore()     => (uint)(m_Counter.Value >> 32);
+    protected override void WriteCore(uint value) => m_Counter.Value = ((ulong)value << 32) | (uint)m_Counter.Value;
 }

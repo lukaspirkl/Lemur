@@ -11,6 +11,6 @@ public class MimpidEntry : CsrEntry
     public MimpidEntry(uint value = 0) : base(0xf13, "mimpid", "Identification")
         => m_Value = value;
 
-    public override uint Read()            => m_Value;
-    public override void Write(uint value) { }
+    protected override uint ReadCore()     => m_Value;
+    protected override void WriteCore(uint value) { }
 }

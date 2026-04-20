@@ -8,6 +8,6 @@ public class MarchidEntry : CsrEntry
 
     public MarchidEntry() : base(0xf12, "marchid", "Identification") { }
 
-    public override uint Read()            => 0x1bu; // bit 31 = 0 (open-source)
-    public override void Write(uint value) { }
+    protected override uint ReadCore()     => 0x1bu; // bit 31 = 0 (open-source)
+    protected override void WriteCore(uint value) { }
 }

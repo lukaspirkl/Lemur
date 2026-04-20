@@ -4,7 +4,7 @@ namespace Venture.Csr.Triggers;
 public class TselectEntry : CsrEntry
 {
     public TselectEntry() : base(0x7a0, "tselect", "Trigger") { }
-    public override uint Read()            => 0;
+    protected override uint ReadCore()     => 0;
     public override uint Peek()            => 0;
-    public override void Write(uint value) => throw new InvalidOperationException("tselect: illegal instruction");
+    protected override void WriteCore(uint value) => throw new InvalidOperationException("tselect: illegal instruction");
 }

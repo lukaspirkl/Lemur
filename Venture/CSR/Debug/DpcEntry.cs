@@ -9,6 +9,6 @@ public class DpcEntry : CsrEntry
     public uint Pc => m_Value;
 
     public DpcEntry() : base(0x7b1, "dpc", "Debug") { }
-    public override uint Read()            => m_Value;
-    public override void Write(uint value) => m_Value = value & ~0x1u; // bit 0 hardwired 0
+    protected override uint ReadCore()     => m_Value;
+    protected override void WriteCore(uint value) => m_Value = value & ~0x1u; // bit 0 hardwired 0
 }

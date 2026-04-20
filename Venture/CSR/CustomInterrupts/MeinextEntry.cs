@@ -41,7 +41,7 @@ public class MeinextEntry : CsrEntry
         return best == -1 ? (true, 0) : (false, best);
     }
 
-    public override uint Read()
+    protected override uint ReadCore()
     {
         var (noIrq, irq) = FindNext();
         // meifa force bit is cleared whenever meinext is read and that IRQ is returned.
@@ -59,7 +59,7 @@ public class MeinextEntry : CsrEntry
         // bit 0 (update) is write-only self-clearing, always reads 0
     }
 
-    public override void Write(uint value)
+    protected override void WriteCore(uint value)
     {
         if ((value & 1u) == 0) return; // only the update bit has effect
         var (noIrq, irq) = FindNext();

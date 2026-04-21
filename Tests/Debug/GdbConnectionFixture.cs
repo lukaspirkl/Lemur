@@ -4,7 +4,7 @@ using Microsoft.Extensions.Hosting;
 using System.IO.Pipelines;
 using System.Text;
 using System.Text.RegularExpressions;
-using Venture.Debug;
+using Lemur.Debug;
 
 namespace Tests.Debug;
 

@@ -3,7 +3,7 @@ using ELFSharp.ELF.Sections;
 using ELFSharp.ELF.Segments;
 using Microsoft.Extensions.Logging;
 using Tests;
-using Venture;
+using Lemur;
 
 namespace Tests;
 

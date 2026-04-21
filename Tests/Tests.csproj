@@ -19,11 +19,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Using Include="Xunit" />
+    <ProjectReference Include="..\Lemur\Lemur.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Venture\Venture.csproj" />
+    <Using Include="Xunit" />
   </ItemGroup>
 
   <ItemGroup>

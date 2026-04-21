@@ -1,9 +1,0 @@
-<Solution>
-  <Folder Name="/Solution Items/">
-    <File Path=".editorconfig" />
-  </Folder>
-  <Project Path="GdbDiff/GdbDiff.csproj" />
-  <Project Path="Tests/Tests.csproj" />
-  <Project Path="Venture/Venture.csproj" />
-  <Project Path="VentureUI/VentureUI.csproj" />
-</Solution>

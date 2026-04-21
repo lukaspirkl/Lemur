@@ -1,7 +1,7 @@
 ﻿using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
-using Venture.Debug;
+using Lemur.Debug;
 
 namespace GdbDiff;
 

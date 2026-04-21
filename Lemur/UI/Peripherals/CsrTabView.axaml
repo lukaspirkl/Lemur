@@ -1,0 +1,52 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemur.UI"
+             mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="600"
+             x:Class="Lemur.UI.CsrTabView"
+             x:DataType="vm:CsrTabViewModel">
+
+    <TabControl ItemsSource="{Binding Groups}"
+                SelectedItem="{Binding SelectedGroup}">
+        <TabControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:CsrGroupViewModel">
+                <TextBlock Text="{Binding GroupName}"/>
+            </DataTemplate>
+        </TabControl.ItemTemplate>
+        <TabControl.ContentTemplate>
+            <DataTemplate x:DataType="vm:CsrGroupViewModel">
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Entries}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:CsrEntryViewModel">
+                                <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" Margin="0,2">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Name}" Width="120" FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding Address}" Width="60" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                            <TextBlock Text="{Binding Value}" FontFamily="Courier New"/>
+                                        </StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Fields}" Margin="8,0,0,2">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:CsrFieldViewModel">
+                                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                                        <TextBlock Text="{Binding Name}" Width="112" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                                        <TextBlock Text="{Binding Bits}" Width="52" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                                        <TextBlock Text="{Binding Value}" Width="60" FontFamily="Courier New"/>
+                                                        <TextBlock Text="{Binding Description}" Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DataTemplate>
+        </TabControl.ContentTemplate>
+    </TabControl>
+
+</UserControl>

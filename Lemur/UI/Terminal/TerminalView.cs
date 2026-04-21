@@ -1,0 +1,372 @@
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Text;
+using Avalonia;
+using Avalonia.Controls;
+using Avalonia.Input;
+using Avalonia.Media;
+using Avalonia.Threading;
+
+namespace Lemur.UI.Terminal;
+
+public class TerminalView : Control
+{
+    // --- Avalonia properties ---
+
+    public static readonly StyledProperty<TerminalEmulator?> EmulatorProperty =
+        AvaloniaProperty.Register<TerminalView, TerminalEmulator?>(nameof(Emulator));
+
+    public static readonly StyledProperty<int> ScrollOffsetProperty =
+        AvaloniaProperty.Register<TerminalView, int>(nameof(ScrollOffset), defaultBindingMode: Avalonia.Data.BindingMode.TwoWay);
+
+    public static readonly DirectProperty<TerminalView, int> MaxScrollOffsetProperty =
+        AvaloniaProperty.RegisterDirect<TerminalView, int>(nameof(MaxScrollOffset), o => o.MaxScrollOffset);
+
+    public TerminalEmulator? Emulator
+    {
+        get => GetValue(EmulatorProperty);
+        set => SetValue(EmulatorProperty, value);
+    }
+
+    public int ScrollOffset
+    {
+        get => GetValue(ScrollOffsetProperty);
+        set => SetValue(ScrollOffsetProperty, value);
+    }
+
+    private int m_MaxScrollOffset;
+    public int MaxScrollOffset
+    {
+        get => m_MaxScrollOffset;
+        private set => SetAndRaise(MaxScrollOffsetProperty, ref m_MaxScrollOffset, value);
+    }
+
+    // --- Font / cell metrics ---
+
+    private const double FONT_SIZE = 14;
+    private static readonly FontFamily m_MonospaceFamily =
+        new("Cascadia Code,Cascadia Mono,Consolas,Menlo,Monospace");
+
+    private double m_CellWidth;
+    private double m_CellHeight;
+
+    // --- Cursor blink ---
+
+    private readonly DispatcherTimer m_BlinkTimer;
+    private bool m_CursorBlink = true; // true = cursor visible during blink cycle
+
+    // --- ANSI color palette ---
+
+    private static readonly Color[] m_AnsiPalette =
+    [
+        Color.FromRgb(12, 12, 12),    // Black
+        Color.FromRgb(197, 15, 31),   // Red
+        Color.FromRgb(19, 161, 14),   // Green
+        Color.FromRgb(193, 156, 0),   // Yellow
+        Color.FromRgb(0, 55, 218),    // Blue
+        Color.FromRgb(136, 23, 152),  // Magenta
+        Color.FromRgb(58, 150, 221),  // Cyan
+        Color.FromRgb(204, 204, 204), // White
+        Color.FromRgb(118, 118, 118), // BrightBlack
+        Color.FromRgb(231, 72, 86),   // BrightRed
+        Color.FromRgb(22, 198, 12),   // BrightGreen
+        Color.FromRgb(249, 241, 165), // BrightYellow
+        Color.FromRgb(59, 120, 255),  // BrightBlue
+        Color.FromRgb(180, 0, 158),   // BrightMagenta
+        Color.FromRgb(97, 214, 214),  // BrightCyan
+        Color.FromRgb(242, 242, 242), // BrightWhite
+    ];
+
+    private static readonly Color m_DefaultFgColor = Color.FromRgb(242, 242, 242);
+    private static readonly Color m_DefaultBgColor = Color.FromRgb(12, 12, 12);
+
+    private static readonly IBrush m_DefaultBgBrush = new SolidColorBrush(m_DefaultBgColor);
+    private static readonly IBrush m_DefaultFgBrush = new SolidColorBrush(m_DefaultFgColor);
+    private static readonly IBrush m_CursorBrush = new SolidColorBrush(Colors.White);
+
+    // --- Keyboard input ---
+
+    public event Action<byte[]>? Input;
+
+    private static readonly Dictionary<Key, byte[]> m_KeySequences = new()
+    {
+        [Key.Up]       = "\x1B[A"u8.ToArray(),
+        [Key.Down]     = "\x1B[B"u8.ToArray(),
+        [Key.Right]    = "\x1B[C"u8.ToArray(),
+        [Key.Left]     = "\x1B[D"u8.ToArray(),
+        [Key.Home]     = "\x1B[H"u8.ToArray(),
+        [Key.End]      = "\x1B[F"u8.ToArray(),
+        [Key.Delete]   = "\x1B[3~"u8.ToArray(),
+        [Key.PageUp]   = "\x1B[5~"u8.ToArray(),
+        [Key.PageDown] = "\x1B[6~"u8.ToArray(),
+        [Key.F1]       = "\x1BOP"u8.ToArray(),
+        [Key.F2]       = "\x1BOQ"u8.ToArray(),
+        [Key.F3]       = "\x1BOR"u8.ToArray(),
+        [Key.F4]       = "\x1BOS"u8.ToArray(),
+        [Key.F5]       = "\x1B[15~"u8.ToArray(),
+        [Key.F6]       = "\x1B[17~"u8.ToArray(),
+        [Key.F7]       = "\x1B[18~"u8.ToArray(),
+        [Key.F8]       = "\x1B[19~"u8.ToArray(),
+        [Key.F9]       = "\x1B[20~"u8.ToArray(),
+        [Key.F10]      = "\x1B[21~"u8.ToArray(),
+        [Key.F11]      = "\x1B[23~"u8.ToArray(),
+        [Key.F12]      = "\x1B[24~"u8.ToArray(),
+        [Key.Tab]      = [(byte)'\t'],
+        [Key.Escape]   = [0x1B],
+        [Key.Return]   = [(byte)'\r'],
+        [Key.Back]     = [0x7F],
+    };
+
+    public TerminalView()
+    {
+        MeasureCellSize();
+        ClipToBounds = true;
+        Focusable = true;
+
+        m_BlinkTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(530) };
+        m_BlinkTimer.Tick += (_, _) =>
+        {
+            m_CursorBlink = !m_CursorBlink;
+            InvalidateVisual();
+        };
+        m_BlinkTimer.Start();
+    }
+
+    protected override void OnPointerPressed(PointerPressedEventArgs e)
+    {
+        base.OnPointerPressed(e);
+        Focus();
+    }
+
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+
+        // Ctrl+X → control character (e.g. Ctrl+C = 0x03)
+        if (e.KeyModifiers == KeyModifiers.Control &&
+            e.Key >= Key.A && e.Key <= Key.Z)
+        {
+            int code = e.Key - Key.A + 1;
+            Input?.Invoke([(byte)code]);
+            e.Handled = true;
+            return;
+        }
+
+        if (m_KeySequences.TryGetValue(e.Key, out var seq))
+        {
+            Input?.Invoke(seq);
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnTextInput(TextInputEventArgs e)
+    {
+        base.OnTextInput(e);
+        if (!string.IsNullOrEmpty(e.Text))
+        {
+            Input?.Invoke(Encoding.UTF8.GetBytes(e.Text));
+            e.Handled = true;
+        }
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == EmulatorProperty)
+        {
+            if (change.OldValue is TerminalEmulator old)
+                old.Changed -= OnEmulatorChanged;
+
+            if (change.NewValue is TerminalEmulator emulator)
+            {
+                emulator.Changed += OnEmulatorChanged;
+                ResizeEmulator();
+            }
+
+            InvalidateVisual();
+        }
+        else if (change.Property == ScrollOffsetProperty)
+        {
+            if (Emulator != null)
+                Emulator.ScrollOffset = ScrollOffset;
+            InvalidateVisual();
+        }
+    }
+
+    private void OnEmulatorChanged()
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (Emulator != null)
+            {
+                MaxScrollOffset = Emulator.MaxScrollOffset;
+                // Keep ScrollOffset in bounds (scrollback may have grown)
+                var clamped = Math.Clamp(ScrollOffset, 0, MaxScrollOffset);
+                if (clamped != ScrollOffset) ScrollOffset = clamped;
+            }
+            InvalidateVisual();
+        });
+    }
+
+    protected override void OnSizeChanged(SizeChangedEventArgs e)
+    {
+        base.OnSizeChanged(e);
+        ResizeEmulator();
+    }
+
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+        InvalidateVisual();
+    }
+
+    private void ResizeEmulator()
+    {
+        if (Emulator == null || m_CellWidth == 0 || m_CellHeight == 0)
+            return;
+        if (Bounds.Width == 0 || Bounds.Height == 0)
+            return;
+
+        int cols = Math.Max(1, (int)(Bounds.Width / m_CellWidth));
+        int rows = Math.Max(1, (int)(Bounds.Height / m_CellHeight));
+        Emulator.Resize(rows, cols);
+    }
+
+    private void MeasureCellSize()
+    {
+        var ft = new FormattedText(
+            "M",
+            CultureInfo.InvariantCulture,
+            FlowDirection.LeftToRight,
+            new Typeface(m_MonospaceFamily),
+            FONT_SIZE,
+            m_DefaultFgBrush);
+
+        m_CellWidth = ft.Width;
+        m_CellHeight = ft.Height;
+    }
+
+    // --- Scroll input ---
+
+    protected override void OnPointerWheelChanged(PointerWheelEventArgs e)
+    {
+        base.OnPointerWheelChanged(e);
+        int delta = e.Delta.Y > 0 ? 3 : -3;
+        ScrollOffset = Math.Clamp(ScrollOffset - delta, 0, MaxScrollOffset);
+    }
+
+    // --- Rendering ---
+
+    public override void Render(DrawingContext ctx)
+    {
+        var emulator = Emulator;
+
+        // Fill background
+        ctx.DrawRectangle(m_DefaultBgBrush, null, new Rect(Bounds.Size));
+
+        if (emulator == null || m_CellWidth == 0 || m_CellHeight == 0)
+            return;
+
+        int rows = emulator.Rows;
+        int cols = emulator.Cols;
+
+        var runChars = new StringBuilder(cols);
+
+        for (int row = 0; row < rows; row++)
+        {
+            double y = row * m_CellHeight;
+            int runStart = 0;
+            var runFg = AnsiColor.Default;
+            var runBg = AnsiColor.Default;
+            var runAttrs = TextAttributes.None;
+            runChars.Clear();
+
+            for (int col = 0; col <= cols; col++)
+            {
+                // Sentinel empty cell at col==cols flushes the last run
+                TerminalCell cell = col < cols ? emulator.GetCell(row, col) : TerminalCell.Empty;
+                var (fg, bg) = ResolveColors(cell);
+
+                bool styleBreak = fg != runFg || bg != runBg || cell.Attributes != runAttrs;
+
+                if (col < cols && (runChars.Length == 0 || !styleBreak))
+                {
+                    if (runChars.Length == 0) { runFg = fg; runBg = bg; runAttrs = cell.Attributes; }
+                    runChars.Append(cell.Char == '\0' ? ' ' : cell.Char);
+                    continue;
+                }
+
+                // Flush accumulated run
+                if (runChars.Length > 0)
+                {
+                    double x = runStart * m_CellWidth;
+                    double runWidth = runChars.Length * m_CellWidth;
+
+                    if (runBg != AnsiColor.Default)
+                        ctx.DrawRectangle(BrushFor(runBg, background: true), null,
+                            new Rect(x, y, runWidth, m_CellHeight));
+
+                    var typeface = (runAttrs & TextAttributes.Bold) != 0
+                        ? new Typeface(m_MonospaceFamily, weight: FontWeight.Bold)
+                        : new Typeface(m_MonospaceFamily);
+
+                    var ft = new FormattedText(
+                        runChars.ToString(),
+                        CultureInfo.InvariantCulture,
+                        FlowDirection.LeftToRight,
+                        typeface,
+                        FONT_SIZE,
+                        BrushFor(runFg, background: false));
+
+                    ctx.DrawText(ft, new Point(x, y));
+
+                    if ((runAttrs & TextAttributes.Underline) != 0)
+                    {
+                        double uy = y + m_CellHeight - 2;
+                        ctx.DrawLine(new Pen(BrushFor(runFg, background: false), 1),
+                            new Point(x, uy), new Point(x + runWidth, uy));
+                    }
+                }
+
+                // Start new run at current cell
+                if (col < cols)
+                {
+                    runStart = col;
+                    runFg = fg;
+                    runBg = bg;
+                    runAttrs = cell.Attributes;
+                    runChars.Clear();
+                    runChars.Append(cell.Char == '\0' ? ' ' : cell.Char);
+                }
+            }
+        }
+
+        // Draw cursor
+        if (emulator.CursorVisible && m_CursorBlink && emulator.ScrollOffset == 0)
+        {
+            double cx = emulator.CursorCol * m_CellWidth;
+            double cy = emulator.CursorRow * m_CellHeight;
+            ctx.DrawRectangle(null, new Pen(m_CursorBrush, 1.5),
+                new Rect(cx, cy, m_CellWidth, m_CellHeight));
+        }
+    }
+
+    private static (AnsiColor fg, AnsiColor bg) ResolveColors(TerminalCell cell)
+    {
+        var fg = cell.Foreground;
+        var bg = cell.Background;
+        if ((cell.Attributes & TextAttributes.Inverse) != 0)
+            (fg, bg) = (bg, fg);
+        return (fg, bg);
+    }
+
+    private static IBrush BrushFor(AnsiColor color, bool background)
+    {
+        if (color == AnsiColor.Default)
+            return background ? m_DefaultBgBrush : m_DefaultFgBrush;
+
+        return new SolidColorBrush(m_AnsiPalette[(int)color - 1]);
+    }
+}

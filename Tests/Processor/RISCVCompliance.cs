@@ -1,7 +1,7 @@
 ﻿using Microsoft.Extensions.Logging.Testing;
-using Venture;
-using Venture.Csr;
-using Venture.Processor;
+using Lemur;
+using Lemur.Csr;
+using Lemur.Processor;
 
 namespace Tests.Processor;
 

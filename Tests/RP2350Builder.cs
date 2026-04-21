@@ -1,8 +1,8 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Testing;
-using Venture;
-using Venture.Debug;
+using Lemur;
+using Lemur.Debug;
 
 namespace Tests;
 

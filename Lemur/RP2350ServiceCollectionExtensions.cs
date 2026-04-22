@@ -1,4 +1,5 @@
 ﻿using Lemur.Csr;
+using Lemur.ExternalPeripherals;
 using Lemur.Peripherals;
 using Lemur.Processor;
 using Microsoft.Extensions.DependencyInjection;

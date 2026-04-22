@@ -1,4 +1,5 @@
-﻿using Lemur.Processor;
+﻿using Lemur.Peripherals;
+using Lemur.Processor;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
@@ -12,9 +13,14 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 {
     private readonly Hazard3Processor m_Processor;
     private readonly RegistersWrapper m_Registers;
+    private readonly UserBankIO m_UserBankIO;
 
     private bool m_Running = false;
     private Task? m_Run;
+
+    private ulong m_StepIndex;
+    private readonly GpioPin?[] m_GpioPins = new GpioPin?[48];
+    private readonly bool[] m_GpioSnapshot = new bool[48];
 
     public HashSet<uint> Brakpoints { get; } = new HashSet<uint>();
 
@@ -26,13 +32,17 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         remove { m_Processor.EBreak -= value; }
     }
 
-    public RP2350Emulator(Hazard3Processor processor, IBusFabric busFabric)
+    public RP2350Emulator(Hazard3Processor processor, IBusFabric busFabric, UserBankIO userBankIO)
     {
         m_Processor = processor;
         m_Processor.Memory = busFabric;
         m_Registers = new RegistersWrapper(processor);
+        m_UserBankIO = userBankIO;
         Reset();
     }
+
+    public IGpioPin GetPin(int number) =>
+        m_GpioPins[number] ??= new GpioPin(number, m_UserBankIO, () => m_StepIndex);
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -48,7 +58,33 @@ public class RP2350Emulator : BackgroundService, IDebuggable
             throw new InvalidOperationException("Already running");
         }
 
+        StepOnce();
+    }
+
+    private void StepOnce()
+    {
+        TakeGpioSnapshot();
         m_Processor.Step();
+        m_StepIndex++;
+        FireGpioChanges();
+    }
+
+    private void TakeGpioSnapshot()
+    {
+        for (int i = 0; i < 48; i++)
+            m_GpioSnapshot[i] = m_UserBankIO.GetPinValue(i) == GpioValue.High;
+    }
+
+    private void FireGpioChanges()
+    {
+        for (int i = 0; i < 48; i++)
+        {
+            var pin = m_GpioPins[i];
+            if (pin == null) continue;
+            bool newVal = m_UserBankIO.GetPinValue(i) == GpioValue.High;
+            if (newVal != m_GpioSnapshot[i])
+                pin.NotifyChanged(newVal);
+        }
     }
 
     public void Run()
@@ -64,7 +100,7 @@ public class RP2350Emulator : BackgroundService, IDebuggable
             // TODO: This is wrong! It will swallow exception until Stop() is called!
             while (m_Running)
             {
-                m_Processor.Step();
+                StepOnce();
                 if (Brakpoints.Contains(m_Processor.PC))
                 {
                     break;
@@ -79,7 +115,7 @@ public class RP2350Emulator : BackgroundService, IDebuggable
     public void RunTo(uint address)
     {
         while (m_Processor.PC != address)
-            m_Processor.Step();
+            StepOnce();
     }
 
     public void Stop()

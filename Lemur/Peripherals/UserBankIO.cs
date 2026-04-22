@@ -181,6 +181,14 @@ public class UserBankIO : PeripheralBase, IGpioSource
     public IGpioLine GetGpioLine(int index) => m_GpioLines[index];
 
     /// <summary>
+    /// Registers a peripheral output line into the GPIO mux for a specific pin and function.
+    /// When firmware sets FUNCSEL to <paramref name="function"/> on <paramref name="pin"/>,
+    /// the mux selects <paramref name="line"/> as the output driver for that pin.
+    /// </summary>
+    public void AddPeripheralLine(int pin, ushort function, string name, IGpioLine line)
+        => m_GpioLines[pin].Add(function, name, line);
+
+    /// <summary>
     /// Returns the <see cref="ManualGpioLine"/> for the given pin, allowing external code
     /// (e.g. a simulated button in the UI) to drive the pin's input value.
     /// The manual value is visible in GPIO_IN only when the pin's output-enable is clear.
@@ -218,6 +226,13 @@ public class UserBankIO : PeripheralBase, IGpioSource
             _               => raw,
         };
     }
+
+    /// <summary>Returns the effective value currently driven on the pin (output of the mux).</summary>
+    public GpioValue GetPinValue(int pin) => m_GpioLines[pin].Value;
+
+    /// <summary>Drives an external input onto the pin so firmware can read it via GPIO_IN.</summary>
+    public void DriveExternalInput(int pin, bool value) =>
+        m_ManualInputLines[pin].Set(value ? GpioValue.High : GpioValue.Low);
 
     // -------------------------------------------------------------------------
     // GPIO interrupt helpers

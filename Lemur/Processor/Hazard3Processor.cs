@@ -50,16 +50,6 @@ public class Hazard3Processor
         CSR = csr;
     }
 
-    /// <summary>
-    /// Sets or clears MTIP (bit 7) or MSIP (bit 3) in MIP.
-    /// MEIP (bit 11) is computed from IRQ state and cannot be set directly.
-    /// </summary>
-    public void SetMip(int bit, bool value)
-    {
-        if (bit == 7)      CSR.Mip.Mtip = value;
-        else if (bit == 3) CSR.Mip.Msip = value;
-    }
-
     public void Step()
     {
         using (m_Logger.BeginScope("PC: {PC}", PC.ToHex()))

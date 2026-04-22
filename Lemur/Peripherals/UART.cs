@@ -7,16 +7,16 @@ namespace Lemur.Peripherals;
 
 public class UART0 : UART
 {
-    public UART0(uint baseAddress, string name, ILogger<UART0> logger, CsrController csrController)
-        : base(baseAddress, name, logger, csrController, Irq.UART0_IRQ)
+    public UART0(uint baseAddress, string name, ILogger<UART0> logger, CsrController csrController, UserBankIO userBankIO)
+        : base(baseAddress, name, logger, csrController, Irq.UART0_IRQ, userBankIO)
     {
     }
 }
 
 public class UART1 : UART
 {
-    public UART1(uint baseAddress, string name, ILogger<UART1> logger, CsrController csrController)
-        : base(baseAddress, name, logger, csrController, Irq.UART1_IRQ)
+    public UART1(uint baseAddress, string name, ILogger<UART1> logger, CsrController csrController, UserBankIO userBankIO)
+        : base(baseAddress, name, logger, csrController, Irq.UART1_IRQ, userBankIO)
     {
     }
 }
@@ -41,12 +41,17 @@ public class UART1 : UART
 ///   - Receive timeout (RTIM) is approximated with a System.Threading.Timer.
 ///     Real hardware uses 32 bit periods; the emulator uses a fixed ~50 ms
 ///     window so most SDK drivers behave correctly.
-///   - Hardware flow control (RTS/CTS) requires GPIO wiring through UserBankIO.
-///     The CTSEN/RTSEN bits are stored but have no behavioural effect yet.
-///     TODO (3.2): Connect nUARTRTS output and nUARTCTS input via UserBankIO mux.
+///   - Hardware flow control (RTS/CTS) is wired through UserBankIO.
+///     nUARTRTS is driven as a GPIO output on all RTS-capable pins (FUNCSEL=2).
+///     When RTSEN=1, nUARTRTS is deasserted (HIGH) once the RX FIFO reaches the
+///     RXIFLSEL threshold, and re-asserted (LOW) when it drains below it.
+///     nUARTCTS is read from whichever CTS-capable pin currently has FUNCSEL=2;
+///     when CTSEN=1, TX is suppressed unless that pin is driven LOW (CTS asserted).
 ///   - IrDA SIR mode (SIREN/SIRLP) is not supported on RP2350 and is ignored.
-///   - Modem signals (RI, DCD, DSR, CTS status in UARTFR) are not connected;
-///     they always read as 0.
+///   - Modem signals DTR/OUT1/OUT2 (UARTCR bits 10/12/13) are stored for readback
+///     but have no GPIO connection — RP2350 does not route these signals to pads.
+///   - Modem inputs RI, DCD, DSR (UARTFR bits 8/2/1) are not present on RP2350
+///     and always read as 0. UARTFR.CTS (bit 0) reflects the live nUARTCTS GPIO state.
 ///
 /// Enable-bit policy (UARTEN / TXE / RXE in UARTCR):
 ///   In real hardware these gate the UARTTXD/UARTRXD pin drivers. The emulator
@@ -101,6 +106,37 @@ public class UART : PeripheralBase
     private readonly CsrController m_CsrController;
     // IRQ number for this UART instance: 33 = UART0, 34 = UART1 (Table 94, §3.2).
     private readonly Irq m_IrqNumber;
+
+    // ─── GPIO modem signal wiring ─────────────────────────────────────────────
+
+    // UART function select values on GPIO Bank 0 (Table 644, §9.4).
+    // F2 (0x02) is the primary UART function; F11 (0x0B) is a secondary TX/RX mapping
+    // found on the same pins that carry CTS/RTS under F2.
+    private const ushort UART_FUNC_SEL     = 0x02;
+    private const ushort UART_ALT_FUNC_SEL = 0x0B;
+
+    private readonly UserBankIO m_UserBankIO;
+
+    // nUARTTXD output line. Driven with the complete UART frame (start + data + parity
+    // + stop) on every TransmitData call. Registered on all TX-capable GPIO pins so
+    // that firmware can observe serial pulses regardless of which pin it selects.
+    // Idle state: GpioValue.High (UART MARK).
+    private readonly GpioLine m_TxGpioLine = new();
+
+    // nUARTRTS output line driven onto all RTS-capable GPIO pins with FUNCSEL=2.
+    // GpioValue.Low = nUARTRTS asserted (UART ready to receive).
+    // GpioValue.High = nUARTRTS deasserted (UART not ready / flow-control pause).
+    private readonly GpioLine m_RtsGpioLine = new();
+
+    // GPIO pin numbers that carry each signal for this UART instance.
+    // m_TxPins:    primary TX  (FUNCSEL=2)  — Table 644 F2 column "UART? TX"
+    // m_TxAltPins: secondary TX (FUNCSEL=0x0B) — F11 column "UART? TX" (same pins as CTS/RTS F2)
+    // m_RtsPins:   nUARTRTS (FUNCSEL=2)
+    // m_CtsPins:   nUARTCTS (FUNCSEL=2)
+    private readonly int[] m_TxPins;
+    private readonly int[] m_TxAltPins;
+    private readonly int[] m_RtsPins;
+    private readonly int[] m_CtsPins;
 
     // ─── Receive timeout (RTIM) ───────────────────────────────────────────────
 
@@ -162,18 +198,18 @@ public class UART : PeripheralBase
     private bool m_Lbe;
 
     // RTSEN (bit 14): RTS hardware flow control enable.
-    //   When set, nUARTRTS is de-asserted once the RX FIFO reaches the RXIFLSEL
-    //   threshold, signalling the remote sender to pause.
+    //   When set, nUARTRTS is de-asserted (HIGH) once the RX FIFO reaches the RXIFLSEL
+    //   threshold. Re-asserted (LOW) when the FIFO drains below the threshold.
+    //   UpdateRtsLine() is called whenever RTSEN or the FIFO level changes.
     // CTSEN (bit 15): CTS hardware flow control enable.
-    //   When set, TX only proceeds while nUARTCTS is asserted.
-    // Both stored but have no effect until GPIO wiring is implemented.
-    // TODO (3.2): On RTSEN change, assert/de-assert the nUARTRTS GPIO line via UserBankIO.
-    // TODO (3.2): On TX, gate transmission on the nUARTCTS GPIO input line when CTSEN=1.
+    //   When set, TransmitData gates on the nUARTCTS GPIO input being LOW (asserted).
     private bool m_Rtsen, m_Ctsen;
 
-    // RTS (bit 11), DTR (bit 10), OUT1 (bit 12), OUT2 (bit 13): modem outputs.
-    // Stored for readback.
-    // TODO (3.2): Drive the corresponding GPIO pins via UserBankIO mux.
+    // RTS (bit 11): complement of nUARTRTS — 1 means nUARTRTS is driven LOW (asserted).
+    //   Effective only when RTSEN=0; when RTSEN=1 flow control overrides this bit.
+    //   Wired to m_RtsGpioLine via UpdateRtsLine().
+    // DTR (bit 10), OUT1 (bit 12), OUT2 (bit 13): modem outputs.
+    //   Stored for readback. RP2350 does not connect these signals to GPIO pads.
     private bool m_Rts, m_Dtr, m_Out1, m_Out2;
 
     // ─── IFLS fields (Interrupt FIFO Level Select) ────────────────────────────
@@ -241,11 +277,16 @@ public class UART : PeripheralBase
 
     // ─────────────────────────────────────────────────────────────────────────
 
-    public UART(uint baseAddress, string name, ILogger<UART> logger, CsrController csrController, Irq irqNumber)
+    public UART(uint baseAddress, string name, ILogger<UART> logger, CsrController csrController, Irq irqNumber, UserBankIO userBankIO)
         : base(baseAddress, name, logger)
     {
         m_CsrController = csrController;
         m_IrqNumber = irqNumber;
+        m_UserBankIO = userBankIO;
+        m_TxPins    = GetTxPins(irqNumber);
+        m_TxAltPins = GetTxAltPins(irqNumber);
+        m_RtsPins   = GetRtsPins(irqNumber);
+        m_CtsPins   = GetCtsPins(irqNumber);
 
         // UARTDR (0x000) — Data Register
         //   Write (TX): bits 7:0 carry the byte to transmit. Upper bits reserved.
@@ -276,7 +317,7 @@ public class UART : PeripheralBase
         //   Bit 7 TXFE: TX FIFO empty. TX is instant, always empty → 1.
         //   Bit 8 RI:   nUARTRI ring indicator. Not on RP2350 → 0.
         AddRegister(0x018, "UARTFR")
-            .Field(lsb: 0, getter: () => false)                 // CTS
+            .Field(lsb: 0, getter: () => GetCtsInput())         // CTS
             .Field(lsb: 1, getter: () => false)                 // DSR
             .Field(lsb: 2, getter: () => false)                 // DCD
             .Field(lsb: 3, getter: () => false)                 // BUSY
@@ -344,10 +385,10 @@ public class UART : PeripheralBase
             .Field(lsb:  8, getter: () => m_Txe,    setter: v => m_Txe    = v)
             .Field(lsb:  9, getter: () => m_Rxe,    setter: v => m_Rxe    = v)
             .Field(lsb: 10, getter: () => m_Dtr,    setter: v => m_Dtr    = v)
-            .Field(lsb: 11, getter: () => m_Rts,    setter: v => m_Rts    = v)
+            .Field(lsb: 11, getter: () => m_Rts,    setter: v => { m_Rts   = v; UpdateRtsLine(); })
             .Field(lsb: 12, getter: () => m_Out1,   setter: v => m_Out1   = v)
             .Field(lsb: 13, getter: () => m_Out2,   setter: v => m_Out2   = v)
-            .Field(lsb: 14, getter: () => m_Rtsen,  setter: v => m_Rtsen  = v)
+            .Field(lsb: 14, getter: () => m_Rtsen,  setter: v => { m_Rtsen = v; UpdateRtsLine(); })
             .Field(lsb: 15, getter: () => m_Ctsen,  setter: v => m_Ctsen  = v);
 
         // UARTIFLS (0x034) — Interrupt FIFO Level Select
@@ -434,6 +475,26 @@ public class UART : PeripheralBase
         AddRegister(0xFF4, "UARTPCELLID1", resetValue: 0xF0);
         AddRegister(0xFF8, "UARTPCELLID2", resetValue: 0x05);
         AddRegister(0xFFC, "UARTPCELLID3", resetValue: 0xB1);
+
+        // ─── GPIO modem signal wiring ─────────────────────────────────────────────
+        // Pin assignments from Table 644 (§9.4).
+        var uartLabel = irqNumber == Irq.UART0_IRQ ? "UART0" : "UART1";
+
+        // nUARTTXD: initialise to MARK (HIGH = UART idle) then register on all TX pins.
+        // Primary TX (F2): UART0 GPIO 0/12/16/28/32/44; UART1 GPIO 4/8/20/24/36/40.
+        // Secondary TX (F11): UART0 GPIO 2/14/18/30/34/46; UART1 GPIO 6/10/22/26/38/42.
+        m_TxGpioLine.Value = GpioValue.High;
+        foreach (int pin in m_TxPins)
+            m_UserBankIO.AddPeripheralLine(pin, UART_FUNC_SEL,    $"{uartLabel}_TX", m_TxGpioLine);
+        foreach (int pin in m_TxAltPins)
+            m_UserBankIO.AddPeripheralLine(pin, UART_ALT_FUNC_SEL, $"{uartLabel}_TX", m_TxGpioLine);
+
+        // nUARTRTS: UART0 GPIO 3/15/19/31/35/47; UART1 GPIO 7/11/23/27/39/43.
+        foreach (int pin in m_RtsPins)
+            m_UserBankIO.AddPeripheralLine(pin, UART_FUNC_SEL, $"{uartLabel}_RTS", m_RtsGpioLine);
+
+        // Set initial RTS line state. With RTS=0 and RTSEN=0, nUARTRTS is deasserted.
+        UpdateRtsLine();
     }
 
     // ─── UARTDR read/write handlers ───────────────────────────────────────────
@@ -444,6 +505,13 @@ public class UART : PeripheralBase
     /// </summary>
     private void TransmitData(uint data)
     {
+        // When CTS hardware flow control is enabled, suppress transmission unless
+        // nUARTCTS is asserted (LOW). This mirrors the hardware gate on the TX shift
+        // register. In loopback mode CTS gating is bypassed — the internal path is
+        // not subject to external flow control.
+        if (m_Ctsen && !m_Lbe && !GetCtsInput())
+            return;
+
         var b = (byte)(data & 0xFF);
 
         if (m_Lbe)
@@ -460,7 +528,13 @@ public class UART : PeripheralBase
         }
         else
         {
-            // Normal TX: deliver the character to external observers (e.g., UI terminal).
+            // Normal TX: serialise the frame as GPIO pulses on the TX line, then notify
+            // high-level observers (e.g., the UI terminal). The pulses fire first so
+            // that a logic-analyser subscriber sees the waveform before the character
+            // arrives at the terminal.
+            // In loopback mode the TX pin is held HIGH per the PL011 spec: "nUARTTXD is
+            // held HIGH and no data is transmitted externally when LBE=1."
+            GenerateTxPulses(b);
             ReceivedData?.Invoke((char)b);
         }
 
@@ -601,6 +675,8 @@ public class UART : PeripheralBase
         // In character mode (FEN=0) the threshold is 1 — any data triggers the interrupt.
         m_RxRis = m_RxFifo.Count >= RxFifoThreshold;
         UpdateUartIrq();
+        // When RTSEN is active, nUARTRTS tracks the FIFO level relative to the threshold.
+        UpdateRtsLine();
     }
 
     // ─── Receive timeout (RTIM) timer ─────────────────────────────────────────
@@ -630,6 +706,106 @@ public class UART : PeripheralBase
         m_RtimTimer?.Dispose();
         m_RtimTimer = null;
     }
+
+    // ─── GPIO modem signal helpers ────────────────────────────────────────────
+
+    /// <summary>
+    /// Drives the nUARTRTS GPIO output line to reflect the current flow-control state.
+    ///
+    /// When RTSEN=0 (manual mode): nUARTRTS = complement of m_Rts.
+    ///   m_Rts=1 → nUARTRTS LOW (asserted, ready to receive).
+    ///   m_Rts=0 → nUARTRTS HIGH (deasserted).
+    ///
+    /// When RTSEN=1 (automatic flow control): nUARTRTS tracks the RX FIFO level.
+    ///   FIFO below threshold  → nUARTRTS LOW (asserted, OK for remote to send).
+    ///   FIFO at/above threshold → nUARTRTS HIGH (deasserted, remote should pause).
+    ///
+    /// Spec: PL011 TRM §3.3.6 — nUARTRTS behaviour.
+    /// </summary>
+    private void UpdateRtsLine()
+    {
+        bool deassert = m_Rtsen
+            ? m_RxFifo.Count >= RxFifoThreshold
+            : !m_Rts;
+        m_RtsGpioLine.Value = deassert ? GpioValue.High : GpioValue.Low;
+    }
+
+    /// <summary>
+    /// Returns the current nUARTCTS input state as seen by the UART.
+    /// Scans all CTS-capable GPIO pins for this instance; the first pin that has
+    /// FUNCSEL=2 (UART function) determines the CTS state. If no CTS pin is
+    /// currently configured as UART, returns false (CTS not asserted).
+    ///
+    /// Returns true when nUARTCTS is LOW (CTS asserted, remote device allows TX).
+    /// The UARTFR.CTS bit is the complement of nUARTCTS, so it reads 1 when this
+    /// method returns true.
+    ///
+    /// Spec: PL011 TRM §3.3.6; UARTFR bit 0 description.
+    /// </summary>
+    private bool GetCtsInput()
+    {
+        foreach (int pin in m_CtsPins)
+        {
+            if (m_UserBankIO.GpioControl[pin].FUNCSEL == UART_FUNC_SEL)
+                return m_UserBankIO.GetPinValue(pin) == GpioValue.Low;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Serialises <paramref name="b"/> as a UART frame onto <see cref="m_TxGpioLine"/>.
+    ///
+    /// Frame layout: 1 start bit (LOW) + WLEN data bits (LSB first) +
+    ///               optional parity bit (PEN=1) + 1 stop bit (HIGH).
+    /// STP2 means two stop bits; since the line stays HIGH after the first stop bit,
+    /// consecutive HIGH values are deduplicated by <see cref="GpioLine"/> and a second
+    /// transition is not emitted — this matches real serial behaviour.
+    ///
+    /// <see cref="GpioLine"/> only fires <c>Changed</c> on actual value transitions, so
+    /// consecutive identical bits produce no extra events — the logic analyser captures
+    /// the exact same waveform seen on real hardware.
+    /// </summary>
+    private void GenerateTxPulses(byte b)
+    {
+        int dataWidth = m_Wlen switch { 0 => 5, 1 => 6, 2 => 7, _ => 8 };
+
+        m_TxGpioLine.Value = GpioValue.Low; // start bit
+
+        for (int i = 0; i < dataWidth; i++)
+            m_TxGpioLine.Value = ((b >> i) & 1) != 0 ? GpioValue.High : GpioValue.Low;
+
+        if (m_Pen)
+        {
+            // Even parity (EPS=1): parity bit makes total 1-count even.
+            // Odd parity  (EPS=0): parity bit makes total 1-count odd.
+            // Stick parity (SPS=1): parity bit is fixed to EPS regardless of data.
+            int ones = System.Numerics.BitOperations.PopCount((uint)(b & ((1u << dataWidth) - 1)));
+            bool parityBit = m_Sps ? m_Eps : ((ones % 2 != 0) == m_Eps);
+            m_TxGpioLine.Value = parityBit ? GpioValue.High : GpioValue.Low;
+        }
+
+        m_TxGpioLine.Value = GpioValue.High; // stop bit (line returns to MARK/idle)
+    }
+
+    /// <summary>Returns nUARTTXD primary (F2) GPIO pin numbers for the given UART instance.</summary>
+    private static int[] GetTxPins(Irq irq) => irq == Irq.UART0_IRQ
+        ? [0, 12, 16, 28, 32, 44]
+        : [4, 8, 20, 24, 36, 40];
+
+    /// <summary>Returns nUARTTXD secondary (F11) GPIO pin numbers for the given UART instance.</summary>
+    private static int[] GetTxAltPins(Irq irq) => irq == Irq.UART0_IRQ
+        ? [2, 14, 18, 30, 34, 46]
+        : [6, 10, 22, 26, 38, 42];
+
+    /// <summary>Returns nUARTRTS-capable GPIO pin numbers for the given UART instance.</summary>
+    private static int[] GetRtsPins(Irq irq) => irq == Irq.UART0_IRQ
+        ? [3, 15, 19, 31, 35, 47]
+        : [7, 11, 23, 27, 39, 43];
+
+    /// <summary>Returns nUARTCTS-capable GPIO pin numbers for the given UART instance.</summary>
+    private static int[] GetCtsPins(Irq irq) => irq == Irq.UART0_IRQ
+        ? [2, 14, 18, 30, 34, 46]
+        : [6, 10, 22, 26, 38, 42];
 
     // ─── FIFO helpers ─────────────────────────────────────────────────────────
 

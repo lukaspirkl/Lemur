@@ -1,5 +1,6 @@
 ﻿using Avalonia;
 using Lemur.Debug;
+using Lemur.ExternalPeripherals;
 using Lemur.Peripherals;
 using Lemur.UI;
 using Lemur.UI.Peripherals;
@@ -72,6 +73,8 @@ internal class Program
         builder.Services.AddTransient(typeof(IEmuLogger<>), typeof(EmuLogger<>));
         builder.Services.AddRP2350Emulator();
 
+        builder.Services.AddSingleton<LogicAnalyzer>();
+        builder.Services.AddHostedService(x => x.GetRequiredService<LogicAnalyzer>());
 
         builder.Services.AddSingleton<ViewLocator>();
         RegisterViewModels(new ViewModelCollection(builder.Services));
@@ -87,6 +90,7 @@ internal class Program
         collection.AddSingletonViewModel<PinDevicesViewModel, PinDevicesView>();
         collection.AddSingletonViewModel<PinsViewModel, PinsView>();
         collection.AddSingletonViewModel<UserBankIOViewModel, UserBankIOView>();
+        collection.AddSingletonViewModel<GpioInterfaceViewModel, GpioInterfaceView>();
         collection.AddSingletonViewModel<UARTViewModel, UARTView>();
         collection.AddSingletonViewModel<CsrTabViewModel, CsrTabView>();
     }

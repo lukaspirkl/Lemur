@@ -1,9 +1,9 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Text;
 using Lemur.UI.Terminal;
-using Lemur.Peripherals;
 using System.Collections.Generic;
 using System.Linq;
+using Lemur.Peripherals.Uart;
 
 namespace Lemur.UI.Peripherals;
 

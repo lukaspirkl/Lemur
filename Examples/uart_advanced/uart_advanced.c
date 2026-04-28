@@ -13,7 +13,7 @@
 /// \tag::uart_advanced[]
 
 #define UART_ID uart0
-#define BAUD_RATE 115200
+#define BAUD_RATE 9600
 #define DATA_BITS 8
 #define STOP_BITS 1
 #define PARITY    UART_PARITY_NONE
@@ -77,7 +77,7 @@ int main() {
     // OK, all set up.
     // Lets send a basic string out, and then run a loop and wait for RX interrupts
     // The handler will count them, but also reflect the incoming data back with a slight change!
-    uart_puts(UART_ID, "\nHello, uart interrupts\n");
+    uart_puts(UART_ID, "Hello, uart interrupts\n\r");
 
     while (1)
         tight_loop_contents();

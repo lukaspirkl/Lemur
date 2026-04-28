@@ -52,29 +52,32 @@ internal class Program
 
 
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
-            .MinimumLevel.Is(LogEventLevel.Fatal)
+            .MinimumLevel.Is(LogEventLevel.Error)
             //.MinimumLevel.Is(LogEventLevel.Information)
             //.MinimumLevel.Override<GdbConnectionHandler>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<BinaryInfoService>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<SIO>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<UserBankIO>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<UserBankPadControl>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<Timer0>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<Timer1>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<Timer>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<UART0>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<UART1>(LogEventLevel.Verbose)
-            .MinimumLevel.Override<UART>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<BinaryInfoService>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<SIO>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<UserBankIO>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<UserBankPadControl>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<Timer0>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<Timer1>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<Timer>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<UART0>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<UART1>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<UART>(LogEventLevel.Verbose)
             .Enrich.FromLogContext()
             //.WriteTo.Async(a => a.File(new CompactJsonFormatter(), m_LogFile))
             .WriteTo.Console()
         );
 
+        builder.Services.AddSingleton<IElapsedTime, ElapsedTime>();
+
         builder.Services.AddTransient(typeof(IEmuLogger<>), typeof(EmuLogger<>));
         builder.Services.AddRP2350Emulator();
 
         builder.Services.AddSingleton<LogicAnalyzer>();
-        builder.Services.AddHostedService(x => x.GetRequiredService<LogicAnalyzer>());
+        builder.Services.AddSingleton<SerialTerminal>();
+        builder.Services.AddHostedService(x => x.GetRequiredService<SerialTerminal>());
 
         builder.Services.AddSingleton<ViewLocator>();
         RegisterViewModels(new ViewModelCollection(builder.Services));
@@ -87,11 +90,9 @@ internal class Program
     {
         collection.AddSingletonViewModel<MainWindowViewModel, MainWindowView>();
         collection.AddSingletonViewModel<BinaryInfoViewModel, BinaryInfoView>();
-        collection.AddSingletonViewModel<PinDevicesViewModel, PinDevicesView>();
-        collection.AddSingletonViewModel<PinsViewModel, PinsView>();
-        collection.AddSingletonViewModel<UserBankIOViewModel, UserBankIOView>();
         collection.AddSingletonViewModel<GpioInterfaceViewModel, GpioInterfaceView>();
         collection.AddSingletonViewModel<UARTViewModel, UARTView>();
+        collection.AddSingletonViewModel<SerialTerminalViewModel, SerialTerminalView>();
         collection.AddSingletonViewModel<CsrTabViewModel, CsrTabView>();
     }
 

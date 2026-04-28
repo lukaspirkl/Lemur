@@ -1,24 +1,23 @@
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using static Lemur.SignalLine;
 
 namespace Lemur.ExternalPeripherals;
 
-public sealed class LogicAnalyzer : BackgroundService
+public sealed class LogicAnalyzer
 {
     private readonly RP2350Emulator m_Emulator;
-
+    
     private string m_OutputFile = string.Empty;
     private List<int> m_PinNumbers = [];
-    private List<Action<PinChange>> m_Handlers = [];
-    private List<(int pin, bool value, long nanoseconds)> m_Events = [];
+    private List<Action<ChangeData>> m_Handlers = [];
+    private List<(int pin, bool value, TimeSpan time)> m_Events = [];
     private Dictionary<int, bool> m_InitialValues = [];
     private readonly object m_Lock = new();
-    private Stopwatch m_Stopwatch = new();
 
     public bool IsRecording { get; private set; }
     public event Action? RecordingChanged;
@@ -27,8 +26,6 @@ public sealed class LogicAnalyzer : BackgroundService
     {
         m_Emulator = emulator;
     }
-
-    protected override Task ExecuteAsync(CancellationToken stoppingToken) => Task.CompletedTask;
 
     public void StartRecording(IEnumerable<int> pins, string outputFile)
     {
@@ -40,25 +37,30 @@ public sealed class LogicAnalyzer : BackgroundService
         m_InitialValues = [];
 
         lock (m_Lock)
+        {
             m_Events = [];
+        }
 
         foreach (var pinNumber in m_PinNumbers)
         {
             var pin = m_Emulator.GetPin(pinNumber);
-            m_InitialValues[pinNumber] = pin.Value;
+            m_InitialValues[pinNumber] = pin.State;
 
             var captured = pinNumber;
-            Action<PinChange> handler = change =>
+            Action<ChangeData> handler = data =>
             {
-                long ns = m_Stopwatch.Elapsed.Ticks; // Ticks are 100 ns each
-                lock (m_Lock)
-                    m_Events.Add((captured, change.Value, ns));
+                if (data.OldState != data.NewState)
+                {
+                    lock (m_Lock)
+                    {
+                        m_Events.Add((captured, data.NewState, data.Time));
+                    }
+                }
             };
             pin.Changed += handler;
             m_Handlers.Add(handler);
         }
 
-        m_Stopwatch = Stopwatch.StartNew();
         IsRecording = true;
         RecordingChanged?.Invoke();
     }
@@ -67,28 +69,28 @@ public sealed class LogicAnalyzer : BackgroundService
     {
         if (!IsRecording) return;
 
-        m_Stopwatch.Stop();
-
         for (int i = 0; i < m_PinNumbers.Count; i++)
             m_Emulator.GetPin(m_PinNumbers[i]).Changed -= m_Handlers[i];
 
         IsRecording = false;
         RecordingChanged?.Invoke();
 
-        List<(int pin, bool value, long nanoseconds)> snapshot;
+        List<(int pin, bool value, TimeSpan time)> snapshot;
         lock (m_Lock)
+        {
             snapshot = [.. m_Events];
+        }
 
         WriteVcd(snapshot);
     }
 
-    private void WriteVcd(List<(int pin, bool value, long nanoseconds)> events)
+    private void WriteVcd(List<(int pin, bool value, TimeSpan time)> events)
     {
-        events.Sort((a, b) => a.nanoseconds.CompareTo(b.nanoseconds));
+        events.Sort((a, b) => a.time.CompareTo(b.time));
 
         using var writer = new StreamWriter(m_OutputFile);
 
-        writer.WriteLine("$timescale 100ns $end");
+        writer.WriteLine("$timescale 100ns $end"); // One tick is 100ns
         writer.WriteLine("$scope module logic_analyzer $end");
 
         for (int i = 0; i < m_PinNumbers.Count; i++)
@@ -111,13 +113,13 @@ public sealed class LogicAnalyzer : BackgroundService
 
         writer.WriteLine("$end");
 
-        long currentNs = -1;
-        foreach (var (pin, value, nanoseconds) in events)
+        TimeSpan currentTime = TimeSpan.Zero;
+        foreach (var (pin, value, time) in events)
         {
-            if (nanoseconds != currentNs)
+            if (time != currentTime)
             {
-                writer.WriteLine($"#{nanoseconds}");
-                currentNs = nanoseconds;
+                writer.WriteLine($"#{time.Ticks}");
+                currentTime = time;
             }
 
             int idx = m_PinNumbers.IndexOf(pin);

@@ -1,8 +1,10 @@
 ﻿using Lemur.Peripherals;
+using Lemur.Peripherals.PadControl;
 using Lemur.Processor;
 using Microsoft.Extensions.Hosting;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,14 +15,11 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 {
     private readonly Hazard3Processor m_Processor;
     private readonly RegistersWrapper m_Registers;
-    private readonly UserBankIO m_UserBankIO;
-
+    private readonly UserBankPadControl m_UserBankPadControl;
+    private readonly IEnumerable<ITickable> m_Tickables;
     private bool m_Running = false;
     private Task? m_Run;
-
-    private ulong m_StepIndex;
-    private readonly GpioPin?[] m_GpioPins = new GpioPin?[48];
-    private readonly bool[] m_GpioSnapshot = new bool[48];
+    private readonly Stopwatch m_StopWatch = Stopwatch.StartNew();
 
     public HashSet<uint> Brakpoints { get; } = new HashSet<uint>();
 
@@ -32,17 +31,17 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         remove { m_Processor.EBreak -= value; }
     }
 
-    public RP2350Emulator(Hazard3Processor processor, IBusFabric busFabric, UserBankIO userBankIO)
+    public RP2350Emulator(Hazard3Processor processor, IBusFabric busFabric, UserBankPadControl userBankPadControl, IEnumerable<ITickable> tickables)
     {
         m_Processor = processor;
         m_Processor.Memory = busFabric;
         m_Registers = new RegistersWrapper(processor);
-        m_UserBankIO = userBankIO;
+        m_UserBankPadControl = userBankPadControl;
+        m_Tickables = tickables;
         Reset();
     }
 
-    public IGpioPin GetPin(int number) =>
-        m_GpioPins[number] ??= new GpioPin(number, m_UserBankIO, () => m_StepIndex);
+    public SignalLine GetPin(int number) => m_UserBankPadControl.GetSignalLine(number);
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -63,27 +62,12 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 
     private void StepOnce()
     {
-        TakeGpioSnapshot();
         m_Processor.Step();
-        m_StepIndex++;
-        FireGpioChanges();
-    }
 
-    private void TakeGpioSnapshot()
-    {
-        for (int i = 0; i < 48; i++)
-            m_GpioSnapshot[i] = m_UserBankIO.GetPinValue(i) == GpioValue.High;
-    }
-
-    private void FireGpioChanges()
-    {
-        for (int i = 0; i < 48; i++)
+        var now = m_StopWatch.Elapsed;
+        foreach (var tickable in m_Tickables)
         {
-            var pin = m_GpioPins[i];
-            if (pin == null) continue;
-            bool newVal = m_UserBankIO.GetPinValue(i) == GpioValue.High;
-            if (newVal != m_GpioSnapshot[i])
-                pin.NotifyChanged(newVal);
+            tickable.Tick(now);
         }
     }
 

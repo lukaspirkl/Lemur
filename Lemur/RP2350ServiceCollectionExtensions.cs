@@ -1,5 +1,5 @@
 ﻿using Lemur.Csr;
-using Lemur.ExternalPeripherals;
+using Lemur.ExternalDevices;
 using Lemur.Peripherals;
 using Lemur.Peripherals.PadControl;
 using Lemur.Peripherals.Sio;

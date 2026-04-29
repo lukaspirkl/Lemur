@@ -2,7 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Lemur.ExternalPeripherals;
+using Lemur.ExternalDevices;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;

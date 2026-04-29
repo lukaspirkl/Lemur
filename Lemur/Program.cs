@@ -1,6 +1,6 @@
 ﻿using Avalonia;
 using Lemur.Debug;
-using Lemur.ExternalPeripherals;
+using Lemur.ExternalDevices;
 using Lemur.Peripherals;
 using Lemur.UI;
 using Lemur.UI.Peripherals;

@@ -1,5 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
-using Lemur.ExternalPeripherals;
+using Lemur.ExternalDevices;
 using Lemur.UI.Terminal;
 
 namespace Lemur.UI.Peripherals;

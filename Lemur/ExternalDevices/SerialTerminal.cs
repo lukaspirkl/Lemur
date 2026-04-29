@@ -1,4 +1,3 @@
-using Lemur.Peripherals;
 using Lemur.Peripherals.Uart;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -6,7 +5,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Lemur.ExternalPeripherals;
+namespace Lemur.ExternalDevices;
 
 /// <summary>
 /// External serial terminal hard-wired to the emulator's GPIO pins:

@@ -1,6 +1,6 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
-using Lemur.ExternalPeripherals;
+using Lemur.ExternalDevices;
 using Lemur.UI.Peripherals;
 using System.Collections.ObjectModel;
 

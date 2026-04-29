@@ -1,4 +1,3 @@
-using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +14,7 @@ public class SignalLine
         set 
         { 
             field = value; 
-            State = Resolve(); 
+            State = Resolve(throwFloating: false); // It is fine when line is floating when setting initial state
         } 
     } = InitialLineState.PullDown;
 
@@ -34,14 +33,14 @@ public class SignalLine
             m_DriveStates[source] = state;
         }
 
-        var newState = Resolve();
+        var newState = Resolve(throwFloating: true); // It is not fine when the line is floating while we are driving it (something is most likely misconfigured)
         var oldState = State;
         State = newState;
 
         Changed?.Invoke(new ChangeData(time, newState, oldState));
     }
 
-    private bool Resolve()
+    private bool Resolve(bool throwFloating)
     {
         var isDown = m_DriveStates.Values.Any(x => x == LineState.Down);
         var isUp = m_DriveStates.Values.Any(x => x == LineState.Up);
@@ -64,8 +63,10 @@ public class SignalLine
                 return false;
             }
 
-            // TODO: There is floting line during initialization - I should handle that
-            Log.Logger.Error("Signal line floating");
+            if (throwFloating)
+            {
+                throw new InvalidOperationException("Signal line floating");
+            }
         }
 
         return isUp;

@@ -1,5 +1,6 @@
 ﻿using Lemur.Peripherals;
 using Lemur.Peripherals.PadControl;
+using Lemur.Peripherals.Sio;
 using Lemur.Processor;
 using Microsoft.Extensions.Hosting;
 using System;
@@ -31,13 +32,16 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         remove { m_Processor.EBreak -= value; }
     }
 
-    public RP2350Emulator(Hazard3Processor processor, IBusFabric busFabric, UserBankPadControl userBankPadControl, IEnumerable<ITickable> tickables)
+    public RP2350Emulator(Hazard3Processor processor, IBusFabric busFabric,
+        UserBankPadControl userBankPadControl, SioPeripheral sio, PadsQSPI padsQspi,
+        IEnumerable<ITickable> tickables)
     {
         m_Processor = processor;
         m_Processor.Memory = busFabric;
         m_Registers = new RegistersWrapper(processor);
         m_UserBankPadControl = userBankPadControl;
         m_Tickables = tickables;
+        sio.RegisterPadControls(userBankPadControl, padsQspi);
         Reset();
     }
 

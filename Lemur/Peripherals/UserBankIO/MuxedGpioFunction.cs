@@ -49,8 +49,11 @@ public class MuxedGpioFunction : GpioFunctionBase
     private IrqOver m_IrqOver = IrqOver.Normal;
 
     private bool? m_LastRawInput;
+    private bool? m_LastProcessedInput;
 
     public string SelectedFunctionName => m_SelectedName;
+
+    public event Action<TimeSpan, bool>? InputChanged;
 
     public event Action? SelectionChanged;
 
@@ -132,13 +135,25 @@ public class MuxedGpioFunction : GpioFunctionBase
     public override void OnInput(TimeSpan time, bool value)
     {
         m_LastRawInput = value;
-        m_Selected?.OnInput(time, ApplyInOver(value));
+        bool processed = ApplyInOver(value);
+        m_Selected?.OnInput(time, processed);
+        if (m_LastProcessedInput != processed)
+        {
+            m_LastProcessedInput = processed;
+            InputChanged?.Invoke(time, processed);
+        }
     }
 
     private void RefreshInput()
     {
-        if (m_LastRawInput.HasValue)
-            m_Selected?.OnInput(m_ElapsedTime.Now, ApplyInOver(m_LastRawInput.Value));
+        if (!m_LastRawInput.HasValue) return;
+        bool processed = ApplyInOver(m_LastRawInput.Value);
+        m_Selected?.OnInput(m_ElapsedTime.Now, processed);
+        if (m_LastProcessedInput != processed)
+        {
+            m_LastProcessedInput = processed;
+            InputChanged?.Invoke(m_ElapsedTime.Now, processed);
+        }
     }
 
     private bool ApplyInOver(bool raw) => m_InOver switch

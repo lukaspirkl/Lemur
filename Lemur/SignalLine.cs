@@ -1,3 +1,4 @@
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -63,7 +64,8 @@ public class SignalLine
                 return false;
             }
 
-            throw new InvalidOperationException("Signal line floating");
+            // TODO: There is floting line during initialization - I should handle that
+            Log.Logger.Error("Signal line floating");
         }
 
         return isUp;

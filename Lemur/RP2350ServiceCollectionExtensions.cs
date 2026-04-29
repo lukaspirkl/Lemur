@@ -1,6 +1,7 @@
 ﻿using Lemur.Csr;
 using Lemur.ExternalDevices;
 using Lemur.Peripherals;
+using Lemur.Peripherals.IoQSPI;
 using Lemur.Peripherals.PadControl;
 using Lemur.Peripherals.Sio;
 using Lemur.Peripherals.Uart;
@@ -56,7 +57,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddPeripheral(0x40018000, "PSM_BASE").Unimplemented();
         services.AddPeripheral(0x40020000, "RESETS_BASE").Implementation<Resets>();
         services.AddPeripheral(0x40028000, "IO_BANK0_BASE").Implementation<UserBankIOPeripheral>();
-        services.AddPeripheral(0x40030000, "IO_QSPI_BASE").Unimplemented();//.Implementation<IoQSPI>();
+        services.AddPeripheral(0x40030000, "IO_QSPI_BASE").Implementation<IoQspiPeripheral>();
         services.AddPeripheral(0x40038000, "PADS_BANK0_BASE").Implementation<UserBankPadControl>();
         services.AddPeripheral(0x40040000, "PADS_QSPI_BASE").Implementation<PadsQSPI>();
         services.AddPeripheral(0x40048000, "XOSC_BASE").Implementation<XOSC>();

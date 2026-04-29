@@ -31,11 +31,15 @@ public class PadBridge
         Drive12MA = 0x3,
     }
 
-    public PadBridge(Register32 reg, IGpioFunction inner, SignalLine line, IElapsedTime elapsedTime)
+    public PadBridge(Register32 reg, IGpioFunction inner, SignalLine line, IElapsedTime elapsedTime,
+        bool initialInputEnable = false, bool initialPullUpEnable = false, bool initialPullDownEnable = true)
     {
-        m_Inner       = inner;
-        m_Line        = line;
-        m_ElapsedTime = elapsedTime;
+        m_Inner            = inner;
+        m_Line             = line;
+        m_ElapsedTime      = elapsedTime;
+        m_InputEnable      = initialInputEnable;
+        m_PullUpEnable     = initialPullUpEnable;
+        m_PullDownEnable   = initialPullDownEnable;
 
         reg.Field(8,    () => m_IsolationControl,    v => { m_IsolationControl    = v; Refresh(); })
            .Field(7,    () => m_OutputDisable,        v => { m_OutputDisable        = v; ApplyOutput(m_ElapsedTime.Now); })
@@ -98,9 +102,6 @@ public class PadBridge
 
     private void ApplyPulls()
     {
-        // ISO=1: pull state is also latched — do not update InitialState.
-        if (m_IsolationControl) return;
-
         // Bus keeper (PUE=PDE=1): snapshot current line state to seed the keeper direction.
         if (m_PullUpEnable && m_PullDownEnable)
         {

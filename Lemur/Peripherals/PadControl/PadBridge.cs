@@ -2,16 +2,17 @@ using System;
 
 namespace Lemur.Peripherals.PadControl;
 
-// Bridges a MuxedGpioFunction to a SignalLine, owning the pad control register fields.
+// Bridges a MuxedGpioFunction to a Pin, owning the pad control register fields.
 //
-// Output path (inner → line): gated by ISO and OD.
-// Input path (line → inner):  gated by IE only; ISO does not isolate input per spec §9.7.
-// Pulls (PUE/PDE):            sets SignalLine.InitialState; bus keeper mode (both set) tracks
-//                             the live line state so the pad retains its last driven level.
+// Output path (inner → pin): gated by ISO and OD.
+// Input path (pin → inner):  gated by IE only; ISO does not isolate input per spec §9.7.
+// Pulls (PUE/PDE):            drives the Pin's pull with Up/Down; bus keeper mode
+//                             (both set) tracks the live line state so the pad retains its
+//                             last driven level.
 public class PadBridge
 {
     private readonly IGpioFunction m_Inner;
-    private readonly SignalLine    m_Line;
+    private readonly Pin           m_Pin;
     private readonly IElapsedTime  m_ElapsedTime;
 
     private bool  m_IsolationControl     = true;
@@ -31,91 +32,83 @@ public class PadBridge
         Drive12MA = 0x3,
     }
 
-    public PadBridge(Register32 reg, IGpioFunction inner, SignalLine line, IElapsedTime elapsedTime,
+    public PadBridge(Register32 reg, IGpioFunction inner, Pin pin, IElapsedTime elapsedTime,
         bool initialInputEnable = false, bool initialPullUpEnable = false, bool initialPullDownEnable = true)
     {
-        m_Inner            = inner;
-        m_Line             = line;
-        m_ElapsedTime      = elapsedTime;
-        m_InputEnable      = initialInputEnable;
-        m_PullUpEnable     = initialPullUpEnable;
-        m_PullDownEnable   = initialPullDownEnable;
+        m_Inner          = inner;
+        m_Pin            = pin;
+        m_ElapsedTime    = elapsedTime;
+        m_InputEnable    = initialInputEnable;
+        m_PullUpEnable   = initialPullUpEnable;
+        m_PullDownEnable = initialPullDownEnable;
 
         reg.Field(8,    () => m_IsolationControl,    v => { m_IsolationControl    = v; Refresh(); })
            .Field(7,    () => m_OutputDisable,        v => { m_OutputDisable        = v; ApplyOutput(m_ElapsedTime.Now); })
            .Field(6,    () => m_InputEnable,          v =>   m_InputEnable          = v)
            .Field(4, 2, () => m_DriveStrength,        v =>   m_DriveStrength        = v)
-           .Field(3,    () => m_PullUpEnable,         v => { m_PullUpEnable         = v; ApplyPulls(); })
-           .Field(2,    () => m_PullDownEnable,       v => { m_PullDownEnable       = v; ApplyPulls(); })
+           .Field(3,    () => m_PullUpEnable,         v => { m_PullUpEnable         = v; ApplyPulls(m_ElapsedTime.Now); })
+           .Field(2,    () => m_PullDownEnable,       v => { m_PullDownEnable       = v; ApplyPulls(m_ElapsedTime.Now); })
            .Field(1,    () => m_EnableSchmittTrigger, v =>   m_EnableSchmittTrigger = v)
            .Field(0,    () => m_SlewRateFast,         v =>   m_SlewRateFast         = v);
 
-        inner.OutputChanged += OnInnerOutputChanged;
-        line.Changed        += OnLineChanged;
+        // Apply pull before subscribing so the initial SetPull() doesn't trigger OnPinChanged.
+        ApplyPulls(m_ElapsedTime.Now);
 
-        Refresh();
+        inner.OutputChanged += OnInnerOutputChanged;
+        pin.Changed         += OnPinChanged;
+
+        ApplyOutput(m_ElapsedTime.Now);
     }
 
     private void Refresh()
     {
+        ApplyPulls(m_ElapsedTime.Now);
         ApplyOutput(m_ElapsedTime.Now);
-        ApplyPulls();
     }
 
     private void OnInnerOutputChanged(GpioFunctionOutput e)
     {
         // ISO=1 latches the output — do not forward new changes until ISO is cleared.
         if (m_IsolationControl) return;
-        DriveLineFromInner(e.Time, e.NewValue);
+        DriveFromInner(e.Time, e.NewValue);
     }
 
-    private void OnLineChanged(SignalLine.ChangeData data)
+    private void OnPinChanged(SignalChange data)
     {
-        // Bus keeper: keep InitialState in sync with the line so the level is retained on release.
+        // Bus keeper: keep weak drive in sync with the line so the level is retained on release.
         // Blocked by ISO because the bus keeper logic is in the switched core domain (§9.6.1).
         if (!m_IsolationControl && m_PullUpEnable && m_PullDownEnable)
-        {
-            m_Line.InitialState = data.NewState
-                ? SignalLine.InitialLineState.PullUp
-                : SignalLine.InitialLineState.PullDown;
-        }
+            ApplyPulls(data.Time);
 
         // IE gates the input path; ISO does not (§9.7: "input signal … is not isolated").
+        // Floating line (null) reads as 0 at the pad input.
         if (m_InputEnable)
-            m_Inner.OnInput(data.Time, data.NewState);
+            m_Inner.OnInput(data.Time, data.NewState ?? false);
     }
 
     private void ApplyOutput(TimeSpan time)
     {
         // ISO=1: output is latched — leave whatever we last drove on the line unchanged.
         if (m_IsolationControl) return;
-        DriveLineFromInner(time, m_Inner.Output);
+        DriveFromInner(time, m_Inner.Output);
     }
 
-    private void DriveLineFromInner(TimeSpan time, bool? value)
+    private void DriveFromInner(TimeSpan time, bool? value)
     {
-        var state = (m_OutputDisable || value == null)
-            ? SignalLine.LineState.HiZ
-            : (value.Value ? SignalLine.LineState.Up : SignalLine.LineState.Down);
-        m_Line.Drive(this, time, state);
+        m_Pin.SetOutput(m_OutputDisable ? null : value, time);
     }
 
-    private void ApplyPulls()
+    private void ApplyPulls(TimeSpan time)
     {
-        // Bus keeper (PUE=PDE=1): snapshot current line state to seed the keeper direction.
-        if (m_PullUpEnable && m_PullDownEnable)
+        var pull = (m_PullUpEnable, m_PullDownEnable) switch
         {
-            m_Line.InitialState = m_Line.State
-                ? SignalLine.InitialLineState.PullUp
-                : SignalLine.InitialLineState.PullDown;
-            return;
-        }
-
-        m_Line.InitialState = (m_PullUpEnable, m_PullDownEnable) switch
-        {
-            (true,  false) => SignalLine.InitialLineState.PullUp,
-            (false, true)  => SignalLine.InitialLineState.PullDown,
-            _              => SignalLine.InitialLineState.HiZ,
+            // Bus keeper: match current pin state — floating line treated as low (§9.6.1).
+            (true,  true)  => m_Pin.State == true ? PullDirection.Up : PullDirection.Down,
+            (true,  false) => PullDirection.Up,
+            (false, true)  => PullDirection.Down,
+            _              => PullDirection.None,
         };
+
+        m_Pin.SetPull(pull, time);
     }
 }

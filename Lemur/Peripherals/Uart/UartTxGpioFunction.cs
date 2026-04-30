@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Numerics;
@@ -9,6 +10,8 @@ public class UartTxGpioFunction : GpioFunctionBase
     private const int FifoCapacity = 32;
 
     private readonly Queue<byte> m_TxFifo = new Queue<byte>();
+    private readonly ILogger<UartTxGpioFunction> m_Logger;
+    private readonly string m_Name;
     private TimeSpan m_NextTimeToTransmit;
     private TimeSpan m_BitDuration;
 
@@ -31,10 +34,12 @@ public class UartTxGpioFunction : GpioFunctionBase
     public bool StickParity  { get; set; } = false;  // SPS
     public bool SendBreak    { get; set; } = false;  // BRK
 
-    public UartTxGpioFunction()
+    public UartTxGpioFunction(ILogger<UartTxGpioFunction> logger, string name = "unset")
     {
         BaudRate = 9600;
         SetOutput(TimeSpan.Zero, true); // UART idle line is high
+        m_Logger = logger;
+        m_Name = name;
     }
 
     public bool CanTransmit()  => m_TxFifo.Count < FifoCapacity;
@@ -66,11 +71,15 @@ public class UartTxGpioFunction : GpioFunctionBase
         // Dump everything
         while (m_TxFifo.TryDequeue(out var nextByte))
         {
+            m_Logger.LogDebug("[TX-{name}] Byte start", m_Name);
+
             foreach (var bit in BuildFrame(nextByte))
             {
                 SetOutput(m_NextTimeToTransmit, bit);
                 m_NextTimeToTransmit += m_BitDuration;
             }
+
+            m_Logger.LogDebug("[TX-{name}] Byte complete", m_Name);
         }
     }
 
@@ -81,30 +90,38 @@ public class UartTxGpioFunction : GpioFunctionBase
             int breakBits = 1 + DataBits + (ParityEnable ? 1 : 0) + (TwoStopBits ? 2 : 1);
             for (int i = 0; i < breakBits; i++)
             {
+                m_Logger.LogDebug("[TX-{name}] Send break", m_Name);
                 yield return false;
             }
 
             yield break;
         }
 
+        m_Logger.LogDebug("[TX-{name}] Start bit {bit}", m_Name, false);
         yield return false; // start bit
 
         int mask = (1 << DataBits) - 1;
         int data = b & mask;
         for (int i = 0; i < DataBits; i++)
         {
-            yield return ((data >> i) & 1) != 0;
+            var bit = ((data >> i) & 1) != 0;
+            m_Logger.LogDebug("[TX-{name}] data {bit}", m_Name, bit);
+            yield return bit;
         }
 
         if (ParityEnable)
         {
-            yield return ComputeParityBit(data);
+            var bit = ComputeParityBit(data);
+            m_Logger.LogDebug("[TX-{name}] Parity {bit}", m_Name, bit);
+            yield return bit;
         }
 
+        m_Logger.LogDebug("[TX-{name}] Stop bit 1 {bit}", m_Name, true);
         yield return true; // stop bit 1
 
         if (TwoStopBits)
         {
+            m_Logger.LogDebug("[TX-{name}] Stop bit 2 {bit}", m_Name, true);
             yield return true; // stop bit 2
         }
     }

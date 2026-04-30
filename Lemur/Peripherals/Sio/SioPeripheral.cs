@@ -21,8 +21,8 @@ public class SioPeripheral : PeripheralBase
     // Pad-level signal lines for GPIO_IN / GPIO_HI_IN.
     // Per spec §9.8: input registers read pad state regardless of funcsel.
     // Populated by RegisterPadControls() after all peripherals are constructed.
-    private readonly SignalLine?[] m_LoLines = new SignalLine?[32];  // GPIO_IN  bits 0–31
-    private readonly SignalLine?[] m_HiLines = new SignalLine?[32];  // GPIO_HI_IN bits 0–31
+    private readonly Pin?[] m_LoLines = new Pin?[32];  // GPIO_IN  bits 0–31
+    private readonly Pin?[] m_HiLines = new Pin?[32];  // GPIO_HI_IN bits 0–31
 
     public SioPeripheral(uint baseAddress, string name, ILogger<SioPeripheral> logger, IElapsedTime elapsedTime)
         : base(baseAddress, name, logger)
@@ -108,15 +108,15 @@ public class SioPeripheral : PeripheralBase
     {
         // GPIO_IN: bits 0–31 = Bank 0 GPIO 0–31
         for (int i = 0; i < 32; i++)
-            m_LoLines[i] = bank0.GetSignalLine(i);
+            m_LoLines[i] = bank0.GetPin(i);
 
         // GPIO_HI_IN: bits 0–15 = Bank 0 GPIO 32–47
         for (int i = 0; i < 16; i++)
-            m_HiLines[i] = bank0.GetSignalLine(32 + i);
+            m_HiLines[i] = bank0.GetPin(32 + i);
 
         // GPIO_HI_IN: bits 24–31 = IoQspi pins 0–7 (USB DP/DM at 24–25 have no PadsQSPI entry → null → 0)
         for (int i = 0; i < 8; i++)
-            m_HiLines[24 + i] = qspi.GetSignalLine(i);
+            m_HiLines[24 + i] = qspi.GetPin(i);
     }
 
     private void AddInterpolator(int n, uint base_)
@@ -155,7 +155,7 @@ public class SioPeripheral : PeripheralBase
         }
     }
 
-    private static uint ReadLineMask(SignalLine?[] lines)
+    private static uint ReadLineMask(Pin?[] lines)
     {
         uint result = 0;
         for (int i = 0; i < 32; i++)

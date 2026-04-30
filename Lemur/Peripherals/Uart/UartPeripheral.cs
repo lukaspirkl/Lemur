@@ -6,16 +6,16 @@ namespace Lemur.Peripherals.Uart;
 
 public class UART0 : UartPeripheral
 {
-    public UART0(uint baseAddress, string name, ILogger<UART0> logger, ILogger<UartRxGpioFunction> rxLogger, CsrController csrController, Clocks clocks)
-        : base(baseAddress, name, logger, rxLogger, csrController, Irq.UART0_IRQ, clocks)
+    public UART0(uint baseAddress, string name, ILogger<UART0> logger, ILogger<UartRxGpioFunction> rxLogger, ILogger<UartTxGpioFunction> txLogger, CsrController csrController, Clocks clocks)
+        : base(baseAddress, name, logger, rxLogger, txLogger, csrController, Irq.UART0_IRQ, clocks)
     {
     }
 }
 
 public class UART1 : UartPeripheral
 {
-    public UART1(uint baseAddress, string name, ILogger<UART1> logger, ILogger<UartRxGpioFunction> rxLogger, CsrController csrController, Clocks clocks)
-        : base(baseAddress, name, logger, rxLogger, csrController, Irq.UART1_IRQ, clocks)
+    public UART1(uint baseAddress, string name, ILogger<UART1> logger, ILogger<UartRxGpioFunction> rxLogger, ILogger<UartTxGpioFunction> txLogger, CsrController csrController, Clocks clocks)
+        : base(baseAddress, name, logger, rxLogger, txLogger, csrController, Irq.UART1_IRQ, clocks)
     {
     }
 }
@@ -34,7 +34,7 @@ public class UartPeripheral : PeripheralBase, ITickable
     // ─── GPIO functions ───────────────────────────────────────────────────────
 
     /// <summary>Serialises TX bytes onto the UART TX pin one bit at a time.</summary>
-    public UartTxGpioFunction TxFunction { get; } = new();
+    public UartTxGpioFunction TxFunction { get; }
 
     /// <summary>Decodes incoming bits from the UART RX pin into bytes.</summary>
     public UartRxGpioFunction RxFunction { get; }
@@ -112,13 +112,14 @@ public class UartPeripheral : PeripheralBase, ITickable
     // ─────────────────────────────────────────────────────────────────────────
 
     public UartPeripheral(uint baseAddress, string name, ILogger<UartPeripheral> logger,
-        ILogger<UartRxGpioFunction> rxLogger, CsrController csrController, Irq irqNumber, Clocks clocks)
+        ILogger<UartRxGpioFunction> rxLogger, ILogger<UartTxGpioFunction> txLogger, CsrController csrController, Irq irqNumber, Clocks clocks)
         : base(baseAddress, name, logger)
     {
         m_CsrController = csrController;
         m_IrqNumber     = irqNumber;
         m_Clocks        = clocks;
         RxFunction      = new UartRxGpioFunction(rxLogger, "UartPeripheral");
+        TxFunction      = new UartTxGpioFunction(txLogger, "UartPeripheral");
 
         RxFunction.DataReceived += () =>
         {

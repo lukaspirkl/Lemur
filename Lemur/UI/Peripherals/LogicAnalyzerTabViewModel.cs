@@ -3,16 +3,21 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Lemur.ExternalDevices;
-using System.Collections.Generic;
-using System.Linq;
+using Lemur.UI.Peripherals;
 using System.Threading.Tasks;
 
 namespace Lemur.UI;
 
-public partial class LogicAnalyzerViewModel : ObservableObject
+public class LogicAnalyzerTabViewModelForPreviewer : LogicAnalyzerTabViewModel
+{
+    public LogicAnalyzerTabViewModelForPreviewer() : base(new LogicAnalyzer(new NullElapsedTime())) { }
+}
+
+public partial class LogicAnalyzerTabViewModel : ObservableObject, IPeripheralTab
 {
     private readonly LogicAnalyzer m_LogicAnalyzer;
-    private readonly IReadOnlyList<GpioPinViewModel> m_Pins;
+
+    public string TabName => "Logic Analyzer";
 
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
@@ -25,18 +30,15 @@ public partial class LogicAnalyzerViewModel : ObservableObject
 
     public string StatusText => IsRecording ? "Recording..." : "Idle";
 
-    public LogicAnalyzerViewModel(LogicAnalyzer logicAnalyzer, IReadOnlyList<GpioPinViewModel> pins)
+    public LogicAnalyzerTabViewModel(LogicAnalyzer logicAnalyzer)
     {
         m_LogicAnalyzer = logicAnalyzer;
-        m_Pins = pins;
     }
 
     [RelayCommand(CanExecute = nameof(CanStart))]
     private void Start()
     {
-        var selectedPins = m_Pins.Where(p => p.IsCapture).Select(p => p.PinNumber).ToList();
-        if (selectedPins.Count == 0) return;
-        m_LogicAnalyzer.StartRecording(selectedPins, OutputFile);
+        m_LogicAnalyzer.StartRecording(OutputFile);
         IsRecording = true;
     }
 

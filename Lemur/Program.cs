@@ -2,6 +2,7 @@
 using Lemur.Debug;
 using Lemur.ExternalDevices;
 using Lemur.Peripherals;
+using Lemur.Peripherals.Uart;
 using Lemur.UI;
 using Lemur.UI.Peripherals;
 using Microsoft.AspNetCore.Builder;
@@ -52,7 +53,7 @@ internal class Program
 
 
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
-            .MinimumLevel.Is(LogEventLevel.Error)
+            .MinimumLevel.Is(LogEventLevel.Fatal)
             //.MinimumLevel.Is(LogEventLevel.Information)
             //.MinimumLevel.Override<GdbConnectionHandler>(LogEventLevel.Verbose)
             //.MinimumLevel.Override<BinaryInfoService>(LogEventLevel.Verbose)
@@ -65,6 +66,8 @@ internal class Program
             //.MinimumLevel.Override<UART0>(LogEventLevel.Verbose)
             //.MinimumLevel.Override<UART1>(LogEventLevel.Verbose)
             //.MinimumLevel.Override<UART>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<UartRxGpioFunction>(LogEventLevel.Verbose)
+            //.MinimumLevel.Override<UartTxGpioFunction>(LogEventLevel.Verbose)
             .Enrich.FromLogContext()
             //.WriteTo.Async(a => a.File(new CompactJsonFormatter(), m_LogFile))
             .WriteTo.Console()
@@ -76,6 +79,8 @@ internal class Program
         builder.Services.AddRP2350Emulator();
 
         builder.Services.AddSingleton<LogicAnalyzer>();
+        builder.Services.AddSingleton<DebugWiring>();
+        builder.Services.AddHostedService(x => x.GetRequiredService<DebugWiring>());
         builder.Services.AddSingleton<SerialTerminal>();
         builder.Services.AddHostedService(x => x.GetRequiredService<SerialTerminal>());
 
@@ -94,6 +99,8 @@ internal class Program
         collection.AddSingletonViewModel<UARTViewModel, UARTView>();
         collection.AddSingletonViewModel<SerialTerminalViewModel, SerialTerminalView>();
         collection.AddSingletonViewModel<CsrTabViewModel, CsrTabView>();
+        collection.AddSingletonViewModel<SwitchesTabViewModel, SwitchesTabView>();
+        collection.AddSingletonViewModel<LogicAnalyzerTabViewModel, LogicAnalyzerTabView>();
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

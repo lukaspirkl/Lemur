@@ -2,9 +2,9 @@ using Avalonia.Controls;
 
 namespace Lemur.UI;
 
-public partial class GpioInterfaceView : UserControl
+public partial class SwitchesTabView : UserControl
 {
-    public GpioInterfaceView()
+    public SwitchesTabView()
     {
         InitializeComponent();
     }

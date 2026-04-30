@@ -7,16 +7,17 @@ using System.Threading.Tasks;
 
 namespace Lemur.ExternalDevices;
 
-/// <summary>
-/// External serial terminal hard-wired to the emulator's GPIO pins:
-///   Pin 0 — emulator UART0 TX  →  terminal RX  (decoded by UartRxGpioFunction)
-///   Pin 1 — terminal TX        →  emulator UART0 RX  (serialised by UartTxGpioFunction)
-/// </summary>
 public sealed class SerialTerminal : BackgroundService
 {
     private readonly UartTxGpioFunction m_TxFunction;
     private readonly UartRxGpioFunction m_RxFunction;
     private readonly IElapsedTime m_ElapsedTime;
+
+    // Pin the chip drives toward the terminal (e.g. emulator UART0 TX → terminal RX).
+    public Pin RxPin { get; } = new Pin("SerialTerminal - RX");
+
+    // Pin the terminal drives toward the chip (e.g. terminal TX → emulator UART0 RX).
+    public Pin TxPin { get; } = new Pin("SerialTerminal - TX");
 
     public event Action<byte>? DataReceived;
 
@@ -30,20 +31,17 @@ public sealed class SerialTerminal : BackgroundService
         }
     }
 
-    public SerialTerminal(RP2350Emulator emulator, ILogger<UartRxGpioFunction> rxLogger, IElapsedTime elapsedTime)
+    public SerialTerminal(ILogger<UartRxGpioFunction> rxLogger, ILogger<UartTxGpioFunction> txLogger, IElapsedTime elapsedTime)
     {
-        m_TxFunction = new UartTxGpioFunction();
+        //TxPin.SetPull(PullDirection.Up, elapsedTime.Now);
+
+        m_TxFunction = new UartTxGpioFunction(txLogger);
         m_RxFunction = new UartRxGpioFunction(rxLogger, "SerialTerminal");
+        m_ElapsedTime = elapsedTime;
 
-        var pin0 = emulator.GetPin(0); // emulator UART0 TX → terminal RX
-        var pin1 = emulator.GetPin(1); // terminal TX → emulator UART0 RX
+        RxPin.Changed += data => m_RxFunction.OnInput(data.Time, data.NewState ?? false);
 
-        pin0.Changed += data => m_RxFunction.OnInput(data.Time, data.NewState);
-
-        m_TxFunction.OutputChanged += data => pin1.Drive(this, data.Time, ToLineState(data.NewValue));
-
-        // Establish idle-HIGH on pin 1 immediately (UartTxGpioFunction already set Output=true in its ctor).
-        pin1.Drive(this, TimeSpan.Zero, ToLineState(m_TxFunction.Output));
+        m_TxFunction.OutputChanged += data => TxPin.SetOutput(data.NewValue, data.Time);
 
         m_RxFunction.DataReceived += () =>
         {
@@ -52,21 +50,13 @@ public sealed class SerialTerminal : BackgroundService
                 DataReceived?.Invoke(b);
             }
         };
-        m_ElapsedTime = elapsedTime;
     }
-
-    private static SignalLine.LineState ToLineState(bool? value) => value switch
-    {
-        true  => SignalLine.LineState.Up,
-        false => SignalLine.LineState.Down,
-        null  => SignalLine.LineState.HiZ,
-    };
 
     public void Transmit(byte b) => m_TxFunction.Transmit(b);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        while(!stoppingToken.IsCancellationRequested)
+        while (!stoppingToken.IsCancellationRequested)
         {
             m_TxFunction.Tick(m_ElapsedTime.Now);
             await Task.Delay(TimeSpan.FromMilliseconds(100), stoppingToken);

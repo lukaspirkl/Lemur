@@ -45,7 +45,7 @@ public class RP2350Emulator : BackgroundService, IDebuggable
         Reset();
     }
 
-    public SignalLine GetPin(int number) => m_UserBankPadControl.GetSignalLine(number);
+    public Pin GetPin(int number) => m_UserBankPadControl.GetPin(number);
 
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {

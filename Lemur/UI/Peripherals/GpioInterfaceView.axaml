@@ -3,7 +3,6 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Lemur.UI"
-             xmlns:converters="using:Avalonia.Data.Converters"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="450"
              x:Class="Lemur.UI.GpioInterfaceView"
              x:DataType="vm:GpioInterfaceViewModel">
@@ -20,12 +19,10 @@
                     <ColumnDefinition Width="auto" SharedSizeGroup="id" />
                     <ColumnDefinition Width="auto" SharedSizeGroup="value" />
                     <ColumnDefinition Width="auto" SharedSizeGroup="drive" />
-                    <ColumnDefinition Width="auto" SharedSizeGroup="capture" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="pin"     FontWeight="Bold" Margin="3,0"/>
-                <TextBlock Grid.Column="1" Text="value"   FontWeight="Bold" Margin="3,0"/>
+                <TextBlock Grid.Column="0" Text="pin"        FontWeight="Bold" Margin="3,0"/>
+                <TextBlock Grid.Column="1" Text="value"      FontWeight="Bold" Margin="3,0"/>
                 <TextBlock Grid.Column="2" Text="drive high" FontWeight="Bold" Margin="3,0"/>
-                <TextBlock Grid.Column="3" Text="capture" FontWeight="Bold" Margin="3,0"/>
             </Grid>
 
             <ItemsControl ItemsSource="{Binding Pins}">
@@ -36,36 +33,14 @@
                                 <ColumnDefinition Width="auto" SharedSizeGroup="id" />
                                 <ColumnDefinition Width="auto" SharedSizeGroup="value" />
                                 <ColumnDefinition Width="auto" SharedSizeGroup="drive" />
-                                <ColumnDefinition Width="auto" SharedSizeGroup="capture" />
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="{Binding Name}"      Margin="3,0"/>
                             <TextBlock Grid.Column="1" Text="{Binding ValueText}" Margin="3,0"/>
                             <CheckBox  Grid.Column="2" IsChecked="{Binding DriveHigh}"  Margin="3,0"/>
-                            <CheckBox  Grid.Column="3" IsChecked="{Binding IsCapture}"  Margin="3,0"/>
                         </Grid>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-
-            <Separator Margin="0,8"
-                       IsVisible="{Binding LogicAnalyzer, Converter={x:Static converters:ObjectConverters.IsNotNull}}"/>
-
-            <StackPanel Margin="4,0,4,8"
-                        IsVisible="{Binding LogicAnalyzer, Converter={x:Static converters:ObjectConverters.IsNotNull}}">
-                <TextBlock Text="Logic Analyzer" FontWeight="Bold" Margin="0,0,0,6"/>
-                <DockPanel Margin="0,0,0,4">
-                    <Button DockPanel.Dock="Right" Content="Browse"
-                            Click="OnBrowseOutputFile" Margin="4,0,0,0"/>
-                    <TextBox Text="{Binding LogicAnalyzer.OutputFile}"
-                             PlaceholderText="Output .vcd file"/>
-                </DockPanel>
-                <StackPanel Orientation="Horizontal" Spacing="4">
-                    <Button Content="Start" Command="{Binding LogicAnalyzer.StartCommand}"/>
-                    <Button Content="Stop"  Command="{Binding LogicAnalyzer.StopCommand}"/>
-                    <TextBlock Text="{Binding LogicAnalyzer.StatusText}"
-                               VerticalAlignment="Center" Margin="4,0,0,0"/>
-                </StackPanel>
-            </StackPanel>
 
         </StackPanel>
     </ScrollViewer>

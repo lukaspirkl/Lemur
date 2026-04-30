@@ -1,0 +1,29 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemur.UI"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="120"
+             x:Class="Lemur.UI.LogicAnalyzerTabView"
+             x:DataType="vm:LogicAnalyzerTabViewModel">
+
+    <Design.DataContext>
+        <vm:LogicAnalyzerTabViewModelForPreviewer />
+    </Design.DataContext>
+
+    <StackPanel Margin="4,8">
+        <DockPanel Margin="0,0,0,4">
+            <Button DockPanel.Dock="Right" Content="Browse"
+                    Click="OnBrowseOutputFile" Margin="4,0,0,0"/>
+            <TextBox Text="{Binding OutputFile}"
+                     PlaceholderText="Output .vcd file"/>
+        </DockPanel>
+        <StackPanel Orientation="Horizontal" Spacing="4">
+            <Button Content="Start" Command="{Binding StartCommand}"/>
+            <Button Content="Stop"  Command="{Binding StopCommand}"/>
+            <TextBlock Text="{Binding StatusText}"
+                       VerticalAlignment="Center" Margin="4,0,0,0"/>
+        </StackPanel>
+    </StackPanel>
+
+</UserControl>

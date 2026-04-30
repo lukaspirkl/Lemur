@@ -21,7 +21,7 @@ namespace Lemur.Peripherals;
 public class PadsQSPI : PeripheralBase
 {
     // Indexed by IoQspiPeripheral.GpioMux index; slots 0–1 (USB) are null.
-    private readonly SignalLine?[] m_SignalLines = new SignalLine?[8];
+    private readonly Pin?[] m_Pins = new Pin?[8];
 
     public Voltage VoltageSelect { get; set; }
 
@@ -43,17 +43,17 @@ public class PadsQSPI : PeripheralBase
         AddPad(0x18, "GPIO_QSPI_SS",   ioQspi, ioQspiIndex: 3, elapsedTime, pullUp: true);
     }
 
-    // Returns the signal line for the given IoQspiPeripheral.GpioMux index (2–7), or null for USB (0–1).
-    public SignalLine? GetSignalLine(int ioQspiIndex) => m_SignalLines[ioQspiIndex];
+    // Returns the pin for the given IoQspiPeripheral.GpioMux index (2–7), or null for USB (0–1).
+    public Pin? GetPin(int ioQspiIndex) => m_Pins[ioQspiIndex];
 
     private void AddPad(uint offset, string padName, IoQspiPeripheral ioQspi,
         int ioQspiIndex, IElapsedTime elapsedTime, bool pullUp)
     {
-        var line = new SignalLine();
-        m_SignalLines[ioQspiIndex] = line;
+        var pin = new Pin($"RP2350 - {padName}");
+        m_Pins[ioQspiIndex] = pin;
         var reg = AddRegister(offset, padName);
         // IE resets to 1 for Bank 1; pull direction depends on the pin.
-        new PadBridge(reg, ioQspi.GpioMux[ioQspiIndex], line, elapsedTime,
+        new PadBridge(reg, ioQspi.GpioMux[ioQspiIndex], pin, elapsedTime,
             initialInputEnable:    true,
             initialPullUpEnable:   pullUp,
             initialPullDownEnable: !pullUp);

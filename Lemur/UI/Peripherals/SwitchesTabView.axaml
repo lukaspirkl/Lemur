@@ -1,0 +1,27 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:Lemur.UI"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="200"
+             x:Class="Lemur.UI.SwitchesTabView"
+             x:DataType="vm:SwitchesTabViewModel">
+
+    <Design.DataContext>
+        <vm:SwitchesTabViewModelForPreviewer />
+    </Design.DataContext>
+
+    <ItemsControl ItemsSource="{Binding Switches}" Margin="4">
+        <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal" />
+            </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="vm:SwitchViewModel">
+                <ToggleButton IsChecked="{Binding IsOn}" Content="{Binding Name}" Margin="4" />
+            </DataTemplate>
+        </ItemsControl.ItemTemplate>
+    </ItemsControl>
+
+</UserControl>

@@ -1,35 +1,46 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using static Lemur.SignalLine;
 
 namespace Lemur.ExternalDevices;
 
 public sealed class LogicAnalyzer
 {
-    private readonly RP2350Emulator m_Emulator;
-    
+    private readonly List<Pin> m_AvailablePins = [];
+
     private string m_OutputFile = string.Empty;
-    private List<int> m_PinNumbers = [];
-    private List<Action<ChangeData>> m_Handlers = [];
-    private List<(int pin, bool value, TimeSpan time)> m_Events = [];
-    private Dictionary<int, bool> m_InitialValues = [];
+    private List<Pin> m_RecordingPins = [];
+    private List<Action<SignalChange>> m_Handlers = [];
+    private List<(Pin pin, bool value, TimeSpan time)> m_Events = [];
+    private Dictionary<Pin, bool> m_InitialValues = [];
     private readonly object m_Lock = new();
+    private readonly IElapsedTime m_ElapsedTime;
+
+    private TimeSpan m_StartTime;
 
     public bool IsRecording { get; private set; }
     public event Action? RecordingChanged;
 
-    public LogicAnalyzer(RP2350Emulator emulator)
+    public LogicAnalyzer(IElapsedTime elapsedTime)
     {
-        m_Emulator = emulator;
+        m_ElapsedTime = elapsedTime;
     }
 
-    public void StartRecording(IEnumerable<int> pins, string outputFile)
+    public void AddPin(Pin pin)
+    {
+        if (!m_AvailablePins.Contains(pin))
+            m_AvailablePins.Add(pin);
+    }
+
+    public void RemovePin(Pin pin) => m_AvailablePins.Remove(pin);
+
+    public void StartRecording(string outputFile)
     {
         if (IsRecording) return;
 
+        m_StartTime = m_ElapsedTime.Now;
         m_OutputFile = outputFile;
-        m_PinNumbers = [.. pins];
+        m_RecordingPins = [.. m_AvailablePins];
         m_Handlers = [];
         m_InitialValues = [];
 
@@ -38,19 +49,17 @@ public sealed class LogicAnalyzer
             m_Events = [];
         }
 
-        foreach (var pinNumber in m_PinNumbers)
+        foreach (var pin in m_RecordingPins)
         {
-            var pin = m_Emulator.GetPin(pinNumber);
-            m_InitialValues[pinNumber] = pin.State;
+            m_InitialValues[pin] = pin.State ?? false;
 
-            var captured = pinNumber;
-            Action<ChangeData> handler = data =>
+            Action<SignalChange> handler = data =>
             {
                 if (data.OldState != data.NewState)
                 {
                     lock (m_Lock)
                     {
-                        m_Events.Add((captured, data.NewState, data.Time));
+                        m_Events.Add((pin, data.NewState ?? false, data.Time - m_StartTime));
                     }
                 }
             };
@@ -66,13 +75,13 @@ public sealed class LogicAnalyzer
     {
         if (!IsRecording) return;
 
-        for (int i = 0; i < m_PinNumbers.Count; i++)
-            m_Emulator.GetPin(m_PinNumbers[i]).Changed -= m_Handlers[i];
+        for (int i = 0; i < m_RecordingPins.Count; i++)
+            m_RecordingPins[i].Changed -= m_Handlers[i];
 
         IsRecording = false;
         RecordingChanged?.Invoke();
 
-        List<(int pin, bool value, TimeSpan time)> snapshot;
+        List<(Pin pin, bool value, TimeSpan time)> snapshot;
         lock (m_Lock)
         {
             snapshot = [.. m_Events];
@@ -81,7 +90,7 @@ public sealed class LogicAnalyzer
         WriteVcd(snapshot);
     }
 
-    private void WriteVcd(List<(int pin, bool value, TimeSpan time)> events)
+    private void WriteVcd(List<(Pin pin, bool value, TimeSpan time)> events)
     {
         events.Sort((a, b) => a.time.CompareTo(b.time));
 
@@ -90,10 +99,10 @@ public sealed class LogicAnalyzer
         writer.WriteLine("$timescale 100ns $end"); // One tick is 100ns
         writer.WriteLine("$scope module logic_analyzer $end");
 
-        for (int i = 0; i < m_PinNumbers.Count; i++)
+        for (int i = 0; i < m_RecordingPins.Count; i++)
         {
             char id = (char)('!' + i);
-            writer.WriteLine($"$var wire 1 {id} GPIO{m_PinNumbers[i]} $end");
+            writer.WriteLine($"$var wire 1 {id} {SanitizeName(m_RecordingPins[i].Name)} $end");
         }
 
         writer.WriteLine("$upscope $end");
@@ -101,10 +110,10 @@ public sealed class LogicAnalyzer
         writer.WriteLine("#0");
         writer.WriteLine("$dumpvars");
 
-        for (int i = 0; i < m_PinNumbers.Count; i++)
+        for (int i = 0; i < m_RecordingPins.Count; i++)
         {
             char id = (char)('!' + i);
-            bool initial = m_InitialValues.GetValueOrDefault(m_PinNumbers[i]);
+            bool initial = m_InitialValues.GetValueOrDefault(m_RecordingPins[i]);
             writer.WriteLine($"{(initial ? '1' : '0')}{id}");
         }
 
@@ -119,11 +128,23 @@ public sealed class LogicAnalyzer
                 currentTime = time;
             }
 
-            int idx = m_PinNumbers.IndexOf(pin);
+            int idx = m_RecordingPins.IndexOf(pin);
             if (idx < 0) continue;
 
             writer.Write(value ? '1' : '0');
             writer.WriteLine((char)('!' + idx));
         }
+
+        writer.WriteLine("$end");
+    }
+
+    private static string SanitizeName(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "_";
+
+        var chars = new char[name.Length];
+        for (int i = 0; i < name.Length; i++)
+            chars[i] = char.IsLetterOrDigit(name[i]) || name[i] == '_' ? name[i] : '_';
+        return new string(chars);
     }
 }

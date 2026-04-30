@@ -67,11 +67,16 @@ public class UartRxGpioFunction : GpioFunctionBase
 
     public override void OnInput(TimeSpan time, bool value)
     {
+        m_Logger.LogDebug("[RX-{name}]Input received {bit}. Diff: {diff}us ({duration})", m_Name, value, time.TotalMicroseconds - m_LastBitTime.TotalMicroseconds, m_BitDuration.TotalMicroseconds);
+
         // When next input is longer than expected we should reset to idle state
         if (m_LastBitTime == TimeSpan.Zero || m_LastBitTime + m_BitDuration + SafetyMargin < time)
         {
+            m_Logger.LogDebug("[RX-{name}]Switch to idle.", m_Name);
             m_State = RxState.Idle;
         }
+
+        // TODO: Ignore events that are received too soon
 
         m_LastBitTime = time;
         ProcessBit(value);
@@ -99,6 +104,7 @@ public class UartRxGpioFunction : GpioFunctionBase
         switch (m_State)
         {
             case RxState.Idle:
+                m_Logger.LogDebug("[RX-{name}]Idle {bit}", m_Name, bit);
                 if (!bit)
                 {
                     m_State = RxState.Data;
@@ -109,6 +115,7 @@ public class UartRxGpioFunction : GpioFunctionBase
                 break;
 
             case RxState.Data:
+                m_Logger.LogDebug("[RX-{name}]Data {bit}", m_Name, bit);
                 if (bit)
                     m_CurrentData |= 1 << m_DataBitIndex;
 
@@ -118,11 +125,13 @@ public class UartRxGpioFunction : GpioFunctionBase
                 break;
 
             case RxState.Parity:
+                m_Logger.LogDebug("[RX-{name}]Parity {bit}", m_Name, bit);
                 m_ReceivedParity = bit;
                 m_State = RxState.Stop1;
                 break;
 
             case RxState.Stop1:
+                m_Logger.LogDebug("[RX-{name}]Stop1 {bit}", m_Name, bit);
                 HandleStopBitErrors(bit);
                 m_State = TwoStopBits ? RxState.Stop2 : RxState.Idle;
                 if (!TwoStopBits)
@@ -130,10 +139,11 @@ public class UartRxGpioFunction : GpioFunctionBase
                 break;
 
             case RxState.Stop2:
+                m_Logger.LogDebug("[RX-{name}]Stop2 {bit}", m_Name, bit);
                 if (!bit)
                 {
                     FramingError = true;
-                    m_Logger.LogWarning("UART RX: framing error (data=0x{Data:X2})", (byte)m_CurrentData);
+                    m_Logger.LogWarning("UART RX-{name}: framing error (data=0x{Data:X2})", m_Name, (byte)m_CurrentData);
                     FramingErrorOccurred?.Invoke();
                 }
                 CompleteFrame();
@@ -147,14 +157,14 @@ public class UartRxGpioFunction : GpioFunctionBase
         if (m_CurrentData == 0 && !stopBit)
         {
             BreakDetected = true;
-            m_Logger.LogWarning("UART RX: break condition detected");
+            m_Logger.LogWarning("UART RX-{name}: break condition detected", m_Name);
             BreakDetectedOccurred?.Invoke();
         }
 
         if (!stopBit)
         {
             FramingError = true;
-            m_Logger.LogWarning("UART RX: framing error (data=0x{Data:X2})", (byte)m_CurrentData);
+            m_Logger.LogWarning("UART RX-{name}: framing error (data=0x{Data:X2})", m_Name, (byte)m_CurrentData);
             FramingErrorOccurred?.Invoke();
         }
     }
@@ -167,7 +177,7 @@ public class UartRxGpioFunction : GpioFunctionBase
             if (m_ReceivedParity != expectedParity)
             {
                 ParityError = true;
-                m_Logger.LogWarning("UART RX: parity error (data=0x{Data:X2}, received={Received}, expected={Expected})", (byte)m_CurrentData, m_ReceivedParity, expectedParity);
+                m_Logger.LogWarning("UART RX-{name}: parity error (data=0x{Data:X2}, received={Received}, expected={Expected})", m_Name, (byte)m_CurrentData, m_ReceivedParity, expectedParity);
                 ParityErrorOccurred?.Invoke();
             }
         }
@@ -175,11 +185,12 @@ public class UartRxGpioFunction : GpioFunctionBase
         if (m_RxFifo.Count >= FifoCapacity)
         {
             OverrunError = true;
-            m_Logger.LogWarning("UART RX: overrun, byte 0x{Data:X2} discarded", (byte)m_CurrentData);
+            m_Logger.LogWarning("UART RX-{name}: overrun, byte 0x{Data:X2} discarded", m_Name, (byte)m_CurrentData);
             OverrunOccurred?.Invoke();
         }
         else
         {
+            m_Logger.LogDebug("[RX-{name}]Complete frame 0x{Data:X2} ({char})", m_Name, (byte)m_CurrentData, (char)m_CurrentData);
             m_RxFifo.Enqueue((byte)m_CurrentData);
             DataReceived?.Invoke();
         }

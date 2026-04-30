@@ -8,8 +8,8 @@ public class UserBankPadControl : PeripheralBase
 {
     const int LINE_COUNT = 48;
 
-    private readonly SignalLine[] m_SignalLines = Enumerable.Range(0, LINE_COUNT).Select(_ => new SignalLine()).ToArray();
-    private readonly PadBridge[]  m_Bridges     = new PadBridge[LINE_COUNT];
+    private readonly Pin[]      m_Pins    = Enumerable.Range(0, LINE_COUNT).Select(i => new Pin($"RP2350 - GPIO{i}")).ToArray();
+    private readonly PadBridge[] m_Bridges = new PadBridge[LINE_COUNT];
 
     public Voltage VoltageSelect { get; set; }
 
@@ -22,14 +22,14 @@ public class UserBankPadControl : PeripheralBase
         for (uint i = 0; i < LINE_COUNT; i++)
         {
             var reg = AddRegister(4 + (i * 4), $"GPIO{i}");
-            m_Bridges[i] = new PadBridge(reg, userBankIO.GpioMux[i], m_SignalLines[i], elapsedTime);
+            m_Bridges[i] = new PadBridge(reg, userBankIO.GpioMux[i], m_Pins[i], elapsedTime);
         }
 
         AddRegister(0xc4, "SWCLK");
         AddRegister(0xc8, "SWD");
     }
 
-    public SignalLine GetSignalLine(int index) => m_SignalLines[index];
+    public Pin GetPin(int index) => m_Pins[index];
 
     public enum Voltage : byte
     {

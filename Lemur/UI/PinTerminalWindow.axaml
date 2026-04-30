@@ -1,0 +1,34 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="using:Lemur.UI"
+        xmlns:terminal="using:Lemur.UI.Terminal"
+        mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
+        x:Class="Lemur.UI.PinTerminalWindow"
+        x:DataType="vm:PinTerminalViewModel"
+        Title="{Binding Title}"
+        Width="800"
+        Height="450">
+
+    <Grid ColumnDefinitions="*, Auto">
+        <terminal:TerminalView Grid.Column="0"
+                               x:Name="m_Terminal"
+                               Emulator="{Binding Emulator}">
+            <terminal:TerminalView.ContextMenu>
+                <ContextMenu>
+                    <MenuItem Header="Clear" Click="Clear" />
+                </ContextMenu>
+            </terminal:TerminalView.ContextMenu>
+        </terminal:TerminalView>
+
+        <ScrollBar Grid.Column="1"
+                   Orientation="Vertical"
+                   Minimum="0"
+                   Maximum="{Binding #m_Terminal.MaxScrollOffset}"
+                   Value="{Binding #m_Terminal.ScrollOffset, Mode=TwoWay}"
+                   SmallChange="1"
+                   LargeChange="10" />
+    </Grid>
+
+</Window>

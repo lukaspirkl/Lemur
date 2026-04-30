@@ -5,6 +5,7 @@
  */
 
 #include "pico/stdlib.h"
+#include "pico/binary_info.h"
 
 #ifndef LED_DELAY_MS
 #define LED_DELAY_MS 250
@@ -13,6 +14,8 @@
 #ifndef PICO_DEFAULT_LED_PIN
 #warning blink_simple example requires a board with a regular LED
 #endif
+
+bi_decl(bi_1pin_with_name(PICO_DEFAULT_LED_PIN, "Status [LED(red)]"));
 
 // Initialize the GPIO for the LED
 void pico_led_init(void) {

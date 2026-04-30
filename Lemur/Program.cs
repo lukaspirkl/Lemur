@@ -79,8 +79,9 @@ internal class Program
         builder.Services.AddRP2350Emulator();
 
         builder.Services.AddSingleton<LogicAnalyzer>();
-        builder.Services.AddSingleton<DebugWiring>();
-        builder.Services.AddHostedService(x => x.GetRequiredService<DebugWiring>());
+        //builder.Services.AddSingleton<DebugWiring>();
+        //builder.Services.AddHostedService(x => x.GetRequiredService<DebugWiring>());
+        builder.Services.AddSingleton<BinaryInfoWiring>();
         builder.Services.AddSingleton<SerialTerminal>();
         builder.Services.AddHostedService(x => x.GetRequiredService<SerialTerminal>());
 
@@ -99,7 +100,7 @@ internal class Program
         collection.AddSingletonViewModel<UARTViewModel, UARTView>();
         collection.AddSingletonViewModel<SerialTerminalViewModel, SerialTerminalView>();
         collection.AddSingletonViewModel<CsrTabViewModel, CsrTabView>();
-        collection.AddSingletonViewModel<SwitchesTabViewModel, SwitchesTabView>();
+        collection.AddSingletonViewModel<DevicesTabViewModel, DevicesTabView>();
         collection.AddSingletonViewModel<LogicAnalyzerTabViewModel, LogicAnalyzerTabView>();
     }
 

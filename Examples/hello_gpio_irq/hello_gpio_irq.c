@@ -5,7 +5,11 @@
 
 #define GPIO_WATCH_PIN 5
 
+
+bi_decl(bi_1pin_with_name(0, "Debug [SerialTerminal-RX]"));
+bi_decl(bi_1pin_with_name(1, "Debug [SerialTerminal-TX]"));
 bi_decl(bi_1pin_with_name(5, "Watch [SWITCH]"));
+
 
 static char event_str[128];
 

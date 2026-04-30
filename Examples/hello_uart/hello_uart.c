@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
+#include "pico/binary_info.h"
 
 /// \tag::hello_uart[]
 
@@ -25,6 +26,8 @@
 #define ANSI_BOLD "\x1b[1m"
 #define ANSI_COLOR_RESET "\x1b[0m"
 
+bi_decl(bi_1pin_with_name(0, "Debug [SerialTerminal-RX]"));
+bi_decl(bi_1pin_with_name(1, "Debug [SerialTerminal-TX]"));
 
 
 int main() {

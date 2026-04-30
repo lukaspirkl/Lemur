@@ -4,24 +4,95 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:Lemur.UI"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="200"
-             x:Class="Lemur.UI.SwitchesTabView"
-             x:DataType="vm:SwitchesTabViewModel">
+             x:Class="Lemur.UI.DevicesTabView"
+             x:DataType="vm:DevicesTabViewModel">
 
     <Design.DataContext>
-        <vm:SwitchesTabViewModelForPreviewer />
+        <vm:DevicesTabViewModelForPreviewer />
     </Design.DataContext>
 
-    <ItemsControl ItemsSource="{Binding Switches}" Margin="4">
-        <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-                <WrapPanel Orientation="Horizontal" />
-            </ItemsPanelTemplate>
-        </ItemsControl.ItemsPanel>
-        <ItemsControl.ItemTemplate>
-            <DataTemplate x:DataType="vm:SwitchViewModel">
-                <ToggleButton IsChecked="{Binding IsOn}" Content="{Binding Name}" Margin="4" />
-            </DataTemplate>
-        </ItemsControl.ItemTemplate>
-    </ItemsControl>
+    <StackPanel Margin="4" Spacing="8">
+
+        <!-- Switches -->
+        <ItemsControl ItemsSource="{Binding Switches}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:SwitchViewModel">
+                    <ToggleButton IsChecked="{Binding IsOn}" Content="{Binding Name}" Margin="4" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Buttons -->
+        <ItemsControl ItemsSource="{Binding Buttons}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ButtonViewModel">
+                    <Border Margin="4"
+                            Padding="10,5"
+                            CornerRadius="4"
+                            BorderThickness="1"
+                            BorderBrush="#555"
+                            Background="#3C3C3C"
+                            Cursor="Hand"
+                            PointerPressed="OnButtonPointerPressed"
+                            PointerReleased="OnButtonPointerReleased"
+                            PointerCaptureLost="OnButtonPointerCaptureLost">
+                        <TextBlock Text="{Binding Name}"
+                                   HorizontalAlignment="Center" />
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- LEDs -->
+        <ItemsControl ItemsSource="{Binding Leds}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:LedViewModel">
+                    <StackPanel Orientation="Vertical" HorizontalAlignment="Center" Margin="4">
+                        <Ellipse Width="20" Height="20"
+                                 Stroke="{Binding StrokeBrush}"
+                                 StrokeThickness="2"
+                                 Fill="{Binding FillBrush}"
+                                 HorizontalAlignment="Center" />
+                        <TextBlock Text="{Binding Name}"
+                                   HorizontalAlignment="Center"
+                                   FontSize="11"
+                                   Margin="0,2,0,0" />
+                    </StackPanel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Serial Terminals -->
+        <ItemsControl ItemsSource="{Binding Terminals}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:PinTerminalViewModel">
+                    <Button Content="{Binding Name, StringFormat='Open {0} Terminal'}"
+                            Command="{Binding OpenTerminalCommand}"
+                            Margin="4" />
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+    </StackPanel>
 
 </UserControl>

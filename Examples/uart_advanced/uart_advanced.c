@@ -8,6 +8,7 @@
 #include "pico/stdlib.h"
 #include "hardware/uart.h"
 #include "hardware/irq.h"
+#include "pico/binary_info.h"
 
 
 /// \tag::uart_advanced[]
@@ -22,6 +23,9 @@
 // datasheet for information on which other pins can be used.
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
+
+bi_decl(bi_1pin_with_name(0, "Debug [SerialTerminal-RX]"));
+bi_decl(bi_1pin_with_name(1, "Debug [SerialTerminal-TX]"));
 
 static int chars_rxed = 0;
 

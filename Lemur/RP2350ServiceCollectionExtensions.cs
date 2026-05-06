@@ -24,7 +24,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddSingleton<IDebuggable>(x => x.GetRequiredService<RP2350Emulator>());
 
         services.AddSingleton<BinaryInfoService>();
-        services.AddSingleton<PmpConfig>();
+        services.AddSingleton<RiscVConfig>();
         services.AddSingleton<Hazard3Processor>();
         services.AddSingleton<PmpChecker>();
         services.AddSingleton<IBusFabric, BusFabric>();

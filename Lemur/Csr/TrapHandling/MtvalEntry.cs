@@ -10,3 +10,12 @@ public class MtvalEntry : CsrEntry
     protected override uint ReadCore()            => m_Value;
     protected override void WriteCore(uint value) => m_Value = value;
 }
+
+
+// mtval — 0x343 — hardwired to 0
+public class MtvalZeroEntry : CsrEntry
+{
+    public MtvalZeroEntry() : base(0x343, "mtval", "Trap") { }
+    protected override uint ReadCore() => 0;
+    protected override void WriteCore(uint value) { }
+}

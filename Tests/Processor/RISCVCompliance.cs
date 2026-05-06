@@ -71,10 +71,16 @@ public class RISCVCompliance
             }
         };
 
-        var csr = new CsrController();
+        var config = new RiscVConfig
+        {
+            TorEnabled = true,
+            MtvalHardwiredToZero = false,
+        };
+
+        var csr = new CsrController(config);
         var r = new Registers(new ConsoleEmuLogger<Registers>());
         var e = new Hazard3Processor(new ConsoleEmuLogger<Hazard3Processor>(), r, csr);
-        var pmp = new PmpChecker(csr, e);
+        var pmp = new PmpChecker(csr, e, config);
         var m = new BusFabric([ram], new ConsoleEmuLogger<BusFabric>(), pmp);
         e.Memory = m;
 

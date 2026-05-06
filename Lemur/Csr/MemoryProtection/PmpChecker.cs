@@ -14,20 +14,20 @@ public enum AccessType { Read, Write, Execute }
 // MPRV (mstatus bit 17): when set and current mode is M, load/store checks
 // use MPP as effective privilege. Instruction fetch always uses current mode.
 //
-// TOR mode (A=1) is only active when PmpConfig.TorEnabled = true.
+// TOR mode (A=1) is only active when RiscVConfig.TorEnabled = true.
 // With the Hazard3 default (TorEnabled = false), A=1 is sanitised to OFF at
 // pmpcfg write time and therefore never reaches the matching logic.
 public class PmpChecker
 {
     private readonly CsrController m_Csr;
     private readonly Hazard3Processor m_Processor;
-    private readonly PmpConfig m_Config;
+    private readonly RiscVConfig m_Config;
 
-    public PmpChecker(CsrController csr, Hazard3Processor processor, PmpConfig? config = null)
+    public PmpChecker(CsrController csr, Hazard3Processor processor, RiscVConfig? config = null)
     {
         m_Csr = csr;
         m_Processor = processor;
-        m_Config = config ?? new PmpConfig();
+        m_Config = config ?? new RiscVConfig();
     }
 
     public bool IsPermitted(uint address, AccessType type)

@@ -38,7 +38,7 @@ public class CsrController
     public MscratchEntry         Mscratch   { get; }
     public MepcEntry             Mepc       { get; }
     public McauseEntry           Mcause     { get; }
-    public MtvalEntry            Mtval      { get; }
+    public CsrEntry              Mtval      { get; }
     public McounterenEntry       Mcounteren { get; }
 
     // 3.3 — Standard Memory Protection (arrays registered manually in constructor)
@@ -77,9 +77,8 @@ public class CsrController
 
     public IEnumerable<CsrEntry> AllEntries => m_Entries.Values;
 
-    public CsrController(PmpConfig? pmpConfig = null)
+    public CsrController(RiscVConfig riscVConfig)
     {
-        pmpConfig ??= new PmpConfig();
         // 3.1 — Identification (all read-only constants)
         Mvendorid  = new();
         Marchid    = new();
@@ -98,12 +97,12 @@ public class CsrController
         Mscratch   = new();
         Mepc       = new();
         Mcause     = new();
-        Mtval      = new();
+        Mtval      = riscVConfig.MtvalHardwiredToZero ? new MtvalZeroEntry() : new MtvalEntry();
         Mcounteren = new();
 
         // 3.3 — Memory Protection (arrays registered separately below)
         for (int i = 0; i < 4; i++)
-            Pmpcfg[i] = new((ushort)(0x3a0 + i), i, isTorEnabled: () => pmpConfig.TorEnabled);
+            Pmpcfg[i] = new((ushort)(0x3a0 + i), i, isTorEnabled: () => riscVConfig.TorEnabled);
         for (int i = 0; i < 16; i++)
         {
             int region = i;

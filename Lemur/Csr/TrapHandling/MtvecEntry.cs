@@ -4,16 +4,16 @@ namespace Lemur.Csr.TrapHandling;
 public class MtvecEntry : CsrEntry
 {
     private uint m_Base;
-    private bool m_Vectored;
+    private uint m_Mode; // bits[1:0]: 0=direct, 1=vectored; bit 1 preserved for readback
 
     [EntryValue("31:2", "trap vector base address")]
-    public uint Base     { get => m_Base;     set => Set(ref m_Base,     value); }
+    public uint Base { get => m_Base; set => Set(ref m_Base, value); }
 
-    [EntryValue("0",    "vectored mode (0=direct, 1=vectored)")]
-    public bool Vectored { get => m_Vectored; set => Set(ref m_Vectored, value); }
+    [EntryValue("1:0", "mode (0=direct, 1=vectored; bit 1 stored for round-trip)")]
+    public bool Vectored => (m_Mode & 1u) != 0;
 
     public MtvecEntry() : base(0x305, "mtvec", "Trap") { }
 
-    protected override uint ReadCore()     => (m_Base << 2) | (m_Vectored ? 1u : 0u);
-    protected override void WriteCore(uint value) { m_Base = value >> 2; m_Vectored = (value & 1u) != 0; }
+    protected override uint ReadCore()          => (m_Base << 2) | m_Mode;
+    protected override void WriteCore(uint value) { m_Base = value >> 2; m_Mode = value & 3u; }
 }

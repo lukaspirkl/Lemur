@@ -50,5 +50,9 @@ public class MipEntry : CsrEntry
         return v;
     }
 
-    protected override void WriteCore(uint value) { } // writable bits exist only for S/U modes
+    protected override void WriteCore(uint value)
+    {
+        Mtip = (value & (1u << 7)) != 0;
+        Msip = (value & (1u << 3)) != 0;
+    }
 }

@@ -149,7 +149,7 @@ public class Hazard3Processor
     {
         CSR.Mepc.Write(epc);
         CSR.Mcause.Write(cause);
-        // MTVAL is hardwired to zero on Hazard3; no write needed.
+        CSR.Mtval.Write(tval);
 
         // Save MIE → MPIE, then clear MIE.
         // Spec Section 3.1.6.1: "When a trap is taken ... MIE is set to 0, and MPIE = old MIE."

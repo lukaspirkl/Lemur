@@ -29,6 +29,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddSingleton<CsrController>();
         services.AddSingleton<MemoryFactory>();
         services.AddSingleton<UnimplementedPeripheralFactory>();
+        services.AddSingleton<IElapsedTime, ElapsedTime>();
 
         // 0x00000000 - ROM
         services.AddMemory("ROM", 0x00000000, 1024 * 32, m => 
@@ -81,7 +82,7 @@ public static class RP2350ServiceCollectionExtensions
         services.AddPeripheral(0x400d8000, "WATCHDOG_BASE").Implementation<Watchdog>();
         services.AddPeripheral(0x400e0000, "BOOTRAM_BASE").Implementation<BootRAM>();
         services.AddPeripheral(0x400e8000, "ROSC_BASE").Unimplemented();
-        services.AddPeripheral(0x400f0000, "TRNG_BASE").Unimplemented();
+        services.AddPeripheral(0x400f0000, "TRNG_BASE").Implementation<Trng>();
         services.AddPeripheral(0x400f8000, "SHA256_BASE").Implementation<Sha256>();
         services.AddPeripheral(0x40100000, "POWMAN_BASE").Implementation<Powman>();
         services.AddPeripheral(0x40108000, "TICKS_BASE").Unimplemented();

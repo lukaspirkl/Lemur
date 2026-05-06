@@ -53,7 +53,7 @@ internal class Program
 
 
         builder.Services.AddSerilog((services, loggerConfiguration) => loggerConfiguration
-            .MinimumLevel.Is(LogEventLevel.Fatal)
+            .MinimumLevel.Is(LogEventLevel.Error)
             //.MinimumLevel.Is(LogEventLevel.Information)
             //.MinimumLevel.Override<GdbConnectionHandler>(LogEventLevel.Verbose)
             //.MinimumLevel.Override<BinaryInfoService>(LogEventLevel.Verbose)
@@ -73,7 +73,6 @@ internal class Program
             .WriteTo.Console()
         );
 
-        builder.Services.AddSingleton<IElapsedTime, ElapsedTime>();
 
         builder.Services.AddTransient(typeof(IEmuLogger<>), typeof(EmuLogger<>));
         builder.Services.AddRP2350Emulator();

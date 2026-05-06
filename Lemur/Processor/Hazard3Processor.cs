@@ -26,6 +26,7 @@ public class Hazard3Processor
     public IBusFabric Memory { get; set; } = new NullBusFabric();
     public Registers Registers { get; }
     public CsrController CSR { get; }
+    public PrivilegeMode CurrentPrivilege { get; set; } = PrivilegeMode.Machine;
 
     public event Action? EBreak;
     public void RaiseEBreak() => EBreak?.Invoke();
@@ -150,6 +151,11 @@ public class Hazard3Processor
         CSR.Mepc.Write(epc);
         CSR.Mcause.Write(cause);
         CSR.Mtval.Write(tval);
+
+        // Save current privilege to MPP, then elevate to M-mode.
+        // Spec Section 3.1.6.1: "the previous privilege mode is written to MPP."
+        CSR.Mstatus.Mpp = (uint)CurrentPrivilege;
+        CurrentPrivilege = PrivilegeMode.Machine;
 
         // Save MIE → MPIE, then clear MIE.
         // Spec Section 3.1.6.1: "When a trap is taken ... MIE is set to 0, and MPIE = old MIE."

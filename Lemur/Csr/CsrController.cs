@@ -77,8 +77,9 @@ public class CsrController
 
     public IEnumerable<CsrEntry> AllEntries => m_Entries.Values;
 
-    public CsrController()
+    public CsrController(PmpConfig? pmpConfig = null)
     {
+        pmpConfig ??= new PmpConfig();
         // 3.1 — Identification (all read-only constants)
         Mvendorid  = new();
         Marchid    = new();
@@ -101,8 +102,15 @@ public class CsrController
         Mcounteren = new();
 
         // 3.3 — Memory Protection (arrays registered separately below)
-        for (int i = 0; i < 4;  i++) Pmpcfg[i]  = new((ushort)(0x3a0 + i), i);
-        for (int i = 0; i < 16; i++) Pmpaddr[i] = new((ushort)(0x3b0 + i), i);
+        for (int i = 0; i < 4; i++)
+            Pmpcfg[i] = new((ushort)(0x3a0 + i), i, isTorEnabled: () => pmpConfig.TorEnabled);
+        for (int i = 0; i < 16; i++)
+        {
+            int region = i;
+            // pmpaddr[i] is read-only while the L bit of its pmpcfg byte is set.
+            Pmpaddr[i] = new((ushort)(0x3b0 + i), i, isLocked: () =>
+                ((Pmpcfg[region / 4].Read() >> ((region % 4) * 8)) & 0x80u) != 0);
+        }
 
         // 3.4 — Performance Counters
         Mcycle        = new();

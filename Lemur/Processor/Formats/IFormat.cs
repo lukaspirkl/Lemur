@@ -345,11 +345,14 @@ public class IFormat : FormatBase
                 // MRET — return from machine-level trap handler.
                 // Spec: RISC-V Privileged ISA Section 3.3.2
                 //
-                // 1. Restore PC from MEPC.
+                // 1. Restore privilege mode from MPP; reset MPP to U.
                 // 2. Restore MSTATUS: MIE = MPIE, MPIE = 1.
-                // 3. Xh3irq: if MEICONTEXT.MRETEIRQ is set, pop the preemption priority stack.
+                // 3. Restore PC from MEPC.
+                // 4. Xh3irq: if MEICONTEXT.MRETEIRQ is set, pop the preemption priority stack.
                 //    Spec §3.8.6.1.5: "A trap exit where MEICONTEXT.MRETEIRQ is set…"
                 {
+                    e.CurrentPrivilege = (PrivilegeMode)e.CSR.Mstatus.Mpp;
+                    e.CSR.Mstatus.Mpp  = (uint)PrivilegeMode.User;
                     e.CSR.Mstatus.Mie  = e.CSR.Mstatus.Mpie;
                     e.CSR.Mstatus.Mpie = true;
                     e.PC = e.CSR.Mepc.Read();

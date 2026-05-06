@@ -1,3 +1,4 @@
+using Lemur.Csr.MemoryProtection;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,8 +9,9 @@ public class BusFabric : IBusFabric
 {
     private readonly IEnumerable<IAddressableResource> m_Resources;
     private readonly IEmuLogger<BusFabric> m_Logger;
+    private readonly PmpChecker m_Pmp;
 
-    public BusFabric(IEnumerable<IAddressableResource> resources, IEmuLogger<BusFabric> logger)
+    public BusFabric(IEnumerable<IAddressableResource> resources, IEmuLogger<BusFabric> logger, PmpChecker pmp)
     {
         if (!BitConverter.IsLittleEndian)
         {
@@ -18,6 +20,7 @@ public class BusFabric : IBusFabric
 
         m_Resources = resources;
         m_Logger = logger;
+        m_Pmp = pmp;
     }
 
     private bool CanHandle(IAddressableResource resource, uint address)
@@ -39,6 +42,11 @@ public class BusFabric : IBusFabric
             throw new RiscVException(ExceptionCause.StoreAddressMisaligned, address, $"Misaligned address {address.ToHex()} when writing {data.Length} bytes.");
         }
 
+        if (!m_Pmp.IsPermitted(address, AccessType.Write))
+        {
+            throw new RiscVException(ExceptionCause.StoreAccessFault, address, $"PMP denied write at {address.ToHex()}");
+        }
+
         var segment = m_Resources.FirstOrDefault(x => CanHandle(x, address));
         if (segment == null)
         {
@@ -53,6 +61,11 @@ public class BusFabric : IBusFabric
         if (address % 2 != 0)
         {
             throw new RiscVException(ExceptionCause.InstructionAddressMisaligned, address, $"Misaligned address {address.ToHex()} when reading instruction.");
+        }
+
+        if (!m_Pmp.IsPermitted(address, AccessType.Execute))
+        {
+            throw new RiscVException(ExceptionCause.InstructionAccessFault, address, $"PMP denied fetch at {address.ToHex()}");
         }
 
         var segment = m_Resources.FirstOrDefault(x => CanHandle(x, address));
@@ -76,6 +89,11 @@ public class BusFabric : IBusFabric
         if (address % count != 0)
         {
             throw new RiscVException(ExceptionCause.LoadAddressMisaligned, address, $"Misaligned address {address.ToHex()} when reading {count} bytes.");
+        }
+
+        if (!m_Pmp.IsPermitted(address, AccessType.Read))
+        {
+            throw new RiscVException(ExceptionCause.LoadAccessFault, address, $"PMP denied read at {address.ToHex()}");
         }
 
         var segment = m_Resources.FirstOrDefault(x => CanHandle(x, address));

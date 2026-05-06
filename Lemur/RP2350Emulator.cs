@@ -121,6 +121,7 @@ public class RP2350Emulator : BackgroundService, IDebuggable
     public void Reset()
     {
         m_Processor.PC = 0x00007dfc; // riscv_entry_point - it is always on this address
+        m_Processor.CurrentPrivilege = PrivilegeMode.Machine;
 
         SetCSR(0x300, 0x00001808); //MSTATUS
         SetCSR(0xBE5, 0x00008000); //meicontext

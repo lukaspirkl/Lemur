@@ -1,4 +1,5 @@
 ﻿using Lemur.Csr;
+using Lemur.Csr.MemoryProtection;
 using Lemur.ExternalDevices;
 using Lemur.Peripherals;
 using Lemur.Peripherals.IoQSPI;
@@ -23,7 +24,9 @@ public static class RP2350ServiceCollectionExtensions
         services.AddSingleton<IDebuggable>(x => x.GetRequiredService<RP2350Emulator>());
 
         services.AddSingleton<BinaryInfoService>();
+        services.AddSingleton<PmpConfig>();
         services.AddSingleton<Hazard3Processor>();
+        services.AddSingleton<PmpChecker>();
         services.AddSingleton<IBusFabric, BusFabric>();
         services.AddSingleton<Registers>();
         services.AddSingleton<CsrController>();

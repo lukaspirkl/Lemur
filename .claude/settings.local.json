@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(dotnet build:*)",
-      "Bash(ls -la /c/Dev/Venture/VentureUI/Peripherals/*.cs)"
-    ]
-  }
-}

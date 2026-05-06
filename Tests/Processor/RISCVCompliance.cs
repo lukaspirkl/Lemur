@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging.Testing;
 using Lemur;
 using Lemur.Csr;
+using Lemur.Csr.MemoryProtection;
 using Lemur.Processor;
 
 namespace Tests.Processor;
@@ -59,8 +60,6 @@ public class RISCVCompliance
         var ram = new ElfMemory("ram", 0x80000000, 1024 * 1024 * 5, false, new FakeLogger<Memory>());
         ram.LoadElf(path);
 
-        var m = new BusFabric([ram], new ConsoleEmuLogger<BusFabric>());
-
         ram.OnWrite += (s, a) =>
         {
             // ToHost address
@@ -73,9 +72,10 @@ public class RISCVCompliance
         };
 
         var csr = new CsrController();
-
         var r = new Registers(new ConsoleEmuLogger<Registers>());
         var e = new Hazard3Processor(new ConsoleEmuLogger<Hazard3Processor>(), r, csr);
+        var pmp = new PmpChecker(csr, e);
+        var m = new BusFabric([ram], new ConsoleEmuLogger<BusFabric>(), pmp);
         e.Memory = m;
 
         // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.

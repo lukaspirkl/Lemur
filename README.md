@@ -33,6 +33,12 @@ from any GDB the same way you would on real hardware.
 - Run the included example binaries (`Examples/blink_simple.bin`,
   `hello_uart.bin`, `hello_gpio_irq.bin`, …).
 
+## Demo
+
+<a href="http://www.youtube.com/watch?feature=player_embedded&v=5qkPk4burmQ" target="_blank">
+ <img src="http://img.youtube.com/vi/5qkPk4burmQ/mqdefault.jpg" alt="Watch the video" width="240" height="180" border="10" />
+</a>
+
 ## RP2350 feature coverage
 
 Legend: ✅ implemented · 🟡 partial / mock · ❌ not implemented

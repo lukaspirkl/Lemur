@@ -35,9 +35,7 @@ from any GDB the same way you would on real hardware.
 
 ## Demo
 
-<a href="http://www.youtube.com/watch?feature=player_embedded&v=5qkPk4burmQ" target="_blank">
- <img src="http://img.youtube.com/vi/5qkPk4burmQ/mqdefault.jpg" alt="Watch the video" width="240" height="180" border="10" />
-</a>
+[![Lemur Demo](https://img.youtube.com/vi/5qkPk4burmQ/0.jpg)](https://www.youtube.com/watch?v=5qkPk4burmQ)
 
 ## RP2350 feature coverage
 

@@ -1,6 +1,7 @@
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Lemur.Debug;
 using Lemur.UI.Peripherals;
 using System;
 using System.Collections.Generic;
@@ -37,12 +38,19 @@ public partial class MainWindowViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(RunCommand))]
     [NotifyCanExecuteChangedFor(nameof(StopCommand))]
     [NotifyCanExecuteChangedFor(nameof(LoadCommand))]
+    [NotifyPropertyChangedFor(nameof(GdbStatusText))]
     private bool m_IsRunning = false;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(GdbStatusText))]
+    private bool m_IsGdbConnected = false;
+
+    public string GdbStatusText => IsRunning ? "Controlled by GDB (running)" : "Controlled by GDB (stopped)";
 
     [ObservableProperty]
     private string m_ProgramLabel = "No binary loaded";
 
-    public MainWindowViewModel(IEnumerable<IPeripheralTab> tabs, IDebuggable system, BinaryInfoService? binaryInfoService)
+    public MainWindowViewModel(IEnumerable<IPeripheralTab> tabs, IDebuggable system, BinaryInfoService? binaryInfoService, GdbSessionService? gdbSession = null)
     {
         Tabs = tabs;
         m_System = system;
@@ -54,6 +62,13 @@ public partial class MainWindowViewModel : ObservableObject
             m_System.Reset();
         });
         m_System.Stopped += () => Dispatcher.UIThread.Post(() => IsRunning = false);
+
+        if (gdbSession != null)
+        {
+            gdbSession.Connected += () => Dispatcher.UIThread.Post(() => IsGdbConnected = true);
+            gdbSession.Disconnected += () => Dispatcher.UIThread.Post(() => IsGdbConnected = false);
+            gdbSession.EmulatorStarted += () => Dispatcher.UIThread.Post(() => IsRunning = true);
+        }
 
         if (binaryInfoService != null)
             binaryInfoService.MetadataChanged += info =>

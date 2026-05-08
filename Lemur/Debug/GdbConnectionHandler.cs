@@ -19,6 +19,7 @@ public partial class GdbConnectionHandler : ConnectionHandler
     private readonly ILogger<GdbConnectionHandler> m_Logger;
     private readonly IDebuggable m_Emulator;
     private readonly IHostApplicationLifetime m_HostLifetime;
+    private readonly GdbSessionService m_GdbSession;
     private readonly GdbCommandRouter m_Router;
 
     [GeneratedRegex(@"^G[0-9A-Fa-f]+$")]
@@ -33,11 +34,12 @@ public partial class GdbConnectionHandler : ConnectionHandler
     [GeneratedRegex(@"^M[0-9A-Fa-f]+,[0-9A-Fa-f]+:[0-9A-Fa-f]+$")]
     private static partial Regex WriteMemoryPattern();
 
-    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, IDebuggable emulator, IHostApplicationLifetime hostLifetime)
+    public GdbConnectionHandler(ILogger<GdbConnectionHandler> logger, IDebuggable emulator, IHostApplicationLifetime hostLifetime, GdbSessionService gdbSession)
     {
         m_Logger = logger;
         m_Emulator = emulator;
         m_HostLifetime = hostLifetime;
+        m_GdbSession = gdbSession;
         m_Router = BuildRouter();
     }
 
@@ -59,7 +61,7 @@ public partial class GdbConnectionHandler : ConnectionHandler
         router.Map("qAttached",       _ => "1");
         router.Map("vCont?",          _ => "vCont;c;C;s;S");
         router.MapPrefix("vCont;s",   _ => { m_Emulator.Step(); return "T05"; });
-        router.MapPrefix("vCont;c",   _ => { m_Emulator.Run(); return null; });
+        router.MapPrefix("vCont;c",   _ => { m_Emulator.Run(); m_GdbSession.NotifyEmulatorStarted(); return null; });
         router.MapPrefix("vCont;t",   _ => { m_Emulator.Stop(); return "S05"; });
         router.MapPrefix("qRcmd,",    HandleQRcmd);
         router.Map("g",               HandleReadAllRegisters);
@@ -76,6 +78,15 @@ public partial class GdbConnectionHandler : ConnectionHandler
 
     public override async Task OnConnectedAsync(ConnectionContext connection)
     {
+        if (!m_GdbSession.TryAcquire())
+        {
+            m_Logger.LogWarning("Rejecting GDB connection from {endpoint}: session already active", connection.RemoteEndPoint);
+            connection.Abort();
+            return;
+        }
+
+        m_GdbSession.NotifyConnected();
+
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(connection.ConnectionClosed, m_HostLifetime.ApplicationStopping);
         var cancellationToken = cts.Token;
 
@@ -166,6 +177,7 @@ public partial class GdbConnectionHandler : ConnectionHandler
         {
             m_Emulator.Stopped -= sendStopped;
             m_Logger.LogInformation("Debugger disconnected.");
+            m_GdbSession.Release();
         }
     }
 

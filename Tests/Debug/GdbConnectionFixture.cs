@@ -36,7 +36,7 @@ public sealed partial class GdbConnectionFixture : ConnectionContext, IAsyncDisp
         Features = new FeatureCollection();
 
         m_Emulator = new MockEmulator();
-        var handler = new GdbConnectionHandler(new NullLogger<GdbConnectionHandler>(), m_Emulator, new FakeHostApplicationLigetime());
+        var handler = new GdbConnectionHandler(new NullLogger<GdbConnectionHandler>(), m_Emulator, new FakeHostApplicationLigetime(), new GdbSessionService());
         m_HandlerTask = handler.OnConnectedAsync(this);
     }
 

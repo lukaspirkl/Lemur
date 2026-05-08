@@ -29,9 +29,11 @@
 				</MenuItem>
 			</Menu>
 
-			<Button Content="Run" Command="{Binding RunCommand}" />
-			<Button Content="Stop" Command="{Binding StopCommand}" />
-			<Button Content="Reset" Command="{Binding ResetCommand}" />
+			<Button Content="Run" Command="{Binding RunCommand}" IsVisible="{Binding !IsGdbConnected}" />
+			<Button Content="Stop" Command="{Binding StopCommand}" IsVisible="{Binding !IsGdbConnected}" />
+			<Button Content="Reset" Command="{Binding ResetCommand}" IsVisible="{Binding !IsGdbConnected}" />
+			<TextBlock Text="{Binding GdbStatusText}" IsVisible="{Binding IsGdbConnected}"
+					   VerticalAlignment="Center" FontStyle="Italic" Margin="4,0" />
 
 			<Separator Width="1" Margin="4,4" Background="Gray" />
 

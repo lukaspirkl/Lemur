@@ -75,6 +75,7 @@ internal class Program
 
 
         builder.Services.AddTransient(typeof(IEmuLogger<>), typeof(EmuLogger<>));
+        builder.Services.AddSingleton<Debug.GdbSessionService>();
         builder.Services.AddRP2350Emulator();
 
         builder.Services.AddSingleton<LogicAnalyzer>();

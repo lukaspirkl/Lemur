@@ -153,7 +153,7 @@ public class AExtensionFormat : FormatBase
             case AMOSWAP_W:
                 {
                     var addr = x[rs1];
-                    var old = e.Memory.ReadWord(addr);
+                    var old = e.Memory.ReadWordForAmo(addr);
                     e.Memory.WriteWord(addr, x[rs2]);
                     x[rd] = old;
                 }
@@ -161,7 +161,7 @@ public class AExtensionFormat : FormatBase
             case AMOADD_W:
                 {
                     var addr = x[rs1];
-                    var old = e.Memory.ReadWord(addr);
+                    var old = e.Memory.ReadWordForAmo(addr);
                     e.Memory.WriteWord(addr, (uint)(old + (int)x[rs2]));
                     x[rd] = old;
                 }
@@ -169,7 +169,7 @@ public class AExtensionFormat : FormatBase
             case AMOXOR_W:
                 {
                     var addr = x[rs1];
-                    var old = e.Memory.ReadWord(addr);
+                    var old = e.Memory.ReadWordForAmo(addr);
                     e.Memory.WriteWord(addr, old ^ x[rs2]);
                     x[rd] = old;
                 }
@@ -177,7 +177,7 @@ public class AExtensionFormat : FormatBase
             case AMOAND_W:
                 {
                     var addr = x[rs1];
-                    var old = e.Memory.ReadWord(addr);
+                    var old = e.Memory.ReadWordForAmo(addr);
                     e.Memory.WriteWord(addr, old & x[rs2]);
                     x[rd] = old;
                 }
@@ -185,7 +185,7 @@ public class AExtensionFormat : FormatBase
             case AMOOR_W:
                 {
                     var addr = x[rs1];
-                    var old = e.Memory.ReadWord(addr);
+                    var old = e.Memory.ReadWordForAmo(addr);
                     e.Memory.WriteWord(addr, old | x[rs2]);
                     x[rd] = old;
                 }
@@ -193,7 +193,7 @@ public class AExtensionFormat : FormatBase
             case AMOMIN_W:
                 {
                     var addr = x[rs1];
-                    var old = e.Memory.ReadWord(addr);
+                    var old = e.Memory.ReadWordForAmo(addr);
                     e.Memory.WriteWord(addr, (uint)Math.Min((int)old, (int)x[rs2]));
                     x[rd] = old;
                 }
@@ -202,7 +202,7 @@ public class AExtensionFormat : FormatBase
             case AMOMINU_W:
                 {
                     var addr = x[rs1];
-                    var old = e.Memory.ReadWord(addr);
+                    var old = e.Memory.ReadWordForAmo(addr);
                     e.Memory.WriteWord(addr, Math.Min(old, x[rs2]));
                     x[rd] = old;
                 }
@@ -210,7 +210,7 @@ public class AExtensionFormat : FormatBase
             case AMOMAX_W:
                 {
                     var addr = x[rs1];
-                    var old = e.Memory.ReadWord(addr);
+                    var old = e.Memory.ReadWordForAmo(addr);
                     e.Memory.WriteWord(addr, (uint)Math.Max((int)old, (int)x[rs2]));
                     x[rd] = old;
                 }
@@ -219,7 +219,7 @@ public class AExtensionFormat : FormatBase
             case AMOMAXU_W:
                 {
                     var addr = x[rs1];
-                    var old = e.Memory.ReadWord(addr);
+                    var old = e.Memory.ReadWordForAmo(addr);
                     e.Memory.WriteWord(addr, Math.Max(old, x[rs2]));
                     x[rd] = old;
                 }

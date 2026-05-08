@@ -40,7 +40,10 @@ public class PmpChecker
                 ? (PrivilegeMode)m_Csr.Mstatus.Mpp
                 : current;
 
-        for (int i = 0; i < 16; i++)
+        int pmpRegions = m_Config.PmpRegionsCount;
+        bool transposed = m_Config.TransposedPmpBits;
+
+        for (int i = 0; i < pmpRegions; i++)
         {
             byte cfg = RegionCfg(i);
             byte a = (byte)((cfg >> 3) & 0x3);
@@ -55,6 +58,20 @@ public class PmpChecker
                 || ((m_Csr.Pmpcfgm0.M >> i) & 1) != 0;
 
             if (!modeApplies) return true; // M-mode bypass
+
+            // RP2350-E6: RWX bits are transposed (R,W,X instead of X,W,R).
+            // Standard: Bit 0=R, Bit 1=W, Bit 2=X.
+            // Transposed: Bit 0=X, Bit 1=W, Bit 2=R.
+            if (transposed)
+            {
+                return type switch
+                {
+                    AccessType.Read    => (cfg & 0x04) != 0,
+                    AccessType.Write   => (cfg & 0x02) != 0,
+                    AccessType.Execute => (cfg & 0x01) != 0,
+                    _                  => false,
+                };
+            }
 
             return type switch
             {
@@ -77,12 +94,12 @@ public class PmpChecker
 
     private bool MatchesAddress(int region, byte a, uint address)
     {
-        uint pmpaddr = m_Csr.Pmpaddr[region].Addr;
+        uint pmpaddr = m_Csr.Pmpaddr[region].Read();
 
         if (a == 1) // TOR — top-of-range: lower <= address < upper
         {
             // Only reachable when TorEnabled=true; PmpcfgEntry sanitises A=1→0 otherwise.
-            uint lower = region == 0 ? 0u : m_Csr.Pmpaddr[region - 1].Addr << 2;
+            uint lower = region == 0 ? 0u : m_Csr.Pmpaddr[region - 1].Read() << 2;
             uint upper = pmpaddr << 2;
             return address >= lower && address < upper;
         }

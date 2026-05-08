@@ -42,8 +42,8 @@ public class CsrController
     public McounterenEntry       Mcounteren { get; }
 
     // 3.3 — Standard Memory Protection (arrays registered manually in constructor)
-    public PmpcfgEntry[]         Pmpcfg     { get; } = new PmpcfgEntry[4];
-    public PmpaddrEntry[]        Pmpaddr    { get; } = new PmpaddrEntry[16];
+    public CsrEntry[]            Pmpcfg     { get; } = new CsrEntry[16];
+    public CsrEntry[]            Pmpaddr    { get; } = new CsrEntry[64];
 
     // 3.4 — Standard M-mode Performance Counters
     public McycleEntry           Mcycle        { get; }
@@ -101,14 +101,32 @@ public class CsrController
         Mcounteren = new();
 
         // 3.3 — Memory Protection (arrays registered separately below)
-        for (int i = 0; i < 4; i++)
-            Pmpcfg[i] = new((ushort)(0x3a0 + i), i, isTorEnabled: () => riscVConfig.TorEnabled);
+        int pmpRegions = riscVConfig.PmpRegionsCount;
         for (int i = 0; i < 16; i++)
         {
-            int region = i;
-            // pmpaddr[i] is read-only while the L bit of its pmpcfg byte is set.
-            Pmpaddr[i] = new((ushort)(0x3b0 + i), i, isLocked: () =>
-                ((Pmpcfg[region / 4].Read() >> ((region % 4) * 8)) & 0x80u) != 0);
+            if (i * 4 < pmpRegions)
+                Pmpcfg[i] = new PmpcfgEntry((ushort)(0x3a0 + i), i,
+                    isTorEnabled: () => riscVConfig.TorEnabled,
+                    isTransposed: () => riscVConfig.TransposedPmpBits);
+            else
+                Pmpcfg[i] = new HardwiredZeroEntry((ushort)(0x3a0 + i), $"pmpcfg{i}", "Memory Protection");
+        }
+        for (int i = 0; i < 64; i++)
+        {
+            if (i < pmpRegions)
+            {
+                int region = i;
+                // pmpaddr[i] is read-only while the L bit of its pmpcfg byte is set.
+                Pmpaddr[i] = new PmpaddrEntry((ushort)(0x3b0 + i), i,
+                    isLocked: () => ((Pmpcfg[region / 4].Read() >> ((region % 4) * 8)) & 0x80u) != 0,
+                    grain: riscVConfig.PmpGrain,
+                    getA: () => (byte)((Pmpcfg[region / 4].Read() >> ((region % 4) * 8 + 3)) & 0x3)
+                );
+            }
+            else
+            {
+                Pmpaddr[i] = new HardwiredZeroEntry((ushort)(0x3b0 + i), $"pmpaddr{i}", "Memory Protection");
+            }
         }
 
         // 3.4 — Performance Counters
@@ -173,6 +191,41 @@ public class CsrController
         m_Entries[0xbff] = new UnimplementedCsrEntry(0xbff, "dmdata0", "Debug");
     }
 
-    public uint Get(ushort address)         => m_Entries[address].Read();
-    public void Set(ushort address, uint v) => m_Entries[address].Write(v);
+    public uint Get(ushort address, Lemur.Processor.PrivilegeMode currentPrivilege)
+    {
+        ValidateAccess(address, currentPrivilege, isWrite: false);
+
+        if (!m_Entries.TryGetValue(address, out var entry))
+            throw new RiscVException(ExceptionCause.IllegalInstruction, 0,
+                $"CSR 0x{address:x3}: unimplemented — illegal instruction");
+        return entry.Read();
+    }
+
+    public void Set(ushort address, uint v, Lemur.Processor.PrivilegeMode currentPrivilege)
+    {
+        ValidateAccess(address, currentPrivilege, isWrite: true);
+
+        if (!m_Entries.TryGetValue(address, out var entry))
+            throw new RiscVException(ExceptionCause.IllegalInstruction, 0,
+                $"CSR 0x{address:x3}: unimplemented — illegal instruction");
+        entry.Write(v);
+    }
+
+    private void ValidateAccess(ushort address, Lemur.Processor.PrivilegeMode currentPrivilege, bool isWrite)
+    {
+        // Bits [9:8] encode the lowest privilege level that can access the CSR.
+        var minPrivilege = (address >> 8) & 0x3;
+        if (minPrivilege > (uint)currentPrivilege)
+        {
+            throw new RiscVException(ExceptionCause.IllegalInstruction, 0,
+                $"CSR 0x{address:x3}: insufficient privilege (required {minPrivilege}, current {(uint)currentPrivilege})");
+        }
+
+        // Bits [11:10] indicate whether the register is read/write (00, 01, or 10) or read-only (11).
+        if (isWrite && (address >> 10) == 0x3)
+        {
+            throw new RiscVException(ExceptionCause.IllegalInstruction, 0,
+                $"CSR 0x{address:x3}: read-only register");
+        }
+    }
 }

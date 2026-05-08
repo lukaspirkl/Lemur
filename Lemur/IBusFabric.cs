@@ -8,6 +8,10 @@ public interface IBusFabric
     void Write(uint address, byte[] data);
     byte[] Read(uint address, int count);
     uint ReadInstruction(uint address);
+
+    // AMO read-half. Same data as Read(addr, 4) but failures are reported as
+    // Store/AMO faults rather than Load faults, per RISC-V Atomic ISA.
+    uint ReadWordForAmo(uint address);
 }
 
 public class NullBusFabric : IBusFabric
@@ -18,6 +22,11 @@ public class NullBusFabric : IBusFabric
     }
 
     public uint ReadInstruction(uint address)
+    {
+        return 0;
+    }
+
+    public uint ReadWordForAmo(uint address)
     {
         return 0;
     }

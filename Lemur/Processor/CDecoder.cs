@@ -55,7 +55,7 @@ public class CDecoder : IDecoder
             }
         }
 
-        throw new NotImplementedException($"Unknown compressed instruction {instruction.ToHex(4)}");
+        throw new RiscVException(ExceptionCause.IllegalInstruction, instruction, $"Unknown compressed instruction {instruction.ToHex(4)}");
     }
 
 }

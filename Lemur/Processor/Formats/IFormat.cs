@@ -180,22 +180,22 @@ public class ICSRFormat : FormatBase
             case CSRRW:
                 if (rd != 0)
                 {
-                    var value = e.CSR.Get(csr);
-                    e.CSR.Set(csr, x[rs1]);
+                    var value = e.CSR.Get(csr, e.CurrentPrivilege);
+                    e.CSR.Set(csr, x[rs1], e.CurrentPrivilege);
                     x[rd] = value;
                 }
                 else
                 {
-                    e.CSR.Set(csr, x[rs1]);
+                    e.CSR.Set(csr, x[rs1], e.CurrentPrivilege);
                 }
                 return;
 
             case CSRRS:
                 {
-                    uint value = e.CSR.Get(csr);
+                    uint value = e.CSR.Get(csr, e.CurrentPrivilege);
                     if (rs1 != 0)
                     {
-                        e.CSR.Set(csr, value | x[rs1]);
+                        e.CSR.Set(csr, value | x[rs1], e.CurrentPrivilege);
                     }
                     x[rd] = value;
                 }
@@ -203,10 +203,10 @@ public class ICSRFormat : FormatBase
 
             case CSRRC:
                 {
-                    uint value = e.CSR.Get(csr);
+                    uint value = e.CSR.Get(csr, e.CurrentPrivilege);
                     if (rs1 != 0)
                     {
-                        e.CSR.Set(csr, value & ~x[rs1]);
+                        e.CSR.Set(csr, value & ~x[rs1], e.CurrentPrivilege);
                     }
                     x[rd] = value;
                 }
@@ -215,23 +215,23 @@ public class ICSRFormat : FormatBase
             case CSRRWI:
                 if (rd != 0)
                 {
-                    x[rd] = e.CSR.Get(csr);
+                    x[rd] = e.CSR.Get(csr, e.CurrentPrivilege);
                 }
-                e.CSR.Set(csr, rs1);
+                e.CSR.Set(csr, rs1, e.CurrentPrivilege);
                 return;
 
             case CSRRSI:
                 {
-                    uint value = e.CSR.Get(csr);
-                    e.CSR.Set(csr, value | rs1);
+                    uint value = e.CSR.Get(csr, e.CurrentPrivilege);
+                    e.CSR.Set(csr, value | rs1, e.CurrentPrivilege);
                     x[rd] = value;
                 }
                 return;
 
             case CSRRCI:
                 {
-                    uint value = e.CSR.Get(csr);
-                    e.CSR.Set(csr, value & ~rs1);
+                    uint value = e.CSR.Get(csr, e.CurrentPrivilege);
+                    e.CSR.Set(csr, value & ~rs1, e.CurrentPrivilege);
                     x[rd] = value;
                 }
                 return; ;

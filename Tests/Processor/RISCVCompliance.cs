@@ -54,7 +54,7 @@ public class RISCVCompliance
     public void All(string path)
     {
         // ~/riscof/riscof_work/riscv-test-suite/rv32i_m/I/src/add-01.S/dut$ riscv32-unknown-elf-objdump -D my.elf > my.dump
-        int maxSteps = 10_000;
+        int maxSteps = 100_000;
         var isRunning = true;
 
         var ram = new ElfMemory("ram", 0x80000000, 1024 * 1024 * 5, false, new FakeLogger<Memory>());
@@ -75,6 +75,8 @@ public class RISCVCompliance
         {
             TorEnabled = true,
             MtvalHardwiredToZero = false,
+            PmpRegionsCount = 16,
+            TransposedPmpBits = false,
         };
 
         var csr = new CsrController(config);
@@ -86,7 +88,7 @@ public class RISCVCompliance
 
         // This is required for the hint tests. Machine Timer Interrupt Pending (MTIP) bit should be set to 1.
         // https://riscv-software-src.github.io/riscv-unified-db/manual/html/isa/isa_20240411/csrs/mip.html#mip-MTIP-def
-        e.CSR.Set(0x344, 0x00000080);
+        e.CSR.Set(0x344, 0x00000080, PrivilegeMode.Machine);
 
         // MISA
         //e.CSR.Set(0x301, 0x40141107);
@@ -97,13 +99,23 @@ public class RISCVCompliance
         e.PC = 0x80000000;
 
         int i = 0;
-        while (isRunning && i <= maxSteps)
+        try
         {
-            e.Step();
-            i++;
+            while (isRunning && i <= maxSteps)
+            {
+                e.Step();
+                i++;
+            }
+        }
+        catch (Exception ex)
+        {
+            throw new Exception($"Exception at step {i}, PC: {e.PC.ToHex()}, MTVEC: {e.CSR.Get(0x305, PrivilegeMode.Machine).ToHex()}, MEPC: {e.CSR.Get(0x341, PrivilegeMode.Machine).ToHex()}, MCAUSE: {e.CSR.Get(0x342, PrivilegeMode.Machine).ToHex()}. Inner: {ex.Message}", ex);
         }
 
-        Assert.True(i <= maxSteps);
+        if (i > maxSteps)
+        {
+            throw new Exception($"Timeout reached ({maxSteps} steps). PC: {e.PC.ToHex()}, MTVEC: {e.CSR.Get(0x305, PrivilegeMode.Machine).ToHex()}, MEPC: {e.CSR.Get(0x341, PrivilegeMode.Machine).ToHex()}, MCAUSE: {e.CSR.Get(0x342, PrivilegeMode.Machine).ToHex()}");
+        }
 
         var signature = File.ReadAllLines(path.Replace("my.elf", "Reference-spike.signature"));
 

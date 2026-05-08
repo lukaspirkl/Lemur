@@ -195,13 +195,14 @@ public class RP2350Emulator : BackgroundService, IDebuggable
 
     public uint GetCSR(ushort index)
     {
-        return m_Processor.CSR.Get(index);
+        return m_Processor.CSR.Get(index, Processor.PrivilegeMode.Machine);
     }
 
     public void SetCSR(ushort index, uint value)
     {
-        m_Processor.CSR.Set(index, value);
+        m_Processor.CSR.Set(index, value, Processor.PrivilegeMode.Machine);
     }
+
 
     public IRegisters Registers => m_Registers;
 
